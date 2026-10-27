@@ -1,0 +1,16 @@
+CP/M 2.2 para la ampliacion de memoria LEC (Jiri Lamac, 1987-1988)
+
+Jiri Lamac autoriza archivar, usar y distribuir gratuitamente sus programas de
+8 bits, sin animo de lucro y citando al autor (contacto: lec@lec.cz).
+Fuente: Spectrum Computing, "CP/M 2.2 for the LEC Memory Extension".
+
+Como arrancarlo en ZXCircle:
+  1. Modelo 48K con la memoria LEC (lec=1 en cmdline.txt o Alt+L).
+  2. Alt+N para meter un cartucho de microdrive nuevo (sera la unidad B:).
+  3. F1, ENTER, elegir cpm/cpm22_lec.tzx y teclear LOAD "".
+  4. Al terminar aparece A> (A: es un disco en RAM con PW, FORMAT, MLOAD y MSAVE).
+  5. Formatear el microdrive: format, 1, 8, ENTER y otra vez ENTER al acabar.
+  6. Ya se puede usar B:, por ejemplo: save 4 b:prueba.com  y  dir b:
+  El cartucho se graba solo en saves/mdr_001.mdv (formato en bruto, porque el
+  CP/M no usa los sectores de Sinclair). En otra sesion, carga ese .mdv antes
+  de arrancar el CP/M.

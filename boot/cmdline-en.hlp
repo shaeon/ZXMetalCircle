@@ -1,0 +1,284 @@
+==============================================================================
+ ZXMetalCircle - cmdline.txt options
+==============================================================================
+
+(English version of cmdline.hlp.)
+
+Every option (except logdev) can also be changed from the emulator: F1 and
+then C (settings). G saves them here (a copy is left in cmdline.bak).
+
+If an option is misspelt, the emulator says so at boot for about 10 seconds
+(for example "sounddev=sndpwn not valid") and uses the default value.
+
+ cmdline.txt must have ALL the options on A SINGLE LINE, separated by
+ spaces, without comments. This file only explains the options; the
+ emulator does not read it. An option that is not there uses its default.
+
+ Example:
+   model=128k tape=flash joystick=kempston sounddev=sndhdmi net=auto tz=0 lang=en
+
+------------------------------------------------------------------------------
+ MACHINE
+------------------------------------------------------------------------------
+ model=128k       Model at boot (F7 changes it on the fly):
+                    16k     ZX Spectrum 16K
+                    48k     ZX Spectrum 48K
+                    128k    ZX Spectrum 128K                (default)
+                    plus2   ZX Spectrum +2 (grey)
+                    plus2a  ZX Spectrum +2A
+                    plus3   ZX Spectrum +3 (with disk drive, .DSK disks)
+                    plus3e  ZX Spectrum +3e (the +3 with Garry Lancaster's
+                            ROMs and a hard disk on a ZXMMC card)
+
+ lang=es          Language of the menus and the web page: es (Spanish) or
+                  en (English), or any other in the locales folder. Also
+                  changed in the settings (F1 and then C).
+
+ p3elang=es       Language of the included +3e ROMs:  es  or  en
+
+ hdd=             +3e hard disk image mounted at boot (switches to the
+                  +3e). Path inside the SD card, for example:
+                    hdd=hdd/marocana.vhd
+                  Formats: .vhd .img .raw .hdf. It can also be chosen in
+                  the settings (F1, C: "Boot hard disk"), and for the
+                  session it is mounted from the browser, the drives
+                  screen (Alt+U) or with "load" in the web page.
+                  hdd=none: none.
+
+ rom48=  rom128=  romplus2=  romplus2a=  romplus3=  romplus3e=  romif1=
+                  (default = the usual one; also in the settings, page 7
+                  "ROMs and folders")
+                  Another file name (in the roms folder of the SD card) for
+                  each machine's ROM or the Interface 1's. Without the
+                  option, 48.rom, 128.rom, plus2.rom, plus2a.rom, plus3.rom,
+                  plus3e.rom (or plus3e-es.rom / plus3e-en.rom) and if1.rom
+                  are used. Only the 48K and 128K have their ROM inside the
+                  emulator: if another machine's ROM is missing, that
+                  machine is not available (see roms/README.txt).
+                  Example: romplus3e=zxp3.rom
+
+ issue=3          16K/48K keyboard board (also in F1, C):
+                    3   Issue 3 (default)
+                    2   Issue 2 (some old programs need it)
+
+ speed=1          Emulation speed at boot (F10 changes it):
+                    1, 2, 4 or 10 (x1 = real speed; faster ones are silent)
+
+ ulaplus=1        ULAplus (64 colours):  1 = available,  0 = disabled
+
+ rs232=1          Interface 1 RS232 on the Pi's TCP port 2323 (or to
+                  saves/rs232.txt if nobody is connected). 0 = off.
+
+ zxnet=1          Interface 1 ZX Net network between Pis on the local
+                  network (UDP 5050, by broadcast). 0 = off.
+
+ lec=0            528 KB LEC memory expansion (48K; on the 128K models,
+                  from 48 BASIC), needed for LEC's CP/M (Alt+L connects
+                  it on the fly):
+                    0 = no (default),  1 = connected
+
+------------------------------------------------------------------------------
+ TAPE
+------------------------------------------------------------------------------
+ tape=flash       Loading mode (F6 changes it on the fly):
+                    flash   instant (standard blocks at once)  (default)
+                    fast    fast, the loading can be seen
+                    normal  real, at the speed of a Spectrum
+
+ tapeaccel=1      Accelerate loaders (as in Fuse), in fast and instant
+                  loading: if the loop that waits for each tape edge is a
+                  known one (the ROM and its copies, Alkatraz, Microprose,
+                  Digital Integration...), the wait is skipped in the data.
+                  It also works with many turbo loaders. 0 = no (if a game
+                  fails to load)
+
+ tapesound=1      Hear the tape signal while loading: 1 = yes, 0 = no
+
+ savetrap=1       The ROM's SAVE writes straight to the SD card (saves
+                  folder):  1 = yes (default),  0 = no
+
+ savefmt=tap      Format of SAVE recordings:  tap  or  tzx
+
+------------------------------------------------------------------------------
+ SNAPSHOTS
+------------------------------------------------------------------------------
+ snapformat=z80   Format when saving with F8 (snaps folder):
+                    z80  (default),  sna  or  szx
+
+------------------------------------------------------------------------------
+ KEYBOARD, JOYSTICK AND MOUSE
+------------------------------------------------------------------------------
+ joystick=kempston  Emulated joystick (F4 changes it on the fly):
+                    none       none
+                    kempston   Kempston                        (default)
+                    fuller     Fuller
+                    sinclair1  Sinclair 1 (Interface 2, keys 6-0)
+                    sinclair2  Sinclair 2 (Interface 2, keys 1-5)
+                    cursor     Cursor / AGF / Protek (keys 5-8 and 0)
+                    qaop       Q A O P and space
+
+ cursors=both     What the PC keyboard's cursor keys do:
+                    both      Spectrum cursor keys (CAPS SHIFT+5-8)
+                              and also the joystick            (default)
+                    keys      Spectrum cursor keys only
+                    joystick  joystick only
+
+ recreated=auto   Recreated ZX Spectrum keyboard (Elite) in "Layer A":
+                    0     there is none: normal keyboard without delay
+                    auto  automatic detection (default); through a USB
+                          cable it is recognised when connected (0F39:0404)
+                    1     every USB keyboard is a Recreated
+
+ gpiokbd=48       Real Spectrum keyboard (and joysticks) through GPIO,
+                  pastbytes' wiring (see README):
+                    48     8 x 5 keyboards: 48K, Spectrum+, 128 and grey +2
+                           (default; 1 or 128 also work)
+                    plus3  +2A/+2B/+3 keyboard (13 x 11, 11 more pins).
+                           Uses GPIO21, 16 and 12: no extended mode or NMI
+                           buttons, and no gpioaudio. The tape input
+                           (ear=gpio) then goes through GPIO15
+                    0      no GPIO keyboard (leaves the pins free)
+
+------------------------------------------------------------------------------
+ SOUND
+------------------------------------------------------------------------------
+ sounddev=sndhdmi Sound output:
+                    sndhdmi  through HDMI                    (default)
+                             (on the Pi 4 and Pi 5, HDMI0 only: the
+                             connector next to the power input)
+                    sndpwm   through the 3.5 mm jack (Pi 1-4); on the Pi 5,
+                             through GPIO12 and GPIO13 (only with gpiokbd=0,
+                             as they are GPIO keyboard lines)
+                    sndusb   USB sound card (Pi 4/400 and Pi 5/500; with
+                             ear=usb it uses the same card)
+                    none     no sound
+
+ gpioaudio=1      With sounddev=sndpwm, also output the sound on GPIO12
+                  (pin 32, mono):  1 = yes,  0 = no
+
+ speaker=auto     Speaker model for the beeper (as in Fuse): auto (48K =
+                  internal speaker, 128K/+2/+3 = television), beeper, tv
+                  or off
+
+ beeperfilter=1   Beeper low-pass filter, like the real speaker (removes
+                  the whine of 1-bit carriers). 0 = no filter
+
+ aystereo=abc     AY chip stereo layout (F9 changes it on the fly):
+                    abc  (default),  acb,  bac  or  mono
+
+ ear=0            Tape input from a real cassette (see README):
+                    0     no input (default)
+                    gpio  through a GPIO, with an LM393 comparator
+                    usb   input of a USB sound card (Pi 4/400)
+                  Alt+G records the input to saves/rec_NNN.tzx
+
+ earpin=20        GPIO (BCM number) of the input with ear=gpio. Default
+                  20 (pin 38); with gpiokbd=plus3, 15 (pin 10), the serial
+                  port's RX (logging through the serial port keeps
+                  working: it only uses TX, GPIO14). If the GPIO is already
+                  used for something else, the input is not enabled
+
+ earinvert=0      1 if the comparator's signal arrives inverted
+
+------------------------------------------------------------------------------
+ IMAGE
+------------------------------------------------------------------------------
+ border=full      Border size (Alt+B changes it on the fly):
+                    none      no border              (256 x 192)
+                    standard  standard               (320 x 240)
+                    full      full                   (352 x 296, default)
+                    huge      huge                   (384 x 304)
+
+ scanlines=0      TV scanlines (Alt+S):  1 = yes,  0 = no
+
+ multicore=1      Pi 2, 3, 4 and Zero 2 W: the image scaling runs on core 1
+                  (0 = everything on core 0)
+
+------------------------------------------------------------------------------
+ PERIPHERALS
+------------------------------------------------------------------------------
+ multiface=1      Multiface One/128/3 on F5 (needs its ROMs in the roms
+                  folder of the SD card):  1 = yes,  0 = no
+
+ divmmc=0         divMMC with esxDOS:
+                    0       no divMMC (default)
+                    esxdos  divMMC with esxDOS 0.8.9; its card is the
+                            hdd/esxdos.img image (see esxdir=).
+                            It cannot be used with the Interface 1, the
+                            LEC memory or the Multiface
+                  F5 opens the esxDOS browser. It is also connected or
+                  disconnected with Alt+X or in the settings (F1, C,
+                  page 5).
+
+ esxdir=esxdos_i  SD card folder whose contents are copied to the esxDOS
+                  card (hdd/esxdos.img) and deleted from the folder.
+                  0 = do not import anything.
+
+ romesx=          Another esxDOS ROM in the roms folder (default
+                  esxmmc.bin, 8192 bytes)
+
+ spectranet=0     Spectranet network card (1 = on). It uses the Pi's
+                  network; F5 opens its menu. It cannot be used with the
+                  divMMC, the Interface 1 or the Multiface. Its flash is
+                  saved in spectranet.flash (in the root of the SD card).
+                  It is also connected or disconnected with Alt+T or in
+                  the settings (F1, C, page 5).
+
+ romsnet=         Another initial Spectranet flash in the roms folder
+                  (default spectranet.rom, 131072 bytes)
+
+ if1=auto         Interface 1 with microdrives:
+                    auto  connects when a cartridge is inserted (default)
+                    1     always connected
+                    0     never
+
+------------------------------------------------------------------------------
+ NETWORK (WiFi or cable)
+------------------------------------------------------------------------------
+ net=auto         Network:
+                    auto  WiFi if wpa_supplicant.conf exists and the model
+                          has WiFi; otherwise cable         (default)
+                    wifi  WiFi only
+                    eth   cable only (or USB network adapter)
+                    0     no network
+
+ tz=60            Offset from universal time, in MINUTES (without summer
+                  time):
+                    60    mainland Spain and Balearic Islands  (default)
+                    0     Canary Islands, Portugal, United Kingdom
+                    -300  New York (a sign is allowed)
+
+ dst=1            Automatic European summer time: 1 = yes, 0 = no
+
+ tlsverify=1      HTTPS downloads (web page search): check the server's
+                  certificate against certs/cacert.pem
+                    1  yes (default)
+                    0  no (only if it fails because of a certificate and
+                       you trust the network)
+
+ web=1            The emulator's web page:
+                    1   full (default)
+                    ro  read-only: browse, download and load; no uploads,
+                        deletes, new folders or ZXDB downloads
+                    0   off
+
+ webpass=         Web page password (empty = no password). It is asked
+                  once; it is not encrypted: it protects you on your local
+                  network, not from someone eavesdropping
+
+ ip=              Fixed IP. Without it, DHCP is used (the normal case).
+ mask=            Network mask          (default 255.255.255.0)
+ gw=              Gateway               (default the network's .1)
+ dns=             DNS server            (default the gateway)
+                  Example: ip=192.168.1.50 gw=192.168.1.1 dns=8.8.8.8
+
+------------------------------------------------------------------------------
+ SYSTEM (Circle options)
+------------------------------------------------------------------------------
+ logdev=ttyS1     Diagnostic messages through the serial port (GPIO14/15,
+                  115200 baud). Only useful for debugging.
+
+==============================================================================
+ The WiFi settings go separately, in wpa_supplicant.conf (see
+ wpa_supplicant.conf.ejemplo). The function keys are in the help (F1).
+==============================================================================

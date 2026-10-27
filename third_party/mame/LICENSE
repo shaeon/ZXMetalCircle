@@ -1,0 +1,41 @@
+Los ficheros de esta carpeta que llevan "license:BSD-3-Clause" en la cabecera
+(upd765.*, fdc_pll.*, y lo que sigue a flopimg.cpp, dsk_dsk.cpp y floppy.cpp)
+vienen de MAME (https://github.com/mamedev/mame) o siguen su código, y se
+distribuyen con esta licencia. El resto de ZXMetalCircle es GPL 3 (../../LICENSE).
+
+The files in this folder marked "license:BSD-3-Clause" in their header
+(upd765.*, fdc_pll.*, and what follows flopimg.cpp, dsk_dsk.cpp and floppy.cpp)
+come from MAME (https://github.com/mamedev/mame) or follow its code, and are
+distributed under this licence. The rest of ZXMetalCircle is GPL 3 (../../LICENSE).
+
+-------------------------------------------------------------------------------
+
+BSD 3-Clause License
+
+Copyright (c) Olivier Galibert and the MAMEdev Team and contributors
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

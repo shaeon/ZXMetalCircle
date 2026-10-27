@@ -1,0 +1,282 @@
+==============================================================================
+ ZXMetalCircle - Opciones de cmdline.txt
+==============================================================================
+
+(English: cmdline-en.hlp.)
+
+Tambien se pueden cambiar todas las opciones (salvo logdev) desde el
+emulador: F1 y luego C (configuracion). Con G se guardan aqui (queda una copia en
+cmdline.bak).
+
+Si una opcion esta mal escrita, el emulador lo avisa al arrancar durante unos
+10 segundos (por ejemplo "sounddev=sndpwn no valido") y usa el valor por
+defecto.
+
+ cmdline.txt debe tener TODAS las opciones en UNA SOLA LINEA, separadas por
+ espacios, sin comentarios. Este fichero solo explica las opciones; el
+ emulador no lo lee. Una opcion que no aparezca usa su valor por defecto.
+
+ Ejemplo:
+   model=128k tape=flash joystick=kempston sounddev=sndhdmi net=auto tz=60
+
+------------------------------------------------------------------------------
+ MAQUINA
+------------------------------------------------------------------------------
+ model=128k       Modelo al arrancar (F7 lo cambia en marcha):
+                    16k     ZX Spectrum 16K
+                    48k     ZX Spectrum 48K
+                    128k    ZX Spectrum 128K                (por defecto)
+                    plus2   ZX Spectrum +2 (gris)
+                    plus2a  ZX Spectrum +2A
+                    plus3   ZX Spectrum +3 (con disquetera, discos .DSK)
+                    plus3e  ZX Spectrum +3e (el +3 con las ROMs de Garry
+                            Lancaster y disco duro en una tarjeta ZXMMC)
+
+ p3elang=es       Idioma de las ROMs del +3e incluidas:  es  o  en
+
+ hdd=             Imagen de disco duro del +3e que se monta al arrancar
+                  (pasa al +3e). Ruta dentro de la SD, por ejemplo:
+                    hdd=hdd/marocana.vhd
+                  Formatos: .vhd .img .raw .hdf. Tambien se elige en la
+                  configuracion (F1, C: "Disco duro al inicio"), y para la
+                  sesion se monta desde el selector, la pantalla de
+                  unidades (Alt+U) o con "cargar" en la web. hdd=none: ninguno.
+
+ rom48=  rom128=  romplus2=  romplus2a=  romplus3=  romplus3e=  romif1=
+                  (default = la de siempre; tambien en la configuracion,
+                  pagina 7 "ROMs y carpetas")
+                  Otro nombre de fichero (en la carpeta roms de la SD) para la
+                  ROM de cada maquina o del Interface 1. Sin la opcion se usan
+                  48.rom, 128.rom, plus2.rom, plus2a.rom, plus3.rom,
+                  plus3e.rom (o plus3e-es.rom / plus3e-en.rom) e if1.rom.
+                  Solo el 48K y el 128K tienen ROM dentro del emulador: si
+                  falta la ROM de otra maquina, esa maquina no esta disponible
+                  (ver roms/LEEME.txt). Ejemplo: romplus3e=zxp3.rom
+
+ issue=3          Placa del teclado del 16K/48K (tambien en F1, C):
+                    3   Issue 3 (por defecto)
+                    2   Issue 2 (algunos programas antiguos lo necesitan)
+
+ speed=1          Velocidad de emulacion al arrancar (F10 la cambia):
+                    1, 2, 4 o 10 (x1 = velocidad real; a mas, sin sonido)
+
+ ulaplus=1        ULAplus (64 colores):  1 = disponible,  0 = desactivado
+
+ rs232=1          RS232 del Interface 1 por el puerto TCP 2323 de la Pi (o a
+                  saves/rs232.txt si no hay nadie conectado). 0 = no.
+
+ zxnet=1          Red ZX Net del Interface 1 entre Pi de la red local (UDP
+                  5050, por difusion). 0 = no.
+
+ lec=0            Ampliacion de memoria LEC de 528 KB (48K; en los 128K,
+                  desde 48 BASIC), necesaria para el CP/M de LEC (Alt+L
+                  la conecta en marcha):
+                    0 = no (por defecto),  1 = conectada
+
+------------------------------------------------------------------------------
+ CINTA
+------------------------------------------------------------------------------
+ tape=flash       Modo de carga (F6 lo cambia en marcha):
+                    flash   instantanea (bloques estandar al momento)
+                                                           (por defecto)
+                    fast    rapida, se ve la carga
+                    normal  real, a la velocidad de un Spectrum
+
+ tapeaccel=1      Acelerar los cargadores (como en Fuse), en carga rapida e
+                  instantanea: si el bucle que espera cada flanco de la cinta
+                  es uno conocido (la ROM y sus copias, Alkatraz, Microprose,
+                  Digital Integration...), se salta la espera en los datos.
+                  Vale tambien para muchos turbos. 0 = no (si algun juego
+                  falla al cargar)
+
+ speaker=auto     Modelo del altavoz para el beeper (como en Fuse): auto (48K =
+                  altavoz interno, 128K/+2/+3 = televisor), beeper, tv u off
+
+ beeperfilter=1   Filtro paso bajo del beeper, como el altavoz real (quita el
+                  pitido de las portadoras de 1 bit). 0 = sin filtro
+
+ tapesound=1      Oir la señal de la cinta al cargar: 1 = si, 0 = no
+
+ savetrap=1       SAVE de la ROM graba directamente en la SD (carpeta saves):
+                    1 = si (por defecto),  0 = no
+
+ savefmt=tap      Formato de las grabaciones con SAVE:  tap  o  tzx
+
+------------------------------------------------------------------------------
+ SNAPSHOTS
+------------------------------------------------------------------------------
+ snapformat=z80   Formato al grabar con F8 (carpeta snaps):
+                    z80  (por defecto),  sna  o  szx
+
+------------------------------------------------------------------------------
+ TECLADO, JOYSTICK Y RATON
+------------------------------------------------------------------------------
+ joystick=kempston  Joystick emulado (F4 lo cambia en marcha):
+                    none       ninguno
+                    kempston   Kempston                        (por defecto)
+                    fuller     Fuller
+                    sinclair1  Sinclair 1 (Interface 2, teclas 6-0)
+                    sinclair2  Sinclair 2 (Interface 2, teclas 1-5)
+                    cursor     Cursor / AGF / Protek (teclas 5-8 y 0)
+                    qaop       Q A O P y espacio
+
+ cursors=both     Que hacen los cursores del teclado del PC:
+                    both      teclas de cursor del Spectrum (CAPS SHIFT+5-8)
+                              y ademas el joystick              (por defecto)
+                    keys      solo teclas de cursor del Spectrum
+                    joystick  solo joystick
+
+ recreated=auto   Teclado Recreated ZX Spectrum (Elite) en "Layer A":
+                    0     no hay ninguno: teclado normal sin retardo
+                    auto  deteccion automatica (por defecto); por cable USB
+                          se reconoce al conectarlo (0F39:0404)
+                    1     todos los teclados USB son Recreated
+
+ gpiokbd=48       Teclado real de Spectrum (y joysticks) por GPIO, montaje de
+                  pastbytes (ver README):
+                    48     teclados de 8 x 5: 48K, Spectrum+, 128 y +2 gris
+                           (por defecto; tambien vale 1 o 128)
+                    plus3  teclado del +2A/+2B/+3 (13 x 11, 11 pines mas).
+                           Usa los GPIO21, 16 y 12: sin pulsadores de modo
+                           extendido ni NMI, y sin gpioaudio. La entrada de
+                           cinta (ear=gpio) va entonces por el GPIO15
+                    0      sin teclado GPIO (deja libres los pines)
+
+------------------------------------------------------------------------------
+ SONIDO
+------------------------------------------------------------------------------
+ sounddev=sndhdmi Salida de sonido:
+                    sndhdmi  por el HDMI                     (por defecto)
+                             (en la Pi 4 y la Pi 5, solo el HDMI0: el
+                             conector junto a la alimentacion)
+                    sndpwm   por el jack de 3,5 mm (Pi 1-4); en la Pi 5,
+                             por el GPIO12 y el GPIO13 (solo con gpiokbd=0,
+                             porque son lineas del teclado por GPIO)
+                    sndusb   tarjeta de sonido USB (Pi 4/400 y Pi 5/500;
+                             con ear=usb usa la misma tarjeta)
+                    none     sin sonido
+
+ gpioaudio=1      Con sounddev=sndpwm, sacar tambien el sonido por el GPIO12
+                  (pin 32, mono):  1 = si,  0 = no
+
+ ear=0            Entrada de cinta desde un casete real (ver README):
+                    0     sin entrada (por defecto)
+                    gpio  por un GPIO, con un comparador LM393
+                    usb   entrada de una tarjeta de sonido USB (Pi 4/400)
+                  Alt+G graba lo que entra a saves/rec_NNN.tzx
+
+ earpin=20        GPIO (numero BCM) de la entrada con ear=gpio. Por defecto
+                  el 20 (pin 38); con gpiokbd=plus3, el 15 (pin 10), que es
+                  la RX del puerto serie (el registro por serie sigue
+                  funcionando: solo usa la TX, GPIO14). Si el GPIO ya se usa
+                  para otra cosa, la entrada no se activa
+
+ earinvert=0      1 si la senal del comparador llega invertida
+
+ aystereo=abc     Reparto estereo del chip AY (F9 lo cambia en marcha):
+                    abc  (por defecto),  acb,  bac  o  mono
+
+------------------------------------------------------------------------------
+ IMAGEN
+------------------------------------------------------------------------------
+ border=full      Tamaño del borde (Alt+B lo cambia en marcha):
+                    none      sin borde              (256 x 192)
+                    standard  estandar               (320 x 240)
+                    full      completo               (352 x 296, por defecto)
+                    huge      enorme                 (384 x 304)
+
+ scanlines=0      Lineas de barrido de televisor (Alt+S):  1 = si,  0 = no
+
+------------------------------------------------------------------------------
+ PERIFERICOS
+------------------------------------------------------------------------------
+ multiface=1      Multiface One/128/3 en F5 (necesita sus ROMs en la carpeta
+                  roms de la SD):  1 = si,  0 = no
+
+ divmmc=0         divMMC con esxDOS:
+                    0       sin divMMC (por defecto)
+                    esxdos  divMMC con esxDOS 0.8.9; su tarjeta es la
+                            imagen hdd/esxdos.img (ver esxdir=). No convive con el
+                            Interface 1, la memoria LEC ni el Multiface
+                  F5 abre el navegador de esxDOS. Tambien se conecta o
+                  desconecta con Alt+X o en la configuracion (F1, C,
+                  pagina 5).
+
+ multicore=1      Pi 2, 3, 4 y Zero 2 W: la ampliacion de la imagen va en el
+                  nucleo 1 (0 = todo en el nucleo 0)
+
+ lang=es          Idioma de los menus y la web: es (espanol) o en (ingles), o
+                  cualquier otro que haya en la carpeta locales. Tambien se
+                  cambia en la configuracion (F1 y luego C).
+
+ spectranet=0     Tarjeta de red Spectranet (1 = activada). Usa la red de la
+                  Pi; F5 abre su menu. No convive con la divMMC, el
+                  Interface 1 ni el Multiface. Su flash se guarda en
+                  spectranet.flash (en la raiz de la SD). Tambien se
+                  conecta o desconecta con Alt+T o en la configuracion
+                  (F1, C, pagina 5).
+
+ romsnet=         Otra flash inicial de la Spectranet en la carpeta roms
+                  (por defecto spectranet.rom, 131072 bytes)
+
+ esxdir=esxdos_i  Carpeta de la SD cuyo contenido se copia a la tarjeta de
+                  esxDOS (hdd/esxdos.img) y se borra de la carpeta. 0 =
+                  no importar nada.
+
+ romesx=          Otra ROM de esxDOS en la carpeta roms (por defecto
+                  esxmmc.bin, 8192 bytes)
+
+ if1=auto         Interface 1 con microdrives:
+                    auto  se conecta al insertar un cartucho (por defecto)
+                    1     siempre conectado
+                    0     nunca
+
+------------------------------------------------------------------------------
+ RED (WiFi o cable)
+------------------------------------------------------------------------------
+ net=auto         Red:
+                    auto  WiFi si existe wpa_supplicant.conf y el modelo
+                          tiene WiFi; si no, cable        (por defecto)
+                    wifi  solo WiFi
+                    eth   solo cable (o adaptador de red USB)
+                    0     sin red
+
+ tz=60            Diferencia horaria con la hora universal, en MINUTOS
+                  (sin contar el horario de verano):
+                    60    España peninsular y Baleares   (por defecto)
+                    0     Canarias, Portugal, Reino Unido
+                    -300  Nueva York (admite signo)
+
+ dst=1            Horario de verano europeo automatico: 1 = si, 0 = no
+
+ tlsverify=1      Descargas por HTTPS (buscador de la web): comprobar el
+                  certificado del servidor con certs/cacert.pem
+                    1  si (por defecto)
+                    0  no (solo si falla por un certificado y te fias de la red)
+
+ web=1            Pagina web del emulador:
+                    1   completa (por defecto)
+                    ro  solo lectura: ver, bajar y cargar; sin subir, borrar,
+                        crear carpetas ni descargar de ZXDB
+                    0   apagada
+
+ webpass=         Contrasena de la pagina web (vacia = sin contrasena). Se
+                  pide una vez; va sin cifrar: protege en tu red local, no
+                  de alguien que la espie
+
+ ip=              IP fija. Si no se pone, se usa DHCP (lo normal).
+ mask=            Mascara de red        (por defecto 255.255.255.0)
+ gw=              Puerta de enlace      (por defecto la .1 de la red)
+ dns=             Servidor DNS          (por defecto la puerta de enlace)
+                  Ejemplo: ip=192.168.1.50 gw=192.168.1.1 dns=8.8.8.8
+
+------------------------------------------------------------------------------
+ SISTEMA (opciones de Circle)
+------------------------------------------------------------------------------
+ logdev=ttyS1     Mensajes de diagnostico por el puerto serie (GPIO14/15,
+                  115200 baudios). Util solo para depurar.
+
+==============================================================================
+ La configuracion de la WiFi va aparte, en wpa_supplicant.conf (ver
+ wpa_supplicant.conf.ejemplo). Las teclas de funcion estan en la ayuda (F1).
+==============================================================================

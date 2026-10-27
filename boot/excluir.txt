@@ -1,0 +1,27 @@
+# Ficheros y carpetas que NO se muestran en el selector (F1) ni en la web.
+#
+# Una entrada por linea; lo que va detras de # se ignora.
+# - Si termina en / o \ es una carpeta; si no, un fichero.
+# - Si empieza por / o \ es una ruta desde la raiz de la SD (puede tener
+#   varias carpetas, por ejemplo /juegos/viejos/); si no, vale para ese
+#   nombre en cualquier carpeta.
+# - Se admiten los comodines * (cualquier texto) y ? (un caracter).
+# - No distingue mayusculas.
+# Los cambios se aplican al abrir el selector; no hace falta reiniciar.
+
+# Arranque de la Raspberry Pi y kernels del emulador
+/bootcode.bin
+/start*.elf
+/fixup*.dat
+/kernel*.img
+/armstub*.bin
+/*.dtb
+/LICENCE.broadcom
+/LICENSE
+/README*.md
+/CHANGELOG.md
+/overlays/
+
+# Firmware de la WiFi y certificados de HTTPS
+/firmware/
+/certs/

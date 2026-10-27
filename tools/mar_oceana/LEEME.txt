@@ -1,0 +1,36 @@
+MENU DE MAR OCEANA PARA ZXMETALCIRCLE
+=====================================
+
+(English: README.txt.)
+
+La imagen "Mar Oceana" de desUBIkado (2022-01-23_Mar_Oceana_ZX-Uno_Spectrum+3e)
+arranca con un menu pensado para el ZX-Uno: FilePlus, uGophy y NetMan usan el
+modulo WiFi del ZX-Uno, y "ZXUC Core Setup" configura el core de la FPGA. En
+ZXMetalCircle no hacen nada, asi que este menu los quita y deja:
+
+  Workbench +3e, CP/M 3.0, +3e Explorer, WB +3e Setup y Exit
+
+Tambien quita los OUT 36411 (registro de velocidad del ZX-Uno) y el titulo
+pasa a ser "ZXMetal +3e". El resto del programa es el original.
+
+COMO INSTALARLO (desde el propio emulador, sin PC)
+--------------------------------------------------
+1. Monta la imagen (hdd=...) y en el menu del +3e elige "+3 BASIC".
+2. F1, elige utils/mar_oceana/menu_zxmetal.tap (queda puesta la cinta).
+3. Escribe:   LOAD "t:"              (cinta como unidad por defecto)
+              LOAD ""                (carga el programa DISK)
+              SAVE "c:DISK" LINE 1   (lo graba en la particion "sistema")
+4. F12 (reset) y "Cargador": aparece el menu nuevo.
+
+El DISK original queda como DISK.BAK en la misma particion; para volver
+atras: ERASE "c:DISK" y MOVE "c:DISK.BAK" TO "c:DISK".
+
+COMO INSTALARLO (desde el PC, con la utilidad 3e)
+-------------------------------------------------
+  3e imagen.img del 63:DISK
+  3e imagen.img put DISK 63:DISK
+
+(63 es el numero de la particion "sistema" en esta imagen.)
+
+mkmenu.py es el programa que genera DISK y menu_zxmetal.tap a partir del
+DISK original.

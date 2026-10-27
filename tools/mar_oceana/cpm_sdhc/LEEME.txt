@@ -1,0 +1,37 @@
+CONTROLADOR DEL CP/M 3 (OTIVAX) PARA TARJETAS SDSC Y SDHC
+=========================================================
+
+(English: README.txt.)
+
+DIVMMC.BIN es el controlador "DivMMC driver v0.8 (c) otivax 2017" de la imagen
+Mar Oceana, modificado para que detecte el tipo de tarjeta antes de cada
+lectura o escritura (orden CMD58, bit CCS) y funcione con las dos:
+
+- SDSC (hasta 2 GB): direccion en bytes, como el original.
+- SDHC: numero de sector (el original leia sectores equivocados).
+
+El fichero sigue midiendo 1664 bytes. MD5 821f898137beefb49d607110aa13e09c.
+
+PROBADO EN ZXMETALCIRCLE (imagen Mar Oceana, +3e):
+- Con tarjeta SDSC y con tarjeta SDHC: el CP/M arranca, DIR lista bien y
+  PIP D:=C:DATE.COM escribe una copia identica al original.
+- El controlador original con SDHC: DIR vacio y PIP no escribe nada.
+
+AVISO: en el core zxp3 de MiST (con los cambios de puertos) el CP/M arranco
+con el DIVMMC.BIN original, pero con este dio "ERROR DE DISCO NUMERO: 23" al
+cargar (error 23 de +3DOS: fichero no encontrado). No se ha averiguado si era
+la instalacion del fichero en la imagen o el propio controlador. En
+ZXMetalCircle, con imagenes de hasta 2 GB, usa el DIVMMC.BIN ORIGINAL: no hace
+falta este. Solo tendria sentido con imagenes de mas de 2 GB.
+
+ZXMMC.BIN es lo mismo para la interfaz ZXMMC (puertos 0x1F/0x3F); esta
+generado con el mismo script pero sin probar.
+
+INSTALARLO (con la utilidad 3e; haz antes una copia de la imagen)
+  3e imagen.img get 1:DIVMMC.BIN          (copia de seguridad)
+  3e imagen.img del 1:DIVMMC.BIN
+  3e imagen.img put DIVMMC.BIN 1:DIVMMC.BIN
+
+parchear_sdhc.py aplica el cambio a un DIVMMC.BIN o ZXMMC.BIN original:
+  python3 parchear_sdhc.py ORIGINAL.BIN SALIDA.BIN
+divmmc_sdhc_sdsc_hecho.md explica el cambio con detalle.

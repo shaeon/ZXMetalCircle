@@ -1,0 +1,6 @@
+esxDOS 0.8.9 (c) 2005-2021 Papaya Dezign - https://esxdos.org
+Copia sin modificar de esxdos089.zip. Uso no comercial.
+
+ESXMMC.BIN va a la SD como roms/esxmmc.bin (la ROM de 8 KB de la divMMC).
+SYS y BIN se copian dentro de hdd/esxdos.img, la tarjeta FAT16 de 64 MB
+que crea build.sh, para que esxDOS arranque sin preparar nada.

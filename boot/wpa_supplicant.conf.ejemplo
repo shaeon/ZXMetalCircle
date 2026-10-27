@@ -1,0 +1,24 @@
+#
+# Configuración de la WiFi de ZXMetalCircle
+#
+# 1. Cambia el nombre de este fichero a  wpa_supplicant.conf  (quitando ".ejemplo").
+# 2. Pon el nombre de tu red y su contraseña entre las comillas.
+# 3. Si tu país no es España, cambia "ES" por su código (FR, DE, GB, US...).
+#
+# Modelos con WiFi: Raspberry Pi 3, 3B+, 3A+, 4, 400, Zero W y Zero 2 W.
+# Solo redes de 2,4 GHz con WPA o WPA2 (no WPA3).
+#
+# En la Zero W la WiFi le quita algo de tiempo a la emulación: al subir o bajar
+# ficheros puede haber cortes breves de imagen o sonido (el Spectrum no se
+# retrasa). En la Zero 2 W, Pi 3 y Pi 4 no se nota.
+#
+
+country=ES
+
+network={
+	ssid="nombre-de-tu-red"
+	psk="tu-contraseña"
+	proto=WPA2
+	key_mgmt=WPA-PSK
+	#scan_ssid=1		# quita la almohadilla si tu red está oculta
+}

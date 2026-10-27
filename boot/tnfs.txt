@@ -1,0 +1,12 @@
+# Servidores TNFS que aparecen en el selector (F1) dentro de "Internet (TNFS)".
+# Uno por linea (nombre o IP); lo que va tras # se ignora.
+# Si este fichero no existe o esta vacio, se usan estos mismos.
+#
+# TNFS es el sistema de ficheros en red de Spectranet: servidores con miles de
+# juegos y programas de Spectrum. Tambien puedes montar uno propio en tu red
+# con tnfsd (https://github.com/spectrumero/tnfsd) y poner aqui su IP.
+
+tnfs.markround.com      # mas de 16.000 juegos, demos y utilidades
+vexed4.alioth.net       # el del autor de Spectranet
+tnfs.millhill.org       # archivo del antiguo zx.kupo.be
+tnfs.bytedelight.com

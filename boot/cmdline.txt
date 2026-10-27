@@ -1,0 +1,1 @@
+model=128k tape=flash joystick=kempston sounddev=sndhdmi logdev=ttyS1 gpiokbd=1 gpioaudio=1 recreated=auto cursors=both savetrap=1 ulaplus=1 aystereo=abc tapesound=1 issue=3 speed=1 border=full scanlines=0 savefmt=tap snapformat=z80 if1=auto lec=0 net=auto tz=60 dst=1

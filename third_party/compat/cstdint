@@ -1,0 +1,5 @@
+// Compatibilidad: Circle compila con -nostdinc++
+#ifndef _compat_cstdint
+#define _compat_cstdint
+#include <stdint.h>
+#endif

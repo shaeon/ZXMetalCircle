@@ -1,0 +1,19 @@
+FIRMWARE DE LA SPECTRANET
+=========================
+
+(English: README.txt.)
+
+Spectranet (c) Dylan Smith, https://spectrum.alioth.net
+Codigo fuente: https://github.com/spectrumero/spectranet (licencia MIT, ver
+LICENSE.txt). Compilado con binutils-z80 a partir del commit
+12c167d99e1fd5bfd04f50da6cf4a062285e138b Thu Feb 12 10:07:12 2026 +0000
+
+roms/spectranet.rom (en la SD) es la flash de 128 KB con el firmware y los
+modulos estandar (basext, streams, messages, config, snapman) instalados por
+el instalador oficial (installer.tap) dentro del propio emulador, y con esta
+configuracion: DHCP activado, direccion MAC 02:5A:58:4D:45:54, nombre zxmetal.
+
+La primera vez que se activa la Spectranet (spectranet=1) se copia a
+SD:/spectranet.flash, que es la que se usa y se actualiza a partir de ahi
+(cambios de configuracion, modulos nuevos...). Para volver a empezar, borra
+spectranet.flash.

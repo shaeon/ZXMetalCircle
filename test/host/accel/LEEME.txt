@@ -1,0 +1,19 @@
+Prueba de la aceleración de cargadores (y de la carga instantánea)
+
+  python3 gen_turbo.py          # genera turbo.tzx y los datos esperados
+  sed 's#"roms/#"../../../roms/#' ../../../src/roms.S > roms_host.S
+  S=../../../src; M=../../../third_party/mame
+  g++ -O2 -std=c++17 -DWITH_BREAKPOINT_SUPPORT -I.. -I$S -I../../../third_party/z80cpp \
+      -I$M/compat -I$M -o accel_test accel_test.cpp $S/spectrum.cpp $S/ay8912.cpp \
+      $S/audiomixer.cpp $S/tape.cpp $S/zxkeyboard.cpp $S/interface1.cpp $S/plus3disk.cpp \
+      $S/sdcard.cpp $S/spectranet.cpp $S/earinput.cpp $S/zxnet.cpp $M/*.cpp $M/compat/*.cpp \
+      $S/inflate.cpp ../../../third_party/z80cpp/z80.cpp roms_host.S
+  ./accel_test 2         # real
+  ./accel_test 1 x       # rápida sin acelerar
+  ./accel_test 1         # rápida con aceleración
+  ./accel_test 0         # instantánea
+
+La cinta tiene un BASIC, un bloque de código y dos bloques de datos al azar:
+uno estándar (0x10) que se carga con la ROM y uno turbo (0x11, bit 0 = 570 T,
+bit 1 = 1140 T) que se carga con una copia reubicada de LD-BYTES con la espera
+y el umbral cambiados. Devuelve 0 si todo lo cargado coincide.

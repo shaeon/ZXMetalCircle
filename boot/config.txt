@@ -1,0 +1,53 @@
+# ZXMetalCircle - configuración del firmware de la Raspberry Pi
+# https://www.raspberrypi.com/documentation/computers/config_txt.html
+#
+# Cada modelo arranca su kernel: la Pi 1, Zero y Pi 2 en 32 bits; la Pi 3,
+# Zero 2 W, 4, 400, 5 y 500 en 64 bits.
+#
+# Para volver a 32 bits en la Pi 3 / Zero 2 W o en la Pi 4 / 400, cambia en su
+# sección arm_64bit=1 por arm_64bit=0 y quita las líneas kernel_address,
+# kernel y armstub de 64 bits (las alternativas de 32 bits están comentadas).
+# La Pi 5 y 500 solo funcionan en 64 bits.
+
+arm_64bit=0
+initial_turbo=0
+disable_overscan=1
+
+# Sonido por HDMI (con pantallas DVI, forzar el modo HDMI)
+#hdmi_drive=2
+
+# Si la pantalla no se detecta
+#hdmi_force_hotplug=1
+
+# Filtro de escalado de la GPU: 8 = vecino más próximo, píxeles nítidos. Sin
+# esta línea la GPU suaviza la imagen al ampliarla y las letras se ven borrosas.
+scaling_kernel=8
+
+enable_uart=1
+
+# Pi 3 y Zero 2 W: 64 bits (32 bits: arm_64bit=0 y kernel=kernel8-32.img)
+[pi3]
+arm_64bit=1
+kernel_address=0x80000
+kernel=kernel8.img
+
+[pi02]
+arm_64bit=1
+kernel_address=0x80000
+kernel=kernel8.img
+
+# Pi 4 y 400: 64 bits (32 bits: arm_64bit=0, kernel=kernel7l.img y
+# armstub=armstub7-rpi4.bin)
+[pi4]
+arm_64bit=1
+kernel_address=0x80000
+kernel=kernel8-rpi4.img
+armstub=armstub8-rpi4.bin
+max_framebuffers=2
+
+# Pi 5 y 500: siempre 64 bits
+[pi5]
+kernel_address=0x80000
+kernel=kernel_2712.img
+
+[all]

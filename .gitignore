@@ -1,0 +1,27 @@
+# Compilación (build.sh): Circle, objetos y kernels
+build/
+qemu/
+*.o
+*.d
+*.elf
+*.map
+*.lst
+/kernel*.img
+
+# Contenido de la SD que genera build.sh (se publica como zip en cada release)
+sdcard/
+
+# Pruebas en el PC: ejecutables y ficheros que generan
+test/host/**/roms_host.S
+test/host/**/*.ppm
+test/host/accel/accel_test
+test/host/harness
+test/host/*_test
+
+# ROMs del Multiface: no tenemos permiso para distribuirlas (ver README)
+roms/mf*.rom
+roms/MF*.ROM
+
+# Varios
+*.zip
+.DS_Store

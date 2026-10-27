@@ -1,0 +1,96 @@
+CARPETA roms
+============
+
+(English: README.txt.)
+
+Solo las ROMs del ZX Spectrum 16K/48K y del 128K van dentro del emulador,
+para que siempre arranque. Todas las demas se cargan de esta carpeta al
+encender. Si falta alguna (o tiene un tamano distinto), la maquina o el
+periferico que la necesita deja de estar disponible: el resto sigue
+funcionando. Al arrancar aparece el aviso "Faltan ROMs: ..." con la lista.
+
+Las ROMs de Sinclair y Amstrad se distribuyen con permiso de Amstrad para
+su uso en emuladores; las del +3e, con permiso de Garry Lancaster. Las del
+Multiface (c) Romantic Robot no se incluyen: no tenemos permiso para
+distribuirlas. Si tienes un Multiface, copia aqui el volcado de su ROM.
+esxDOS es de Papaya Dezign (https://esxdos.org), de uso no comercial.
+El firmware de la Spectranet es de Dylan Smith (licencia MIT).
+
+
+1) ROMS QUE VIENEN CON ZXMETALCIRCLE
+------------------------------------
+
+ Fichero         Tamano       Para que sirve       Si falta...
+ --------------  -----------  -------------------  ---------------------------
+ plus2.rom       32768 bytes  ZX Spectrum +2 gris  F7 se salta el +2.
+                                                   model=plus2 arranca en 48K.
+                                                   Snapshots de +2: en 128K.
+
+ plus2a.rom      65536 bytes  ZX Spectrum +2A      F7 se salta el +2A.
+                                                   model=plus2a arranca en 48K.
+                                                   Snapshots de +2A: en 128K
+                                                   (pueden no funcionar).
+
+ plus3.rom       65536 bytes  ZX Spectrum +3       No hay +3 ni discos .DSK
+                              (ROMs 4.0)           (el selector y la web avisan
+                                                   "Falta roms/plus3.rom").
+                                                   Snapshots de +3: en 128K.
+
+ plus3e-es.rom   65536 bytes  ZX Spectrum +3e      No hay +3e ni disco duro
+ plus3e-en.rom                (version ZXMMC,      (.vhd .img .raw .hdf).
+                              castellano/ingles)   Se usa la del idioma elegido
+                                                   con p3elang=es (por defecto)
+                                                   o p3elang=en. Basta con la
+                                                   de un idioma.
+
+ if1.rom          8192 bytes  Interface 1 (v2)     No hay Interface 1: ni
+                                                   microdrives (.mdr .mdv,
+                                                   Alt+N), ni RS232, ni
+                                                   ZX Net, ni CP/M de LEC.
+
+ esxmmc.bin       8192 bytes  esxDOS 0.8.9 para    No se puede conectar la
+                              la divMMC            divMMC.
+
+ spectranet.rom 131072 bytes  Flash de la          No se puede conectar la
+                              Spectranet           Spectranet.
+
+Si borras alguna por error, la tienes en el zip de ZXMetalCircle
+(carpeta roms de zxcircle-sd.zip).
+
+
+2) ROMS QUE PUEDES ANADIR TU
+----------------------------
+
+ ROMs del Multiface (no se incluyen; el volcado de la de tu Multiface):
+
+   mf1.rom       8192 bytes   Multiface One (16K/48K)
+   mf128.rom     8192 bytes   Multiface 128 (128K y +2)
+   mfplus3.rom   8192 bytes   Multiface 3 (+2A, +3 y +3e); tambien vale mf3.rom
+
+   Sin ellas, F5 hace una NMI normal.
+
+ ROMs propias, en lugar de las incluidas:
+
+   48.rom       16384 bytes   para el 16K y el 48K
+   128.rom      32768 bytes   para el 128K (ROM 0 + ROM 1 seguidas)
+   plus3e.rom   65536 bytes   para el +3e; si existe, tiene preferencia sobre
+                              plus3e-es.rom y plus3e-en.rom
+
+   Las ROMs de 64 KB son los cuatro bancos (0, 1, 2 y 3) seguidos; las de
+   32 KB, los bancos 0 y 1.
+
+
+3) OTROS NOMBRES
+----------------
+
+En cmdline.txt se puede indicar otro fichero de esta carpeta para cada
+maquina: rom48=  rom128=  romplus2=  romplus2a=  romplus3=  romplus3e=
+romif1=   Por ejemplo, para usar la misma ROM que en el core zxp3 de MiST:
+
+   romplus3e=zxp3.rom
+
+Para el +3e hace falta la version de la ROM para la interfaz ZXMMC
+("mmc"), que es la que emula ZXMetalCircle.
+
+Las trampas de carga y grabacion de cinta (carga instantanea, SAVE a la SD)
+solo funcionan si la ROM tiene las rutinas estandar en su sitio.
