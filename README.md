@@ -61,7 +61,7 @@ This project is provided **"as is", without warranty of any kind**, express or i
 
 ZX Spectrum and Sinclair are trademarks of their respective owners; Raspberry Pi is a trademark of Raspberry Pi Ltd. This project is not affiliated with or endorsed by them.
 
-## Status (version 1.01)
+## Status (version 1.02)
 
 Done:
 

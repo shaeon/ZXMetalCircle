@@ -6,7 +6,7 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
-## Sin publicar
+## 1.02
 
 - **Cambiado**: el joystick Kempston se decodifica solo por A5 = 0 (con A0 = 1; con A0 = 0 gana la ULA), como el interfaz original y el core zxp3 de Kyp. Gracias a José Luis Sánchez, que lo propuso. Hay juegos españoles que no leen el puerto 0x1F: Las Tres Luces de Glaurung lee el 0xDF (que ya aceptábamos, como JSpeccy y ESPectrum) y Silent Shadow lee el 0xD3 (`IN A,(0D3h)`), con A6 y A7 a 1. Con A5 = A6 = A7 = 0, como Fuse y MAME, a Silent Shadow no le funcionaba el joystick. Prueba nueva: `test/host/kempston_ports_test.cpp`.
 - **Nuevo**: compilación en GitHub (`.github/workflows/build.yml`). En cada push a `main`, en los pull requests y a mano: pruebas en el PC, los siete kernels y la SD como zip descargable. Con una etiqueta `vX.YY`, además, un borrador de release con el zip. Probado en un Ubuntu 24.04 con los mismos pasos: las cinco pruebas pasan y `build.sh` compila los siete kernels con el Arm GNU Toolchain 14.2 descargado.
