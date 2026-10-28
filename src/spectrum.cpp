@@ -1137,9 +1137,14 @@ uint8_t CSpectrum::inPort (uint16_t port)
 		}
 	}
 
-	// Kempston (A5 = A6 = A7 = 0, o 0xDF como hace JSpeccy)
+	// Kempston: decodificado solo por A5 = 0, como el interfaz original, el
+	// core zxp3 de Kyp y lo que propone José Luis Sánchez. Hay juegos españoles
+	// que no leen el 0x1F: Las Tres Luces de Glaurung lee el 0xDF y Silent
+	// Shadow el 0xD3 (A6 y A7 a 1), y con A5 = A6 = A7 = 0 (Fuse, MAME) el
+	// joystick no les funcionaba. Con A0 = 0 gana la ULA (teclado), para no
+	// quitarle el teclado a un programa que lea un puerto par con A5 = 0.
 	if (   m_pKeyboard->GetJoystickMode () == JoystickKempston
-	    && ((port & 0x00E0) == 0 || (port & 0x00FF) == 0xDF))
+	    && (port & 0x0021) == 0x0001)
 	{
 		return m_pKeyboard->ReadKempston ();
 	}

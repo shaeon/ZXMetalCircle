@@ -15,7 +15,7 @@
 enum TJoystickMode
 {
 	JoystickNone,		// cursores del PC = CAPS SHIFT + 5/6/7/8
-	JoystickKempston,	// puerto 0x1F (disparo 2 = bit 5)
+	JoystickKempston,	// puertos con A5 = 0, como el 0x1F (disparo 2 = bit 5)
 	JoystickFuller,		// puerto 0x7F
 	JoystickSinclair1,	// 6-0, disparo 2 = X
 	JoystickSinclair2,	// 1-5, disparo 2 = Z
