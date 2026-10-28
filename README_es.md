@@ -69,7 +69,7 @@ Este proyecto se ofrece **"tal cual", sin garantía de ningún tipo**, expresa o
 
 ZX Spectrum y Sinclair son marcas de sus respectivos propietarios; Raspberry Pi es una marca de Raspberry Pi Ltd. Este proyecto no está afiliado a ellos ni cuenta con su respaldo.
 
-## Estado (versión 1.00)
+## Estado (versión 1.01)
 
 Hecho:
 
@@ -105,7 +105,7 @@ Hecho:
 - Grabación con SAVE: los bloques que graba la ROM van a ficheros .TAP en la carpeta `saves` de la SD.
 - Snapshots: carga de .Z80 (versiones 1, 2 y 3), .SNA (48K y 128K) y .SZX; grabación en .Z80 v3, .SNA o .SZX con F8.
 - Grabación de la señal de cinta (salida MIC) con Alt+W, para programas con rutinas de grabación propias.
-- Spectrum +3 con disquetera: discos .DSK (normales y extendidos, con protecciones: sectores débiles, Speedlock, pistas largas, errores de CRC), con el controlador uPD765 de MAME.
+- Spectrum +3 con disquetera: discos .DSK (normales y extendidos, con protecciones: sectores débiles, Speedlock, pistas largas, errores de CRC) y discos de 720K (la unidad pasa sola a ser de 3,5"), con el controlador uPD765 de MAME.
 - Spectrum +3e (ROMs de Garry Lancaster) con disco duro en una tarjeta ZXMMC: imágenes .VHD, .IMG, .RAW y .HDF.
 - divMMC con esxDOS 0.8.9: su tarjeta es una imagen (`hdd/esxdos.img`) y lo que se deja en la carpeta `esxdos_i` se copia a ella; puertos divMMC en el +3e.
 - Tarjeta de red Spectranet, con el firmware oficial.
@@ -407,7 +407,8 @@ Si la Raspberry no da abasto para dibujar todos los cuadros (por ejemplo, con sc
 **Cargar un disco**: elige un `.DSK` en el selector (F1) o pulsa "cargar" en la web. El disco va a la unidad **A:**. Si el modelo no es el +3, el emulador cambia al +3 con el disco ya dentro; en el menú de arranque, **Loader** lo arranca. También se puede arrancar con `model=plus3`.
 
 **Teclas**:
-- **Alt+F**: disco nuevo, ya formateado para el +3, en la primera unidad libre (A:, luego B:).
+- **Alt+F**: disco nuevo, ya formateado para +3DOS, en la primera unidad libre (A:, luego B:). Pregunta el formato: **180K** (3", una cara, 40 pistas, el del +3) o **720K** (3,5", dos caras, 80 pistas).
+- **Discos de 720K**: cada unidad se adapta al disco que se mete. Con un DSK de dos caras o de más de 44 pistas, esa unidad pasa a ser una disquetera de 3,5" de 80 pistas y doble cara, como las que se ponían en el +3 para esos discos; con los demás sigue siendo la de 3" del +3. En la pantalla de unidades y en el aviso al meter el disco se ve "(unidad de 3,5\")".
 - **Alt+E**: expulsa los dos discos (grabando antes los cambios).
 
 **Grabación**: lo que el Spectrum escribe en un disco se graba solo en su fichero cuando el motor lleva 2 segundos parado. Los discos nuevos se guardan en `saves/disk_NNN.dsk`. Siempre se graban en formato extendido. Mientras gira el disco aparece una **D** roja arriba a la derecha.

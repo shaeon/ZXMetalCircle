@@ -6,6 +6,11 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## 1.01
+
+- **Nuevo**: discos de 720K en el +3 (reportado por Ximo). Las dos unidades eran siempre la de 3" del +3 (una cara, ~40 pistas), y +3DOS respondía "disk unsuitable" con los DSK de 720K (80 pistas, dos caras, como los que crea Cronomantic). Ahora cada unidad se adapta al disco que se mete: con dos caras o más de 44 pistas pasa a ser una de 3,5" de 80 pistas y doble cara (+3DOS lo ve en el bit "dos caras" de ST3), y si no, la de 3" de siempre. Alt+F (disco nuevo) pregunta el formato: 180K (3") o 720K (3,5", ya formateado para +3DOS: 702K libres). La pantalla de unidades y el aviso al meter el disco dicen "(unidad de 3,5")".
+- Probado en el PC: los dos DSK de 720K de Ximo (CAT, y el Loader arranca los dos; el de 170 pantallas va mostrando imágenes de todo el disco), y un disco de 720K nuevo: SAVE, CAT con 700K libres, guardarlo a fichero, volver a cargarlo y el fichero sigue ahí. En QEMU: Alt+F con la pregunta del formato, y CAT de los dos discos nuevos (702K y 173K libres). Sin cambios en Coin-Op Hits, Tomahawk, Ghouls'n Ghosts, The Deep, Dragon Ninja, Fernandez Must Die ni en las pruebas del controlador y de protecciones.
+
 ## 1.00
 
 - **Nuevo**: el Recreated ZX Spectrum por cable USB se reconoce al conectarlo por su VID:PID (`0F39:0404`, TG3 Electronics; dato de José Luis Sánchez) y el modo Recreated se activa sin pulsar nada. `recreated=auto` pasa a ser el valor por defecto (antes `0`: había que activarlo a mano); la detección por tiempos sigue para cuando no se reconoce por el identificador (un adaptador). `recreated=0` lo desactiva (Layer B, QWERTY).

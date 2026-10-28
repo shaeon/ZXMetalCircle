@@ -61,7 +61,7 @@ This project is provided **"as is", without warranty of any kind**, express or i
 
 ZX Spectrum and Sinclair are trademarks of their respective owners; Raspberry Pi is a trademark of Raspberry Pi Ltd. This project is not affiliated with or endorsed by them.
 
-## Status (version 1.00)
+## Status (version 1.01)
 
 Done:
 
@@ -97,7 +97,7 @@ Done:
 - Saving with SAVE: the blocks saved by the ROM go to .TAP files in the SD card's `saves` folder.
 - Snapshots: .Z80 (versions 1, 2 and 3), .SNA (48K and 128K) and .SZX loading; saving as .Z80 v3, .SNA or .SZX with F8.
 - Recording of the tape signal (MIC output) with Alt+W, for programs with their own saving routines.
-- Spectrum +3 with disk drive: .DSK disks (standard and extended, with protections: weak sectors, Speedlock, long tracks, CRC errors), with MAME's uPD765 controller.
+- Spectrum +3 with disk drive: .DSK disks (standard and extended, with protections: weak sectors, Speedlock, long tracks, CRC errors) and 720K disks (the drive becomes a 3.5" one by itself), with MAME's uPD765 controller.
 - Spectrum +3e (Garry Lancaster's ROMs) with a hard disk on a ZXMMC card: .VHD, .IMG, .RAW and .HDF images.
 - divMMC with esxDOS 0.8.9: its card is an image (`hdd/esxdos.img`) and whatever is left in the `esxdos_i` folder is copied into it; divMMC ports on the +3e.
 - Spectranet network card, with the official firmware.
@@ -399,7 +399,8 @@ If the Raspberry Pi cannot draw every frame (for example, with scanlines at nati
 **Loading a disk**: choose a `.DSK` in the browser (F1) or press "load" in the web page. The disk goes into drive **A:**. If the model is not the +3, the emulator switches to the +3 with the disk already inside; in the start-up menu, **Loader** boots it. You can also start with `model=plus3`.
 
 **Keys**:
-- **Alt+F**: new disk, already formatted for the +3, in the first free drive (A:, then B:).
+- **Alt+F**: new disk, already formatted for +3DOS, in the first free drive (A:, then B:). It asks for the format: **180K** (3", single sided, 40 tracks, the +3's) or **720K** (3.5", double sided, 80 tracks).
+- **720K disks**: each drive adapts to the disk inserted. With a DSK that has two sides or more than 44 tracks, that drive becomes an 80-track double-sided 3.5" drive, like the ones fitted to the +3 for those disks; with the others it stays as the +3's 3" drive. The drives screen and the message on inserting the disk show "(3.5\" drive)".
 - **Alt+E**: ejects both disks (saving the changes first).
 
 **Saving**: what the Spectrum writes to a disk is saved automatically to its file once the motor has been stopped for 2 seconds. New disks are saved as `saves/disk_NNN.dsk`. They are always saved in extended format. While the disk spins, a red **D** appears at the top right.
