@@ -110,7 +110,7 @@ Done:
 - Hot-plug USB keyboard.
 - Tape input from a real cassette player, through a GPIO (with a comparator) or a USB sound card (Pi 4/400), with recording to .TZX (Alt+G).
 - Real Spectrum keyboard and two Atari joysticks through GPIO, with pastbytes' wiring for ZXBaremulator: 48K, Spectrum+, 128 and grey +2 keyboards (8 × 5) or the +2A/+2B/+3 one (13 × 11), chosen with `gpiokbd=` (see below).
-- Kempston, Fuller, Sinclair 1/2, Cursor/AGF/Protek and QAOPSpaceM joysticks, used with USB gamepads or the keyboard's cursor keys.
+- Kempston, Fuller, Sinclair 1/2, Cursor/AGF/Protek and QAOPSpaceM joysticks, used with USB gamepads or the keyboard's cursor keys. Kempston is decoded by A5 only, like the original interface, so it also works with games that do not read port 0x1F (Las Tres Luces de Glaurung, Silent Shadow).
 - Hot-plug USB gamepads (up to 4):
   - with a known mapping: PS3, PS4 DualShock, Xbox 360, Xbox One, Switch Pro and 8BitDo;
   - generic HID gamepads, including Mayflash adapters in DirectInput mode.
@@ -140,6 +140,8 @@ You need both Arm GNU Toolchains (tested with 14.2): `arm-none-eabi` for the 32-
 ./build.sh 3-64         # a single one
 ./build.sh "1 3-64 5"   # several
 ```
+
+**On GitHub** (`.github/workflows/build.yml`) it builds by itself: on every push to `main` and on pull requests it runs the PC tests, builds the seven kernels and leaves the SD card as a zip in the *Actions* tab (*Artifacts* of each run). It can also be started by hand (*Actions → Build → Run workflow*). When a `vX.YY` tag is pushed it also creates a draft release with that zip: you only have to paste the notes and publish it.
 
 The script downloads Circle and the Raspberry Pi firmware, builds the Circle libraries for each target (with multi-core support on the Pi 2, 3 and 4) and generates these kernels:
 

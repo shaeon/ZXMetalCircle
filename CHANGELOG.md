@@ -8,6 +8,9 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Cambiado**: el joystick Kempston se decodifica solo por A5 = 0 (con A0 = 1; con A0 = 0 gana la ULA), como el interfaz original y el core zxp3 de Kyp. Gracias a José Luis Sánchez, que lo propuso. Hay juegos españoles que no leen el puerto 0x1F: Las Tres Luces de Glaurung lee el 0xDF (que ya aceptábamos, como JSpeccy y ESPectrum) y Silent Shadow lee el 0xD3 (`IN A,(0D3h)`), con A6 y A7 a 1. Con A5 = A6 = A7 = 0, como Fuse y MAME, a Silent Shadow no le funcionaba el joystick. Prueba nueva: `test/host/kempston_ports_test.cpp`.
+- **Nuevo**: compilación en GitHub (`.github/workflows/build.yml`). En cada push a `main`, en los pull requests y a mano: pruebas en el PC, los siete kernels y la SD como zip descargable. Con una etiqueta `vX.YY`, además, un borrador de release con el zip. Probado en un Ubuntu 24.04 con los mismos pasos: las cinco pruebas pasan y `build.sh` compila los siete kernels con el Arm GNU Toolchain 14.2 descargado.
+- **Corregido**: la prueba del controlador del +3 (`fdc_test`) grababa su resultado en una carpeta de `/tmp` que solo existía en el entorno de desarrollo; en GitHub fallaba. Ahora graba en la carpeta de trabajo.
 - **Nuevo**: `GPIO.md`, con todos los pines GPIO que usa el emulador (teclado 48K/128 y +2A/+3, pulsadores, sonido PWM, casete real, puerto serie), una tabla por pines, y qué se quita o cambia cuando dos opciones comparten un pin. Enlazado desde los README.
 - **Cambiado**: en la configuración, "Sonido por GPIO12" sale en gris también con el teclado del +2A/+3 (que usa el GPIO12 como fila) y en las Pi 4, 400 y 5 (donde no se usa). Antes solo se ponía en gris si la salida de sonido no era el jack.
 

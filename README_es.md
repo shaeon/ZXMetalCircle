@@ -118,7 +118,7 @@ Hecho:
 - Teclado USB con conexión en caliente.
 - Entrada de cinta desde un casete real, por un GPIO (con un comparador) o por una tarjeta de sonido USB (Pi 4/400), con grabación a .TZX (Alt+G).
 - Teclado real de Spectrum y dos joysticks Atari por GPIO, con el montaje de pastbytes para ZXBaremulator: teclados de 48K, Spectrum+, 128 y +2 gris (8 × 5) o del +2A/+2B/+3 (13 × 11), elegido con `gpiokbd=` (ver más abajo).
-- Joysticks Kempston, Fuller, Sinclair 1/2, Cursor/AGF/Protek y QAOPSpaceM, manejados con mandos USB o con los cursores del teclado.
+- Joysticks Kempston, Fuller, Sinclair 1/2, Cursor/AGF/Protek y QAOPSpaceM, manejados con mandos USB o con los cursores del teclado. El Kempston se decodifica solo por A5, como el interfaz original, así que funciona también con los juegos que no leen el puerto 0x1F (Las Tres Luces de Glaurung, Silent Shadow).
 - Mandos USB con conexión en caliente (hasta 4):
   - con mapeo conocido: PS3, PS4 DualShock, Xbox 360, Xbox One, Switch Pro y 8BitDo;
   - mandos HID genéricos, incluidos los adaptadores Mayflash en modo DirectInput.
@@ -148,6 +148,8 @@ Hacen falta los dos toolchains de la Arm GNU Toolchain (probado con la 14.2): `a
 ./build.sh 3-64         # solo uno
 ./build.sh "1 3-64 5"   # varios
 ```
+
+**En GitHub** (`.github/workflows/build.yml`) se compila solo: en cada cambio subido a `main` y en los pull requests pasa las pruebas en el PC, compila los siete kernels y deja la SD como zip en la pestaña *Actions* (apartado *Artifacts* de cada ejecución). También se puede lanzar a mano (*Actions → Build → Run workflow*). Al subir una etiqueta `vX.YY` crea además un borrador de release con ese zip: solo falta pegar las notas y publicarlo.
 
 El script descarga Circle y el firmware de la Raspberry, compila las librerías de Circle para cada objetivo y genera estos kernels:
 
