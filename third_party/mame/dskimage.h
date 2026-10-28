@@ -60,6 +60,7 @@ public:
 
 	bool Load (const u8 *pData, unsigned nSize);
 	bool CreateBlank3 (void);		// disco del +3 formateado (40 pistas, 9x512, una cara)
+	bool CreateBlank720 (void);		// 3,5" de 720K para +3DOS (80 pistas, dos caras, 9x512)
 
 	// Guarda en formato extendido. Devuelve el tamaño (0 si no cabe).
 	unsigned Save (u8 *pBuffer, unsigned nBufferSize) const;

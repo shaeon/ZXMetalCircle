@@ -41,7 +41,8 @@ public:
 
 	// Discos: unidad 0 = A:, 1 = B:
 	boolean InsertDSK (unsigned nUnit, const u8 *pData, unsigned nSize);
-	boolean InsertBlank (unsigned nUnit);
+	boolean InsertBlank (unsigned nUnit, boolean b720K = FALSE);	// FALSE: 3" 180K; TRUE: 3,5" 720K
+	boolean Is35 (unsigned nUnit) const;	// la unidad es de 3,5" (doble cara, 80 pistas)
 	void Eject (unsigned nUnit);
 	boolean HasDisk (unsigned nUnit) const;
 	boolean IsModified (unsigned nUnit);
@@ -52,6 +53,7 @@ public:
 	boolean IsMotorOn (void) const	{ return m_bMotor; }
 
 private:
+	void SetDriveType (unsigned nUnit, const CDskImage *pDisk);
 	void AdvanceTo (u64 nTstates, unsigned nClock);
 	static void SelectUnit (void *pThis, u8 nData);
 

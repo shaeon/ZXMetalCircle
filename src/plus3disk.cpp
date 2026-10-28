@@ -152,11 +152,12 @@ boolean CPlus3Disk::InsertDSK (unsigned nUnit, const u8 *pData, unsigned nSize)
 
 	Eject (nUnit);
 	m_pDisk[nUnit] = pDisk;
+	SetDriveType (nUnit, pDisk);
 	m_pDrive[nUnit]->insert (pDisk);
 	return TRUE;
 }
 
-boolean CPlus3Disk::InsertBlank (unsigned nUnit)
+boolean CPlus3Disk::InsertBlank (unsigned nUnit, boolean b720K)
 {
 	if (nUnit > 1)
 	{
@@ -164,7 +165,7 @@ boolean CPlus3Disk::InsertBlank (unsigned nUnit)
 	}
 
 	CDskImage *pDisk = new CDskImage;
-	if (pDisk == 0 || !pDisk->CreateBlank3 ())
+	if (pDisk == 0 || !(b720K ? pDisk->CreateBlank720 () : pDisk->CreateBlank3 ()))
 	{
 		delete pDisk;
 		return FALSE;
@@ -172,8 +173,25 @@ boolean CPlus3Disk::InsertBlank (unsigned nUnit)
 
 	Eject (nUnit);
 	m_pDisk[nUnit] = pDisk;
+	SetDriveType (nUnit, pDisk);
 	m_pDrive[nUnit]->insert (pDisk);
 	return TRUE;
+}
+
+// La unidad se adapta al disco: con más de 44 pistas o dos caras (720K) es una
+// de 3,5" de 80 pistas y doble cara, como las que se ponían en el +3 para esos
+// discos; si no, la de 3" de una cara del +3. +3DOS lo mira en ST3 (bit "dos
+// caras") al leer la especificación del disco; antes los discos de 720K daban
+// "disk unsuitable" porque las dos unidades eran siempre de 3".
+void CPlus3Disk::SetDriveType (unsigned nUnit, const CDskImage *pDisk)
+{
+	boolean b35 = pDisk->GetSides () > 1 || pDisk->GetTracks () > 44;
+	m_pDrive[nUnit]->set_geometry (b35 ? 84 : 42, b35);
+}
+
+boolean CPlus3Disk::Is35 (unsigned nUnit) const
+{
+	return nUnit <= 1 && m_pDrive[nUnit]->is_double_sided ();
 }
 
 void CPlus3Disk::Eject (unsigned nUnit)

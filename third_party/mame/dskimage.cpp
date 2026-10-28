@@ -304,6 +304,49 @@ bool CDskImage::CreateBlank3 (void)
 	return true;
 }
 
+// Disco de 3,5" de 720K formateado para +3DOS: 80 pistas, dos caras, 9
+// sectores de 512 numerados del 1 al 9 y relleno E5, con la especificación
+// del disco en el primer sector (tipo 3: doble cara, 80 pistas, 9 x 512,
+// bloques de 2K; la misma que dejan las herramientas de PC, como Cronomantic)
+bool CDskImage::CreateBlank720 (void)
+{
+	Clear ();
+	m_nTracks = 80;
+	m_nSides = 2;
+
+	for (int t = 0; t < 80; t++)
+	{
+		for (int h = 0; h < 2; h++)
+		{
+			TDskTrack &T = m_Track[t][h];
+			T.bPresent = true;
+			T.nGap3 = 0x52;
+			T.nFiller = 0xE5;
+			T.nSectors = 9;
+			for (int j = 0; j < 9; j++)
+			{
+				TDskSector &S = T.Sector[j];
+				S.C = t;
+				S.H = h;
+				S.R = j + 1;
+				S.N = 2;
+				S.ST1 = S.ST2 = 0;
+				S.nLength = 512;
+				S.pData = new u8[512];
+				if (S.pData == 0)
+				{
+					return false;
+				}
+				memset (S.pData, 0xE5, 512);
+			}
+		}
+	}
+
+	static const u8 Spec[] = {0x03, 0x81, 0x50, 0x09, 0x02, 0x02, 0x04, 0x04, 0x2A, 0x52};
+	memcpy (m_Track[0][0].Sector[0].pData, Spec, sizeof Spec);
+	return true;
+}
+
 //------------------------------------------------------------------------------
 // MFM
 

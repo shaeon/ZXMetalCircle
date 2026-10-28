@@ -182,6 +182,8 @@ CKernel::CKernel (void)
 	m_bRebootChoice = FALSE;
 	m_bModelChoice = FALSE;
 	m_SuggestedModel = Model48K;
+	m_bDiskChoice = FALSE;
+	m_bNewDisk720 = FALSE;
 #ifdef ARM_ALLOW_MULTI_CORE
 	m_pVideoCore = 0;
 #endif
@@ -2275,9 +2277,15 @@ void CKernel::UpdateUnitLines (void)
 	for (unsigned i = 0; i < 2; i++)
 	{
 		const char *pName = "";
+		CString Line;
 		if (pDisk->HasDisk (i))
 		{
 			pName = m_DSKPath[i][0] != '\0' ? m_DSKPath[i] : T ("disco nuevo");
+			if (pDisk->Is35 (i))
+			{
+				Line.Format ("%s%s", pName, T (" (unidad de 3,5\")"));
+				pName = Line;
+			}
 		}
 		m_Menu.SetUnitLine (UNIT_DISK_A + i, pName);
 	}
@@ -2933,7 +2941,7 @@ void CKernel::InsertDisk (const char *pPath, int nForceUnit)
 		SetModel (ModelPlus3);
 	}
 
-	boolean bOK = pPath != 0 ? pDisk->InsertDSK (nUnit, m_pWork, nSize) : pDisk->InsertBlank (nUnit);
+	boolean bOK = pPath != 0 ? pDisk->InsertDSK (nUnit, m_pWork, nSize) : pDisk->InsertBlank (nUnit, m_bNewDisk720);
 	if (!bOK)
 	{
 		ShowMessage (pPath != 0 ? T ("El fichero no es un disco .DSK válido") : T ("No se pudo crear el disco"));
@@ -2959,7 +2967,8 @@ void CKernel::InsertDisk (const char *pPath, int nForceUnit)
 			pName = p + 1;
 		}
 	}
-	Message.Format ("%s%s: %s", bChangeModel ? "Spectrum +3  " : "", nUnit == 0 ? "A" : "B", pName);
+	Message.Format ("%s%s: %s%s", bChangeModel ? "Spectrum +3  " : "", nUnit == 0 ? "A" : "B", pName,
+			pDisk->Is35 (nUnit) ? T (" (unidad de 3,5\")") : "");
 	ShowMessage (Message);
 }
 
@@ -3881,6 +3890,17 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			EjectUnit (m_Menu.GetSelectedUnit ());
 			UpdateUnitLines ();
 		}
+		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bDiskChoice)
+		{
+			m_bDiskChoice = FALSE;
+			if (Result == MenuResultChoice)
+			{
+				m_bNewDisk720 = m_Menu.GetChoice () == 1;
+				m_Menu.Close ();
+				InsertDisk (0);
+				m_bNewDisk720 = FALSE;
+			}
+		}
 		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bModelChoice)
 		{
 			// la cinta no funciona en este modelo (bloque 0x33 del TZX)
@@ -4140,7 +4160,17 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		break;
 
 	case ActionBlankDisk:
-		InsertDisk (0);
+		// disco nuevo: se pregunta el formato (3" de siempre o 3,5" de 720K)
+		if (!m_Menu.IsOpen ())
+		{
+			memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+			OpenMenu ();
+			m_Keyboard.SetCaptured (TRUE);
+		}
+		m_bDiskChoice = TRUE;
+		m_Menu.OpenChoice (T ("Disco nuevo del +3"));
+		m_Menu.SetChoiceItem (0, T ("180K (3\", una cara, 40 pistas)"));
+		m_Menu.SetChoiceItem (1, T ("720K (3,5\", dos caras, 80 pistas)"));
 		break;
 
 	case ActionEjectDisks:

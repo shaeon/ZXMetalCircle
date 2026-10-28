@@ -258,6 +258,8 @@ private:
 	unsigned		m_nSnetSaveFrames;	// cuadros para guardar la flash (0 = nada)
 	unsigned		m_nRTCLast;		// segundo de la última hora dada a esxDOS
 	boolean			m_bModelChoice;		// pregunta: la cinta no va en este modelo
+	boolean			m_bDiskChoice;		// pregunta: formato del disco nuevo
+	boolean			m_bNewDisk720;		// el disco nuevo es de 720K
 	TModel			m_SuggestedModel;
 	boolean			m_bRebootChoice;	// la lista abierta es la del reinicio
 	char			m_OptionWarning[44];	// aviso de cmdline.txt al arrancar

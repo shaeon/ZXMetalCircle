@@ -70,6 +70,20 @@ public:
 	int trk00_r () const		{ return m_nCyl == 0 ? 0 : 1; }
 	int wpt_r () const;			// 1 = protegido contra escritura
 	int twosid_r () const		{ return m_bDoubleSided ? 0 : 1; }
+
+	// Tipo de unidad: 3" de una cara y ~40 pistas (la del +3) o 3,5" de doble
+	// cara y 80 pistas (la que se ponía para los discos de 720K). Se elige al
+	// meter el disco, según su geometría (CPlus3Disk).
+	void set_geometry (int nTracks, bool bDoubleSided)
+	{
+		m_nMaxTracks = nTracks;
+		m_bDoubleSided = bDoubleSided;
+		if (!bDoubleSided) m_nSide = 0;
+		if (m_nCyl >= nTracks) m_nCyl = nTracks - 1;
+		m_bLastValid = false;
+		m_bLastNever = false;
+	}
+	bool is_double_sided (void) const	{ return m_bDoubleSided; }
 	int dskchg_r () const		{ return m_pImage != 0 ? 1 : 0; }
 
 	// Flujo magnético
