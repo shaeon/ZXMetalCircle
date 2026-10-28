@@ -816,6 +816,8 @@ Decoding is partial (A0, A5, A8 and A10), as in Fuse.
 
 ## Real keyboard and joysticks through GPIO
 
+The full GPIO pin table (keyboard, sound, cassette, serial port) and which options share pins is in [GPIO.md](GPIO.md) (in Spanish).
+
 It is compatible with Jorge Castillo's (pastbytes) "keyboard and 2 Atari-compatible joysticks" wiring for ZXBaremulator: https://pastbytes.com/zxb/. Two keyboard types are supported, chosen with `gpiokbd=`:
 
 | `gpiokbd=` | Keyboards | Matrix |

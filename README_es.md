@@ -827,6 +827,8 @@ La decodificación es parcial (A0, A5, A8 y A10), como en Fuse.
 
 ## Teclado real y joysticks por GPIO
 
+La tabla completa de pines GPIO (teclado, sonido, casete, puerto serie) y qué opciones comparten pines está en [GPIO.md](GPIO.md).
+
 Es compatible con el montaje "teclado y 2 joysticks compatibles Atari" de Jorge Castillo (pastbytes) para ZXBaremulator: https://pastbytes.com/zxb/. Admite dos tipos de teclado, que se eligen con `gpiokbd=`:
 
 | `gpiokbd=` | Teclados | Matriz |
