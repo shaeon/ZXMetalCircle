@@ -1,0 +1,105 @@
+# Compila ZXMetalCircle en GitHub: pruebas en el PC, los siete kernels y la SD.
+#
+# - En cada push a main, en los pull requests y a mano (Actions > Build > Run
+#   workflow): deja la SD en un zip descargable en "Artifacts" del run.
+# - Al subir una etiqueta vX.YY (git tag -a v1.02 ...; git push origin v1.02):
+#   además crea un BORRADOR de release con ese zip; solo falta pegar las notas
+#   y publicarlo.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # para crear el borrador de release con las etiquetas
+
+env:
+  ARM_TOOLCHAIN: "14.2.rel1"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Paquetes
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends mtools dosfstools zip
+
+      - name: Arm GNU Toolchain (caché)
+        id: toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/arm-toolchain
+          key: arm-gnu-toolchain-${{ env.ARM_TOOLCHAIN }}
+
+      - name: Descargar el Arm GNU Toolchain
+        if: steps.toolchain.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/arm-toolchain
+          cd ~/arm-toolchain
+          base="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_TOOLCHAIN}/binrel"
+          for t in arm-none-eabi aarch64-none-elf; do
+            wget -q "$base/arm-gnu-toolchain-${ARM_TOOLCHAIN}-x86_64-$t.tar.xz"
+            tar xf "arm-gnu-toolchain-${ARM_TOOLCHAIN}-x86_64-$t.tar.xz"
+            rm "arm-gnu-toolchain-${ARM_TOOLCHAIN}-x86_64-$t.tar.xz"
+          done
+
+      - name: Añadir el toolchain al PATH
+        run: |
+          for d in ~/arm-toolchain/*/bin; do echo "$d" >> "$GITHUB_PATH"; done
+
+      - name: Pruebas en el PC
+        working-directory: test/host
+        run: |
+          sed 's#"roms/#"../../roms/#' ../../src/roms.S > roms_host.S
+          S=../../src; M=../../third_party/mame
+          CORE="$S/spectrum.cpp $S/ay8912.cpp $S/audiomixer.cpp $S/tape.cpp $S/zxkeyboard.cpp \
+                $S/interface1.cpp $S/plus3disk.cpp $S/sdcard.cpp $S/spectranet.cpp $S/earinput.cpp \
+                $S/zxnet.cpp $M/*.cpp $M/compat/*.cpp $S/inflate.cpp ../../third_party/z80cpp/z80.cpp"
+          FLAGS="-O2 -std=c++17 -DWITH_BREAKPOINT_SUPPORT -I. -I$S -I../../third_party/z80cpp -I$M/compat -I$M"
+          g++ $FLAGS -o kempston_ports_test kempston_ports_test.cpp $CORE roms_host.S
+          ./kempston_ports_test
+          g++ -O2 -std=c++17 -I. -I$S -o joystick_test joystick_test.cpp $S/zxkeyboard.cpp
+          ./joystick_test
+          g++ -O2 -std=c++17 -I. -I$S -o recreated_test recreated_test.cpp $S/recreated.cpp
+          ./recreated_test
+          g++ -O2 -std=c++17 -I. -I$S -I$M/compat -I$M -o fdc_test plus3/fdc_test.cpp $M/*.cpp $M/compat/*.cpp
+          ./fdc_test
+          g++ -O2 -std=c++17 -I. -I$S -I$M/compat -I$M -o prot_test plus3/prot_test.cpp $M/*.cpp $M/compat/*.cpp
+          ./prot_test
+
+      - name: Compilar los kernels y la SD
+        run: ./build.sh
+
+      - name: Versión
+        id: version
+        run: |
+          v=$(sed -n 's/.*ZXCIRCLE_VERSION[[:space:]]*"\(.*\)".*/\1/p' src/version.h)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Versión $v"
+          ls -la sdcard/kernel*.img
+
+      - name: Zip de la SD
+        run: |
+          cd sdcard
+          zip -qr -X "../ZXMetalCircle-${{ steps.version.outputs.version }}-sd.zip" .
+
+      - name: Subir el zip (Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZXMetalCircle-${{ steps.version.outputs.version }}-sd
+          path: ZXMetalCircle-${{ steps.version.outputs.version }}-sd.zip
+
+      - name: Borrador de release (solo con etiquetas vX.YY)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: ZXMetalCircle ${{ steps.version.outputs.version }}
+          files: ZXMetalCircle-${{ steps.version.outputs.version }}-sd.zip

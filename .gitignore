@@ -17,6 +17,8 @@ test/host/**/*.ppm
 test/host/accel/accel_test
 test/host/harness
 test/host/*_test
+test/host/fdc_out.dsk
+test/host/kempston_ports_test
 
 # ROMs del Multiface: no tenemos permiso para distribuirlas (ver README)
 roms/mf*.rom

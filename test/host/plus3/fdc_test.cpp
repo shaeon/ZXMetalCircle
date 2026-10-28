@@ -34,5 +34,5 @@ int main(){
  CDskImage img2; chk("recargar DSK", img2.Load(buf,n)); fl.insert(&img2); fl.mon_w(0); adv(500000);
  cmd({0x0F,0x00,0x05}); adv(300000); cmd({0x08}); results();
  cmd({0x46,0x00,0x05,0x00,0x03,0x02,0x03,0x2A,0xFF}); d=readexec(512); r=results(); chk("dato persistente tras guardar y recargar", d==w);
- FILE*o=fopen("/tmp/fdctest/out.dsk","wb"); fwrite(buf,1,n,o); fclose(o);
+ FILE*o=fopen("fdc_out.dsk","wb"); if(o){ fwrite(buf,1,n,o); fclose(o);}
  printf(fails?"%d fallos\n":"todo OK\n",fails); return fails; }
