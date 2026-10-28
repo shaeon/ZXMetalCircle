@@ -476,10 +476,17 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	{
 		return Is ("savetrap", "1");
 	}
-	// sonido por el GPIO12: solo con la salida PWM
+	// sonido por el GPIO12: solo con la salida PWM, en las Pi 1 a 3 (en la 4 el
+	// PWM del jack no llega al conector; en la 5 el PWM ya sale por el GPIO12 y
+	// el GPIO13) y sin el teclado del +2A/+3, que usa el GPIO12 como fila. Ver
+	// GPIO.md.
 	if (strcmp (pKey, "gpioaudio") == 0)
 	{
-		return Is ("sounddev", "sndpwm");
+#if RASPPI <= 3
+		return Is ("sounddev", "sndpwm") && !Is ("gpiokbd", "plus3");
+#else
+		return FALSE;
+#endif
 	}
 	// la imagen en el núcleo 1: solo en las Pi con varios núcleos (2, 3 y 4)
 	if (strcmp (pKey, "multicore") == 0)

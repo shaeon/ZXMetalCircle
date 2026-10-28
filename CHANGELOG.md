@@ -6,6 +6,11 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## Sin publicar
+
+- **Nuevo**: `GPIO.md`, con todos los pines GPIO que usa el emulador (teclado 48K/128 y +2A/+3, pulsadores, sonido PWM, casete real, puerto serie), una tabla por pines, y qué se quita o cambia cuando dos opciones comparten un pin. Enlazado desde los README.
+- **Cambiado**: en la configuración, "Sonido por GPIO12" sale en gris también con el teclado del +2A/+3 (que usa el GPIO12 como fila) y en las Pi 4, 400 y 5 (donde no se usa). Antes solo se ponía en gris si la salida de sonido no era el jack.
+
 ## 1.01
 
 - **Nuevo**: discos de 720K en el +3 (reportado por Ximo). Las dos unidades eran siempre la de 3" del +3 (una cara, ~40 pistas), y +3DOS respondía "disk unsuitable" con los DSK de 720K (80 pistas, dos caras, como los que crea Cronomantic). Ahora cada unidad se adapta al disco que se mete: con dos caras o más de 44 pistas pasa a ser una de 3,5" de 80 pistas y doble cara (+3DOS lo ve en el bit "dos caras" de ST3), y si no, la de 3" de siempre. Alt+F (disco nuevo) pregunta el formato: 180K (3") o 720K (3,5", ya formateado para +3DOS: 702K libres). La pantalla de unidades y el aviso al meter el disco dicen "(unidad de 3,5")".
