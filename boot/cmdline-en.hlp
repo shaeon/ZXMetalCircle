@@ -191,6 +191,11 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
 
  scanlines=0      TV scanlines (Alt+S):  1 = yes,  0 = no
 
+ pureblack=0      Palette: the 16K and 48K use JSpeccy's palette measured
+                  from the ULA (its black has a touch of green, #060800);
+                  the other models the usual one with pure black. 1 = pure
+                  black on the 16K and 48K too
+
  multicore=1      Pi 2, 3, 4 and Zero 2 W: the image scaling runs on core 1
                   (0 = everything on core 0)
 

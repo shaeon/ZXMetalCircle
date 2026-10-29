@@ -205,6 +205,7 @@ All the options go on a single line:
 | `tapesound=` | `1` (loading is heard), `0` (silent) | `1` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (on), `0` | `0` |
+| `pureblack=` | `1` (pure black also in the 16K/48K palette), `0` | `0` |
 | `multicore=` | `1` (image scaling on core 1, Pi 2/3/4), `0` | `1` |
 | `issue=` | `3` (Issue 3), `2` (Issue 2, only affects the 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |

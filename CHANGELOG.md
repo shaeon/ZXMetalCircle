@@ -6,6 +6,11 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## Sin publicar
+
+- **Cambiado**: la paleta depende del modelo, como en JSpeccy. El 16K y el 48K usan la paleta calculada a partir de los voltajes YUV de la ULA del 48K (la de JSpeccy, como hasta ahora); el 128K, +2, +2A, +3 y +3e, la de siempre (negro puro, 0xC0 y 0xFF; la de Fuse y MAME es casi igual). Antes se usaba la del 48K para todos, y su negro (#060800, que en pantalla queda #000800) no era negro del todo: un usuario lo midió con una capturadora, #000A00 en la Pi frente a #000000 en el Spectrum real.
+- **Nuevo**: opción "Negro puro (paleta 48K)" (`pureblack=1`, página "Imagen y sonido" de la configuración): negro #000000 también en la paleta del 16K y el 48K. Se aplica al momento y sale en gris con los demás modelos, que ya lo tienen. Prueba nueva: `test/host/palette_test.cpp`.
+
 ## 1.02
 
 - **Cambiado**: el joystick Kempston se decodifica solo por A5 = 0 (con A0 = 1; con A0 = 0 gana la ULA), como el interfaz original y el core zxp3 de Kyp. Gracias a José Luis Sánchez, que lo propuso. Hay juegos españoles que no leen el puerto 0x1F: Las Tres Luces de Glaurung lee el 0xDF (que ya aceptábamos, como JSpeccy y ESPectrum) y Silent Shadow lee el 0xD3 (`IN A,(0D3h)`), con A6 y A7 a 1. Con A5 = A6 = A7 = 0, como Fuse y MAME, a Silent Shadow no le funcionaba el joystick. Prueba nueva: `test/host/kempston_ports_test.cpp`.

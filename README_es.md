@@ -213,6 +213,7 @@ Todas las opciones van en una sola línea:
 | `tapesound=` | `1` (se oye la carga), `0` (silencio) | `1` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (activadas), `0` | `0` |
+| `pureblack=` | `1` (negro puro también en la paleta del 16K/48K), `0` | `0` |
 | `multicore=` | `1` (ampliación de la imagen en el núcleo 1, Pi 2/3/4), `0` | `1` |
 | `issue=` | `3` (Issue 3), `2` (Issue 2, solo afecta al 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |

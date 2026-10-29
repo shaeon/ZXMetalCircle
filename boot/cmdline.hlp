@@ -187,6 +187,11 @@ defecto.
 
  scanlines=0      Lineas de barrido de televisor (Alt+S):  1 = si,  0 = no
 
+ pureblack=0      Paleta: el 16K y el 48K usan la de JSpeccy medida de la ULA
+                  (su negro tiene un toque de verde, #060800); los demas
+                  modelos, la de siempre con negro puro. 1 = negro puro
+                  tambien en el 16K y el 48K
+
 ------------------------------------------------------------------------------
  PERIFERICOS
 ------------------------------------------------------------------------------
