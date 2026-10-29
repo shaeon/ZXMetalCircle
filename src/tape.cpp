@@ -1731,9 +1731,19 @@ unsigned CTape::Step (void)
 		case StatePause:
 			if (m_nPauseMs == 0)
 			{
-				m_nBlock++;
-				m_State = StateNextBlock;
-				continue;
+				if (m_nBlock + 1 < m_nBlocks)
+				{
+					m_nBlock++;
+					m_State = StateNextBlock;
+					continue;
+				}
+
+				// Último bloque de la cinta sin pausa: sin el flanco final, el
+				// último pulso no se cerraba nunca y el cargador no terminaba
+				// de leer el último bit. Como JSpeccy y Fuse, flanco y 1 ms.
+				// Astro Marine Corps (Dinamic) en 128K: su último bloque tiene
+				// pausa 0 y daba "NO CARGA" (en 48K no lo necesita).
+				m_nPauseMs = 1;
 			}
 			// Según la especificación TZX: flanco final, 1 ms de nivel opuesto
 			// y el resto de la pausa en nivel bajo
