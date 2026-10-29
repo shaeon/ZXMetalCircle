@@ -6,7 +6,7 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
-## Sin publicar
+## 1.03
 
 - **Cambiado**: la paleta depende del modelo, como en JSpeccy. El 16K y el 48K usan la paleta calculada a partir de los voltajes YUV de la ULA del 48K (la de JSpeccy, como hasta ahora); el 128K, +2, +2A, +3 y +3e, la de siempre (negro puro, 0xC0 y 0xFF; la de Fuse y MAME es casi igual). Antes se usaba la del 48K para todos, y su negro (#060800, que en pantalla queda #000800) no era negro del todo: un usuario lo midió con una capturadora, #000A00 en la Pi frente a #000000 en el Spectrum real.
 - **Nuevo**: opción "Negro puro (paleta 48K)" (`pureblack=1`, página "Imagen y sonido" de la configuración): negro #000000 también en la paleta del 16K y el 48K. Se aplica al momento y sale en gris con los demás modelos, que ya lo tienen. Prueba nueva: `test/host/palette_test.cpp`.
