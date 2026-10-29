@@ -69,7 +69,7 @@ Este proyecto se ofrece **"tal cual", sin garantía de ningún tipo**, expresa o
 
 ZX Spectrum y Sinclair son marcas de sus respectivos propietarios; Raspberry Pi es una marca de Raspberry Pi Ltd. Este proyecto no está afiliado a ellos ni cuenta con su respaldo.
 
-## Estado (versión 1.03)
+## Estado (versión 1.04)
 
 Hecho:
 

@@ -6,7 +6,7 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
-## Sin publicar
+## 1.04
 
 - **Corregido**: The Running Man (+3, Grandslam, convertido por Emerald Software) se quedaba con la pantalla en negro. Su cargador apaga el motor de la disquetera al cambiar la paginación (escribe 07 y 04 en 0x1FFD) y carga todo el juego sin volver a encenderlo; el disco seguía girando solo 300 ms tras apagar el motor (como Fuse) y la primera lectura se quedaba esperando para siempre. Ahora, con el motor apagado, el disco sigue girando mientras se use el controlador y se para a los 2 s del último acceso (como mínimo, a los 300 ms de siempre). +3DOS apaga el motor cuando ya ha terminado, así que con él no cambia nada.
 - Probado en el PC: The Running Man carga ("It's Showtime!" y la introducción); sin cambios en Coin-Op Hits, Tomahawk, Ghouls'n Ghosts, The Deep, Dragon Ninja, Fernandez Must Die y un disco de 720K, ni en las pruebas del controlador y de protecciones.
