@@ -1,5 +1,5 @@
 //
-// video.h - Salida de vídeo (framebuffer de la GPU, doble búfer), tamaño de
+// video.h - Salida de vídeo (framebuffer de la GPU, triple búfer), tamaño de
 //           borde, scanlines y utilidades de dibujo
 //
 // This program is free software: you can redistribute it and/or modify
@@ -93,6 +93,7 @@ private:
 	TPixel *m_pRowBuf;			// línea ya ampliada (en RAM normal, con caché)
 	TPixel *m_pDimBuf;			// la misma línea a la mitad de brillo
 	unsigned m_nPage;
+	unsigned	m_nPages;		// páginas del framebuffer (3, o menos si el firmware no las da)
 
 	u16 m_Palette[256];
 	const u8 *m_pFont;

@@ -8,14 +8,23 @@
 //
 #include "video.h"
 
-// Doble búfer: se dibuja en una página mientras se ve la otra y se cambia con
-// SetVirtualOffset. El firmware de la Pi 5 no cambia de página: muestra el
-// framebuffer virtual entero, con las dos páginas una encima de otra. Allí se
-// usa una sola página (puede verse algún corte de imagen).
+// Triple búfer: tres páginas que se van turnando con SetVirtualOffset. La
+// pantalla toma el cambio de página en el siguiente retrazado, así que justo
+// después de un cambio se sigue viendo la página anterior; con tres, la que se
+// dibuja nunca es ni la que se ve ni la que está a punto de verse, sin tener
+// que esperar al retrazado (que pararía la emulación). Vale mientras no haya
+// más de un cambio por barrido de la pantalla: a velocidad normal el Spectrum
+// da 50 imágenes por segundo y la pantalla 50 o 60 barridos.
+// Antes había dos páginas y se podía dibujar en la que aún se veía (cortes).
+// Si el firmware no da tres, se prueba con dos y luego con una.
+//
+// El firmware de la Pi 5 no cambia de página: muestra el framebuffer virtual
+// entero, con las páginas una encima de otra. Allí se usa una sola página
+// (puede verse algún corte de imagen).
 #if RASPPI >= 5
-	#define FB_PAGES	1
+	#define FB_MAX_PAGES	1
 #else
-	#define FB_PAGES	2
+	#define FB_MAX_PAGES	3
 #endif
 
 // La GPU escala el framebuffer a la pantalla, salvo en la Pi 5: allí el
@@ -30,6 +39,7 @@
 #include "videolayout.h"
 #include <circle/bcmpropertytags.h>
 #include <circle/util.h>
+#include <circle/logger.h>
 
 // Colores de la interfaz (después de los 16 del Spectrum)
 static const u32 UIPaletteRGB[COLOR_COUNT - 16] =
@@ -76,6 +86,7 @@ CVideo::CVideo (void)
 	m_pRowBuf (0),
 	m_pDimBuf (0),
 	m_nPage (0),
+	m_nPages (1),
 	m_pFont (0)
 {
 	m_nExtGlyphs = 0;
@@ -241,35 +252,46 @@ boolean CVideo::CreateFrameBuffer (void)
 		}
 	}
 
-	m_pFrameBuffer = new CBcmFrameBuffer (m_nFBWidth, m_nFBHeight, 16,
-					      m_nFBWidth, m_nFBHeight * FB_PAGES);
-	if (   m_pFrameBuffer == 0
-	    || !m_pFrameBuffer->Initialize ())
+	// Tres páginas; si el firmware no las da, dos, y si no, una
+	for (m_nPages = FB_MAX_PAGES; m_nPages >= 1; m_nPages--)
 	{
-		delete m_pFrameBuffer;
-		m_pFrameBuffer = 0;
-		return FALSE;
-	}
+		m_pFrameBuffer = new CBcmFrameBuffer (m_nFBWidth, m_nFBHeight, 16,
+						      m_nFBWidth, m_nFBHeight * m_nPages);
+		if (m_pFrameBuffer == 0)
+		{
+			return FALSE;
+		}
 
-	// El firmware puede dar otra cosa de la pedida (la Pi 5 limita el
-	// framebuffer): si no cuadra, mejor no dibujar fuera de él
-	if (   m_pFrameBuffer->GetWidth () != m_nFBWidth
-	    || m_pFrameBuffer->GetHeight () != m_nFBHeight
-	    || m_pFrameBuffer->GetDepth () != 16
-	    || m_pFrameBuffer->GetPitch () < m_nFBWidth * sizeof (TPixel)
-	    || m_pFrameBuffer->GetBuffer () == 0
-	    || m_pFrameBuffer->GetSize () < m_pFrameBuffer->GetPitch () * m_nFBHeight * FB_PAGES)
-	{
+		// El firmware puede dar otra cosa de la pedida (la Pi 5 limita el
+		// framebuffer): si no cuadra, mejor no dibujar fuera de él
+		if (   m_pFrameBuffer->Initialize ()
+		    && m_pFrameBuffer->GetWidth () == m_nFBWidth
+		    && m_pFrameBuffer->GetHeight () == m_nFBHeight
+		    && m_pFrameBuffer->GetDepth () == 16
+		    && m_pFrameBuffer->GetPitch () >= m_nFBWidth * sizeof (TPixel)
+		    && m_pFrameBuffer->GetBuffer () != 0
+		    && m_pFrameBuffer->GetSize () >= m_pFrameBuffer->GetPitch () * m_nFBHeight * m_nPages)
+		{
+			break;
+		}
+
 		delete m_pFrameBuffer;
 		m_pFrameBuffer = 0;
+	}
+	if (m_pFrameBuffer == 0)
+	{
 		return FALSE;
 	}
 
 	// Limpia las páginas
 	u8 *pBuffer = (u8 *) (uintptr) m_pFrameBuffer->GetBuffer ();
-	memset (pBuffer, 0, m_pFrameBuffer->GetPitch () * m_nFBHeight * FB_PAGES);
+	memset (pBuffer, 0, m_pFrameBuffer->GetPitch () * m_nFBHeight * m_nPages);
 
-	m_nPage = FB_PAGES - 1;		// se dibuja en la página que no se ve
+	// Se ve la página 0; se dibuja en la siguiente
+	m_nPage = m_nPages > 1 ? 1 : 0;
+
+	CLogger::Get ()->Write ("video", LogNotice, "Framebuffer %ux%u, %u pagina%s",
+				m_nFBWidth, m_nFBHeight, m_nPages, m_nPages > 1 ? "s" : "");
 
 	return TRUE;
 }
@@ -287,10 +309,11 @@ void CVideo::Flip (void)
 	{
 		return;
 	}
-#if FB_PAGES == 2
-	m_pFrameBuffer->SetVirtualOffset (0, m_nPage * m_nFBHeight);
-	m_nPage ^= 1;
-#endif
+	if (m_nPages > 1)
+	{
+		m_pFrameBuffer->SetVirtualOffset (0, m_nPage * m_nFBHeight);
+		m_nPage = (m_nPage + 1) % m_nPages;	// la siguiente: ni la que se ve ni la que se va a ver
+	}
 }
 
 // Copia una línea de píxeles al framebuffer. El framebuffer está en la memoria
