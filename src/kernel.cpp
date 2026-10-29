@@ -159,6 +159,7 @@ CKernel::CKernel (void)
 	m_nNextFrameTime (0)
 {
 	m_nSpeed = 1;
+	m_nLastKeyTime = 0;
 	m_nFPSStart = 0;
 	m_nFPSFrames = 0;
 	m_nFPSx100 = 0;
@@ -682,6 +683,21 @@ void CKernel::KeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned cha
 	for (unsigned i = 0; i < 6; i++)
 	{
 		s_pThis->m_LastReport[1 + i] = RawKeys[i];
+	}
+	// Teclas para el Spectrum (letras, números, ENTER, espacio, símbolos y
+	// cursores; no las de función del emulador ni con un menú abierto): ver
+	// IsTyping
+	if (!s_pThis->m_Keyboard.IsCaptured ())
+	{
+		for (unsigned i = 0; i < 6; i++)
+		{
+			u8 k = RawKeys[i];
+			if ((k >= 0x04 && k <= 0x38) || (k >= 0x4F && k <= 0x52))
+			{
+				s_pThis->m_nLastKeyTime = CTimer::GetClockTicks64 ();
+				break;
+			}
+		}
 	}
 
 	unsigned nIndex = (unsigned) (uintptr) pArg;
@@ -4350,6 +4366,11 @@ void CKernel::HandleGPIOKeyboard (void)
 		return;
 	}
 
+	if (bAnyKey && !m_Keyboard.IsCaptured ())
+	{
+		m_nLastKeyTime = CTimer::GetClockTicks64 ();		// ver IsTyping
+	}
+
 	boolean bCaptured = m_Keyboard.IsCaptured ();
 	if (!m_bExtendedMode && !bCaptured)
 	{
@@ -4562,7 +4583,7 @@ void CKernel::OutputAudio (void)
 	boolean bQueueFull =    m_pSound != 0
 			     && m_pSound->GetQueueFramesAvail () > SOUND_MAX_QUEUED_FRAMES;
 
-	if (m_pSound != 0 && !m_pSpectrum->IsTapeAccelerating () && !bQueueFull)
+	if (m_pSound != 0 && !IsAccelerating () && !bQueueFull)
 	{
 		if (m_bMonoAudio)
 		{
@@ -4590,6 +4611,33 @@ void CKernel::OutputAudio (void)
 // 128K). Antes lo marcaba la cola de audio, pero si la tarjeta o el monitor no
 // consumen el sonido al ritmo esperado (por ejemplo, un monitor DVI sin audio),
 // el emulador podía ir demasiado deprisa o demasiado despacio.
+// Juegos durante la carga (el Master Mind de Astro Marine Corps, de Dinamic):
+// en carga instantánea o rápida, o a velocidad x2 o más, mientras la cinta
+// está en marcha se emula más deprisa que el Spectrum real, y una pulsación de
+// unas décimas de segundo le duraba al juego varios segundos: escribía cada
+// número dos o más veces. Mientras se escribe (hasta 3 s después de la última
+// tecla) y la cinta está en marcha, se va a la velocidad del Spectrum real. La
+// carga instantánea sigue cargando cada bloque al momento, como JSpeccy, y sin
+// cinta en marcha la velocidad xN no cambia.
+#define TYPING_SLOWDOWN_US	3000000
+
+boolean CKernel::IsTyping (void) const
+{
+	return    m_nLastKeyTime != 0
+	       && CTimer::GetClockTicks64 () - m_nLastKeyTime < TYPING_SLOWDOWN_US
+	       && m_Tape.IsPlaying ();
+}
+
+boolean CKernel::IsAccelerating (void) const
+{
+	return m_pSpectrum->IsTapeAccelerating () && !IsTyping ();
+}
+
+unsigned CKernel::GetEffectiveSpeed (void) const
+{
+	return IsTyping () ? 1 : m_nSpeed;
+}
+
 void CKernel::WaitFrame (void)
 {
 	const TMachineTiming *T = m_pSpectrum->GetTiming ();
@@ -4626,7 +4674,7 @@ void CKernel::WaitFrame (void)
 		m_nFPSStart = nNowUs;
 		m_nFPSFrames = 0;
 	}
-	m_nFPSFrames += m_nSpeed;
+	m_nFPSFrames += GetEffectiveSpeed ();
 	if (nNowUs - m_nFPSStart >= 2000000)
 	{
 		m_nFPSx100 = (unsigned) ((u64) m_nFPSFrames * 100000000ULL / (nNowUs - m_nFPSStart));
@@ -4740,14 +4788,15 @@ TShutdownMode CKernel::Run (void)
 		}
 
 		// A velocidad xN se emulan N cuadros por cada cuadro real, sin sonido
-		for (unsigned nFrame = 0; nFrame < m_nSpeed; nFrame++)
+		unsigned nSpeed = GetEffectiveSpeed ();
+		for (unsigned nFrame = 0; nFrame < nSpeed; nFrame++)
 		{
 			// Casete real: los cambios de su señal que caen en este cuadro (solo a
 			// velocidad normal; si no, se resincroniza al volver)
 			m_EarInput.BeginFrame ();
 			if (m_pEarSource != 0)
 			{
-				if (m_nSpeed == 1 && !m_pSpectrum->IsTapeAccelerating ())
+				if (nSpeed == 1 && !IsAccelerating ())
 				{
 					const TMachineTiming *T = m_pSpectrum->GetTiming ();
 					m_pEarSource->FillFrame (&m_EarInput,
@@ -4797,7 +4846,7 @@ TShutdownMode CKernel::Run (void)
 			}
 			m_nFrames++;
 
-			if (m_nSpeed == 1)
+			if (nSpeed == 1)
 			{
 				OutputAudio ();
 			}
@@ -4807,7 +4856,7 @@ TShutdownMode CKernel::Run (void)
 			}
 		}
 
-		boolean bAccelerating = m_pSpectrum->IsTapeAccelerating ();
+		boolean bAccelerating = IsAccelerating ();
 
 		// Los cartuchos modificados se graban cuando el motor lleva al menos
 		// 2 s parado, y como mucho una vez cada 3 s: grabar cuesta (convertir

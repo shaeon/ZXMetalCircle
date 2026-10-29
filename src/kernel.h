@@ -148,6 +148,9 @@ private:
 	void UpdateStatusLines (void);
 	void OutputAudio (void);
 	void WaitFrame (void);
+	boolean IsTyping (void) const;		// tecla hace poco y cinta en marcha
+	boolean IsAccelerating (void) const;	// carga acelerada, salvo si se escribe
+	unsigned GetEffectiveSpeed (void) const;	// m_nSpeed, o 1 si se escribe con la cinta en marcha
 	void SetModel (TModel Model);
 	void HandleGPIOKeyboard (void);
 	void LoadMultifaceROMs (void);
@@ -275,6 +278,7 @@ private:
 	unsigned		m_nFrames;
 	u64			m_nNextFrameTime;	// en nanosegundos
 	unsigned		m_nSpeed;		// cuadros emulados por cuadro real (1 = normal)
+	volatile u64		m_nLastKeyTime;		// última tecla (µs), para IsTyping
 	u64			m_nFPSStart;		// medida de la velocidad real
 	unsigned		m_nFPSFrames;
 	unsigned		m_nFPSx100;		// cuadros por segundo x 100
