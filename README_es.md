@@ -177,6 +177,10 @@ El mismo código se compila en 32 bits (AArch32) y en 64 bits (AArch64). `config
   - **Sonido por el HDMI0** (el conector junto a la alimentación): el sonido HDMI de Circle no funciona por el HDMI1. Sin jack, el PWM sale por el GPIO12 y el GPIO13, que son líneas del teclado por GPIO, así que solo se usa con `gpiokbd=0` (antes, por el HDMI1, el PWM hacía que el teclado pareciera pulsar teclas solo).
   - Sin varios núcleos todavía: la imagen se amplía en el núcleo 0.
 
+**Imagen sin cortes**: en las Pi 1 a 4 la imagen se dibuja con triple búfer (tres páginas que se turnan), así que nunca se dibuja en la página que se está viendo ni en la que está a punto de verse, y no se ven cortes a velocidad normal. A velocidad x2 o más puede verse alguno. En la Pi 5 hay una sola página (ver arriba).
+
+**Scroll suave (opcional)**: el Spectrum da 50 imágenes por segundo y muchas pantallas van a 60 Hz, así que unas imágenes duran más que otras y el scroll da tirones. Si tu pantalla admite 50 Hz, se puede forzar en `config.txt`, por ejemplo `hdmi_group=1` y `hdmi_mode=31` (1080p a 50 Hz) o `hdmi_mode=19` (720p a 50 Hz).
+
 Para el Spectrum no hay diferencia de funciones entre las dos versiones. En 64 bits el código ocupa algo más y el compilador tiene más registros con los que optimizar el Z80; la diferencia de velocidad real está por medir en una Pi con Alt+D.
 
 **Probar en QEMU**: `QEMU=1 ./build.sh "1 3-64"` deja en `qemu/` kernels compilados con `ZX_QEMU` (sin sonido, porque QEMU no emula el HDMI ni el PWM y Circle se cuelga al intentarlo, y con IP fija para la red de usuario de QEMU). La Pi Zero se prueba en 32 bits (`qemu-system-arm -M raspi0 -bios qemu/kernel.img`, sin opciones) y la Pi 3 en 64 bits (`qemu-system-aarch64 -M raspi3b -kernel qemu/kernel8.img`, con las opciones de `cmdline.txt` en `-append`). Esos kernels no van a la SD.
@@ -1043,7 +1047,7 @@ third_party/mame/ uPD765 y PLL de MAME, capa de compatibilidad, imágenes .DSK
 src/zxkeyboard.*  teclado USB -> matriz del Spectrum y joysticks
 src/recreated.*   teclado Recreated ZX Spectrum (capa de juego, por VID:PID o detección)
 src/gpiokeyboard.* teclado real y joysticks por GPIO
-src/video.*       framebuffer de la GPU con doble búfer y dibujo de texto
+src/video.*       framebuffer de la GPU con triple búfer y dibujo de texto
 src/palette.h     colores del Spectrum y de ULAplus (RGB565)
 src/menu.*        navegador de ficheros, ayuda, configuración y créditos
 src/roms.S        ROMs embebidas

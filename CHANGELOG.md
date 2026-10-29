@@ -6,6 +6,12 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## Sin publicar
+
+- **Cambiado**: en las Pi 1 a 4, la imagen se dibuja con triple búfer en lugar de doble. Con dos páginas se cambiaba de página sin esperar al retrazado y, como la pantalla no toma el cambio hasta el siguiente barrido, a veces se dibujaba en la página que todavía se estaba viendo (cortes de imagen). Con tres, la que se dibuja nunca es ni la que se ve ni la que está a punto de verse, sin tener que esperar al retrazado (que pararía la emulación). El trabajo por imagen es el mismo; solo se usa una página más de la memoria de la GPU (unos 230 KB con la imagen normal). Si el firmware no da tres páginas, se usan dos, o una. La Pi 5 sigue con una sola página, porque su firmware no cambia de página. Idea de mejorar los cortes de José Luis Sánchez.
+- **Nuevo** (README): cómo forzar la pantalla a 50 Hz en `config.txt` para que el scroll no dé tirones con pantallas de 60 Hz.
+- Probado en QEMU (Pi 3, 64 bits): el firmware da las tres páginas ("Framebuffer 400x296, 3 paginas" en el registro) y la imagen y los menús se ven bien. Compila para la Pi 1, la Pi 3 y la Pi 5. Los cortes en sí no se pueden ver en QEMU: falta probarlo en una Pi real.
+
 ## 1.04
 
 - **Corregido**: The Running Man (+3, Grandslam, convertido por Emerald Software) se quedaba con la pantalla en negro. Su cargador apaga el motor de la disquetera al cambiar la paginación (escribe 07 y 04 en 0x1FFD) y carga todo el juego sin volver a encenderlo; el disco seguía girando solo 300 ms tras apagar el motor (como Fuse) y la primera lectura se quedaba esperando para siempre. Ahora, con el motor apagado, el disco sigue girando mientras se use el controlador y se para a los 2 s del último acceso (como mínimo, a los 300 ms de siempre). +3DOS apaga el motor cuando ya ha terminado, así que con él no cambia nada.
