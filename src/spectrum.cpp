@@ -100,10 +100,8 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	memset (m_IF1Page, 0xFF, sizeof m_IF1Page);	// sin ROM hasta SetIF1ROM ()
 	memset (m_NoRAM, 0xFF, sizeof m_NoRAM);
 
-	for (unsigned i = 0; i < 16; i++)
-	{
-		m_StdColor[i] = RGB565 (SpectrumPaletteRGB[i]);
-	}
+	m_bPureBlack = FALSE;
+	UpdatePalette ();
 	m_bULAplusEnabled = TRUE;
 	m_bULAplusActive = FALSE;
 	m_nULAplusRegister = 0;
@@ -189,6 +187,28 @@ void CSpectrum::SetIF1ROM (const u8 *pROM)
 	m_bIF1ROM = TRUE;
 }
 
+// Paleta según el modelo, como JSpeccy: la del 48K (medida) en el 16K y el
+// 48K, la de siempre en los demás. pureblack: negro puro también en la del 48K.
+void CSpectrum::UpdatePalette (void)
+{
+	boolean b48 = m_Model == Model16K || m_Model == Model48K;
+	for (unsigned i = 0; i < 16; i++)
+	{
+		u32 nRGB = b48 ? SpectrumPaletteRGB[i] : SpectrumPalette128RGB[i];
+		if (m_bPureBlack && (i & 7) == 0)
+		{
+			nRGB = 0x000000;
+		}
+		m_StdColor[i] = RGB565 (nRGB);
+	}
+}
+
+void CSpectrum::SetPureBlack (boolean bPureBlack)
+{
+	m_bPureBlack = bPureBlack;
+	UpdatePalette ();
+}
+
 void CSpectrum::SetModel (TModel Model)
 {
 	// sin su ROM, el +2/+2A/+3/+3e no se puede emular: se usa el 128K
@@ -244,6 +264,8 @@ void CSpectrum::SetModel (TModel Model)
 	m_pTape->SetMachine (m_pTiming->nClockFreq, m_pTiming->CodeModel == CodeModel48K);
 
 	Reset ();
+
+	UpdatePalette ();			// la del 48K o la del 128K
 }
 
 void CSpectrum::Reset (void)

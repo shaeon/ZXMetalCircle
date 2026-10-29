@@ -29,6 +29,7 @@ static const TOptionDef Options[] =
 	{"gpiokbd",	"0|off|1|48|128|plus3|plus2a|+3|+2a"},
 	{"gpioaudio",	"0|1"},
 	{"ulaplus",	"0|1"},
+	{"pureblack",	"0|1"},
 	{"aystereo",	"abc|acb|bac|mono"},
 	{"tapesound",	"0|1"},
 	{"beeperfilter", "0|1"},

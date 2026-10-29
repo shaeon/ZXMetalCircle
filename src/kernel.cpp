@@ -509,6 +509,7 @@ void CKernel::ParseOptions (void)
 
 	// ULAplus (64 colores); ulaplus=0 lo desactiva
 	m_pSpectrum->SetULAplusEnabled (m_Options.GetAppOptionDecimal ("ulaplus", 1) != 0);
+	m_pSpectrum->SetPureBlack (m_Options.GetAppOptionDecimal ("pureblack", 0) != 0);
 
 	// Recreated ZX: recreated=0 (por defecto: teclado normal sin ningún retardo),
 	// auto (detección automática) o 1 (todos los teclados USB son Recreated)
@@ -1815,6 +1816,7 @@ void CKernel::SyncSetting (const char *pKey)
 		pValue = Borders[m_BorderSize % 4];
 	}
 	else if (strcmp (pKey, "scanlines") == 0)	pValue = m_bScanlines ? "1" : "0";
+	else if (strcmp (pKey, "pureblack") == 0)	pValue = m_pSpectrum->IsPureBlack () ? "1" : "0";
 	else if (strcmp (pKey, "aystereo") == 0)
 	{
 		static const char *Stereo[] = {"abc", "acb", "bac", "mono"};
@@ -1895,6 +1897,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "issue") == 0)		m_pSpectrum->SetIssue2 (strcmp (pValue, "2") == 0);
 	else if (strcmp (pKey, "speed") == 0)		m_nSpeed = atoi (pValue);
 	else if (strcmp (pKey, "ulaplus") == 0)		m_pSpectrum->SetULAplusEnabled (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "pureblack") == 0)	m_pSpectrum->SetPureBlack (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "border") == 0 || strcmp (pKey, "scanlines") == 0)
 	{
 		static const char *Borders[] = {"none", "standard", "full", "huge"};

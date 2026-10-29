@@ -165,6 +165,10 @@ public:
 
 	// ULAplus (64 colores, puertos 0xBF3B/0xFF3B)
 	void SetULAplusEnabled (boolean bEnabled)	{ m_bULAplusEnabled = bEnabled; }
+	// negro puro (#000000) también en la paleta del 16K/48K (pureblack=1)
+	void SetPureBlack (boolean bPureBlack);
+	boolean IsPureBlack (void) const	{ return m_bPureBlack; }
+	TPixel GetStdColor (unsigned nIndex) const	{ return m_StdColor[nIndex & 15]; }
 	boolean IsULAplusActive (void) const		{ return m_bULAplusActive; }
 
 	// Grabación por pulsos de la salida MIC (cualquier rutina de grabación,
@@ -262,6 +266,8 @@ private:
 	// pantalla
 	TPixel m_Screen[SCREEN_WIDTH * SCREEN_HEIGHT];
 	TPixel m_StdColor[16];		// colores normales del Spectrum en RGB565
+	boolean m_bPureBlack;
+	void UpdatePalette (void);
 	u8 m_Delay[MAX_TSTATES_FRAME + 128];		// contención
 	int m_States2Border[MAX_TSTATES_FRAME + 128];
 	int m_StepStates[6144];

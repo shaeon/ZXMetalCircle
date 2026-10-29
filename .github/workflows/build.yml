@@ -65,6 +65,8 @@ jobs:
           FLAGS="-O2 -std=c++17 -DWITH_BREAKPOINT_SUPPORT -I. -I$S -I../../third_party/z80cpp -I$M/compat -I$M"
           g++ $FLAGS -o kempston_ports_test kempston_ports_test.cpp $CORE roms_host.S
           ./kempston_ports_test
+          g++ $FLAGS -o palette_test palette_test.cpp $CORE roms_host.S
+          ./palette_test
           g++ -O2 -std=c++17 -I. -I$S -o joystick_test joystick_test.cpp $S/zxkeyboard.cpp
           ./joystick_test
           g++ -O2 -std=c++17 -I. -I$S -o recreated_test recreated_test.cpp $S/recreated.cpp

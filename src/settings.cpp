@@ -39,6 +39,7 @@ static TSettingDef Settings[] =
 	// 1 Imagen y sonido
 	{"border",	N_("Borde"),		1, "none|standard|full|huge", N_("sin borde|estándar|completo|enorme"), "full", TRUE},
 	{"scanlines",	N_("Scanlines"),	1, "0|1", N_("no|sí"),					"0",	TRUE},
+	{"pureblack",	N_("Negro puro (paleta 48K)"), 1, "0|1", N_("no|sí"),			"0",	TRUE},
 	{"aystereo",	N_("Sonido AY"),	1, "abc|acb|bac|mono", "ABC|ACB|BAC|mono",		"abc",	TRUE},
 	{"tapesound",	N_("Oír la carga"),	1, "1|0", N_("sí|no"),					"1",	TRUE},
 	{"speaker",	N_("Altavoz"),		1, "auto|beeper|tv|off", N_("automático|el del 48K|televisor|sin modelo"), "auto", TRUE},
@@ -515,6 +516,11 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	if (strcmp (pKey, "earpin") == 0)
 	{
 		return Is ("ear", "gpio");
+	}
+	// negro puro: solo cambia la paleta del 16K/48K (la de los demás ya lo es)
+	if (strcmp (pKey, "pureblack") == 0)
+	{
+		return Is ("model", "16k") || Is ("model", "48k");
 	}
 	// contraseña de la web: solo con la web y la red
 	if (strcmp (pKey, "webpass") == 0)
