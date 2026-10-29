@@ -6,6 +6,10 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## Sin publicar
+
+- **Cambiado**: la SD lleva todos los ficheros DTB del firmware (28, de la Pi 1 a la Pi 5 y los módulos CM), no solo los diez que trae Circle para los modelos que los necesitan. Cada modelo arranca con su descripción de hardware oficial y el firmware deja de avisar de que le falta. Los baja `build.sh` de la misma versión del firmware que usa Circle (1,4 MB en total). Gracias a José Luis Sánchez, que lo propuso y lo ha probado en todas sus Pi, incluida una Pi 1 B+.
+
 ## 1.03
 
 - **Cambiado**: la paleta depende del modelo, como en JSpeccy. El 16K y el 48K usan la paleta calculada a partir de los voltajes YUV de la ULA del 48K (la de JSpeccy, como hasta ahora); el 128K, +2, +2A, +3 y +3e, la de siempre (negro puro, 0xC0 y 0xFF; la de Fuse y MAME es casi igual). Antes se usaba la del 48K para todos, y su negro (#060800, que en pantalla queda #000800) no era negro del todo: un usuario lo midió con una capturadora, #000A00 en la Pi frente a #000000 en el Spectrum real.

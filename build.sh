@@ -186,6 +186,27 @@ if [ ! -f "$ROOT/sdcard/start.elf" ] || [ ! -f "$ROOT/sdcard/overlays/bcm2712d0.
 	cp "$WORK/circle-src/boot/bcm2712d0.dtbo" "$ROOT/sdcard/overlays/"
 	cp "$WORK/circle-src/boot/LICENCE.broadcom" "$ROOT/sdcard/"
 fi
+# Todos los DTB del firmware, de la misma versión que baja Circle (Circle solo
+# trae los de los modelos que los necesitan). Con el suyo en la raíz, cada
+# modelo arranca con su descripción de hardware oficial y el firmware no avisa
+# de que le falta (sugerencia de José Luis Sánchez, probado en todas sus Pi,
+# incluida una Pi 1 B+).
+FW_COMMIT=$(sed -n 's/^FIRMWARE ?= *//p' "$WORK/circle-src/boot/Makefile")
+for f in bcm2708-rpi-b.dtb bcm2708-rpi-b-plus.dtb bcm2708-rpi-b-rev1.dtb bcm2708-rpi-cm.dtb \
+	 bcm2708-rpi-zero.dtb bcm2708-rpi-zero-w.dtb bcm2709-rpi-2-b.dtb bcm2709-rpi-cm2.dtb \
+	 bcm2710-rpi-2-b.dtb bcm2710-rpi-3-b.dtb bcm2710-rpi-3-b-plus.dtb bcm2710-rpi-cm3.dtb \
+	 bcm2710-rpi-cm0.dtb bcm2710-rpi-zero-2.dtb bcm2710-rpi-zero-2-w.dtb \
+	 bcm2711-rpi-4-b.dtb bcm2711-rpi-400.dtb bcm2711-rpi-cm4.dtb bcm2711-rpi-cm4-io.dtb \
+	 bcm2711-rpi-cm4s.dtb bcm2712-rpi-5-b.dtb bcm2712d0-rpi-5-b.dtb bcm2712-d-rpi-5-b.dtb \
+	 bcm2712-rpi-500.dtb bcm2712-rpi-cm5-cm5io.dtb bcm2712-rpi-cm5l-cm5io.dtb \
+	 bcm2712-rpi-cm5-cm4io.dtb bcm2712-rpi-cm5l-cm4io.dtb; do
+	if [ ! -f "$ROOT/sdcard/$f" ]; then
+		wget -q -O "$ROOT/sdcard/$f.tmp" "https://github.com/raspberrypi/firmware/raw/$FW_COMMIT/boot/$f" \
+			&& mv "$ROOT/sdcard/$f.tmp" "$ROOT/sdcard/$f" \
+			|| { rm -f "$ROOT/sdcard/$f.tmp"; echo "ERROR: no se pudo descargar $f" >&2; exit 1; }
+	fi
+done
+
 # armstub de la Pi 4: uno para 32 bits y otro para 64 (la Pi 5 no lo necesita)
 if [ ! -f "$ROOT/sdcard/armstub7-rpi4.bin" ] && command -v "${PREFIX32}gcc" > /dev/null; then
 	make -C "$WORK/circle-src/boot/armstub" PREFIX="$PREFIX32" armstub7-rpi4.bin > /dev/null
