@@ -53,6 +53,7 @@ public:
 	boolean IsMotorOn (void) const	{ return m_bMotor; }
 
 private:
+	void KeepSpinning (u64 nTstates, unsigned nClock);	// sin motor, sigue girando si se usa
 	void SetDriveType (unsigned nUnit, const CDskImage *pDisk);
 	void AdvanceTo (u64 nTstates, unsigned nClock);
 	static void SelectUnit (void *pThis, u8 nData);

@@ -79,28 +79,51 @@ void CPlus3Disk::Reset (void)
 u8 CPlus3Disk::ReadStatus (u64 nTstates, unsigned nClock)
 {
 	AdvanceTo (nTstates, nClock);
+	KeepSpinning (nTstates, nClock);
 	return m_pFDC->msr_r ();
 }
 
 u8 CPlus3Disk::ReadData (u64 nTstates, unsigned nClock)
 {
 	AdvanceTo (nTstates, nClock);
+	KeepSpinning (nTstates, nClock);
 	return m_pFDC->fifo_r ();
 }
 
 void CPlus3Disk::WriteData (u8 nValue, u64 nTstates, unsigned nClock)
 {
 	AdvanceTo (nTstates, nClock);
+	KeepSpinning (nTstates, nClock);
 	m_pFDC->fifo_w (nValue);
 }
 
 // Al apagar el motor, el disco no se para en seco: sigue girando y la unidad
-// sigue preparada (READY) un momento. Como Fuse (fdd.c), 1,5 vueltas: 300 ms.
-// Hay cargadores que cuentan con ello: el de The Deep (U.S. Gold) apaga el
-// motor al cambiar de página con 0x1FFD y enseguida pide a +3DOS un sector;
-// con la unidad "no preparada" al instante, la lectura fallaba y el +3 volvía
-// a su menú. Si se vuelve a encender antes, sigue girando sin esperar.
+// sigue preparada (READY) un momento, como mínimo 1,5 vueltas (300 ms, como
+// Fuse en fdd.c), y además mientras se siga usando el controlador: se para a
+// los 2 s del último acceso. Hay cargadores que cuentan con ello:
+// - El de The Deep (U.S. Gold) apaga el motor al cambiar de página con
+//   0x1FFD y enseguida pide a +3DOS un sector.
+// - El de The Running Man (Grandslam, también de Emerald Software) apaga el
+//   motor del mismo modo (escribe 07 y 04 en 0x1FFD) y carga todo el juego
+//   sin volver a encenderlo; con solo 300 ms, la primera lectura se quedaba
+//   esperando para siempre con la pantalla en negro.
+// +3DOS apaga el motor cuando ya ha terminado, así que con él no cambia nada.
+// Si se vuelve a encender antes de pararse, sigue girando sin esperar.
 #define MOTOR_SPINDOWN_MS	300
+#define MOTOR_IDLE_STOP_MS	2000
+
+void CPlus3Disk::KeepSpinning (u64 nTstates, unsigned nClock)
+{
+	if (m_nMotorOffAt == 0)
+	{
+		return;				// el motor está encendido (o ya parado)
+	}
+	u64 nStop = nTstates + (u64) nClock * MOTOR_IDLE_STOP_MS / 1000;
+	if (nStop > m_nMotorOffAt)
+	{
+		m_nMotorOffAt = nStop;
+	}
+}
 
 void CPlus3Disk::SetMotor (boolean bOn, u64 nTstates, unsigned nClock)
 {
