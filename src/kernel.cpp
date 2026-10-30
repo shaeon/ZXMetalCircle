@@ -86,6 +86,7 @@ enum TAction
 	ActionRecordEar,
 	ActionKeyDebug,
 	ActionMultiKey,			// Alt+V: pulsar varias teclas a la vez
+	ActionFiles,			// Alt+F5 (o F5 con f5=files): navegador de ficheros
 	ActionBlankDisk,
 	ActionEjectDisks,
 	ActionBlankMicrodrive,
@@ -114,7 +115,8 @@ static const TKeyBinding KeyBindings[] =
 	{HID_KEY_F1 + 1, FALSE, ActionTapePlayStop, "F2/F3",  N_("Cinta: play-stop / bloques")},
 	{HID_KEY_F1 + 2, FALSE, ActionTapeRewind,   "F3",     0},
 	{HID_KEY_F1 + 3, FALSE, ActionJoystick,     "F4",     N_("Cambiar joystick")},
-	{HID_KEY_F1 + 4, FALSE, ActionNMI,          "F5",     N_("NMI / Multiface")},
+	{HID_KEY_F1 + 4, FALSE, ActionNMI,          "F5/Alt", N_("NMI-Multiface / ficheros")},	// ver f5=
+	{HID_KEY_F1 + 4, TRUE,  ActionFiles,        "Alt+F5", 0},
 	{HID_KEY_F1 + 5, FALSE, ActionTapeMode,     "F6",     N_("Velocidad de carga")},
 	{HID_KEY_F1 + 6, FALSE, ActionModel,        "F7",     N_("Modelo (16K, 48K ... +3, +3e)")},
 	{HID_KEY_F1 + 7, FALSE, ActionSaveSnapshot, "F8",     N_("Grabar snapshot")},
@@ -133,7 +135,7 @@ static const TKeyBinding KeyBindings[] =
 	{0x0F,           TRUE,  ActionLEC,          "Alt+L/T/X", N_("LEC/Spectranet/divMMC sí/no")},
 	{0x17,           TRUE,  ActionSpectranet,   "Alt+T",  0},
 	{0x1B,           TRUE,  ActionDivMMC,       "Alt+X",  0},
-	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D/V", N_("Teclado: diagnóstico / varias a la vez")},
+	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D/V", N_("Diagnóstico / varias teclas")},
 	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",  0},
 	{0x09,           TRUE,  ActionBlankDisk,    "Alt+F/E", N_("Disco +3: nuevo / expulsar")},
 	{0x08,           TRUE,  ActionEjectDisks,   "Alt+E",  0},
@@ -164,6 +166,7 @@ CKernel::CKernel (void)
 {
 	m_nSpeed = 1;
 	m_nLastKeyTime = 0;
+	m_bF5Files = FALSE;
 	m_nFPSStart = 0;
 	m_nFPSFrames = 0;
 	m_nFPSx100 = 0;
@@ -495,6 +498,9 @@ void CKernel::ParseOptions (void)
 	strncpy (m_Speaker, m_Options.GetAppOptionString ("speaker", "auto"), sizeof m_Speaker - 1);
 	m_Speaker[sizeof m_Speaker - 1] = '\0';
 	ApplySpeaker ();
+
+	// F5: NMI (por defecto) o navegador de ficheros; Alt+F5 hace lo otro
+	m_bF5Files = strcasecmp (m_Options.GetAppOptionString ("f5", "nmi"), "files") == 0;
 
 	// Cursores del PC: both (por defecto), keys o joystick
 	const char *pCursors = m_Options.GetAppOptionString ("cursors", "both");
@@ -1031,7 +1037,12 @@ void CKernel::UpdateStatusLines (void)
 		{
 			continue;
 		}
-		Line.Format ("%-7s %s", KeyBindings[i].pKeyName, T (KeyBindings[i].pDescription));
+		const char *pDescription = T (KeyBindings[i].pDescription);
+		if (KeyBindings[i].Action == ActionNMI && m_bF5Files)
+		{
+			pDescription = T ("Ficheros / NMI-Multiface");	// f5=files
+		}
+		Line.Format ("%-7s %s", KeyBindings[i].pKeyName, pDescription);
 		m_Menu.SetHelpLine (nHelpLine++, Line);
 	}
 
@@ -1981,6 +1992,10 @@ void CKernel::ApplySetting (unsigned nIndex)
 				m_Keyboard.SetJoystickMode ((TJoystickMode) i);
 			}
 		}
+	}
+	else if (strcmp (pKey, "f5") == 0)
+	{
+		m_bF5Files = strcmp (pValue, "files") == 0;
 	}
 	else if (strcmp (pKey, "cursors") == 0)
 	{
@@ -4049,7 +4064,14 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 
 	CString Message;
 
-	switch (pBinding->Action)
+	// F5 y Alt+F5: NMI y navegador de ficheros; f5=files los intercambia
+	TAction Action = pBinding->Action;
+	if (rEvent.nKey == HID_KEY_F1 + 4)
+	{
+		Action = (bAlt != m_bF5Files) ? ActionFiles : ActionNMI;
+	}
+
+	switch (Action)
 	{
 	case ActionHelp:
 		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
@@ -4103,6 +4125,15 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		Message.Format (T ("Joystick: %s"), T (JoystickNames[m_Keyboard.GetJoystickMode ()]));
 		ShowMessage (Message);
 		SyncSetting ("joystick");
+		break;
+
+	case ActionFiles:
+		// el navegador de ficheros directamente, como F1 y ENTER
+		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		UpdateStatusLines ();
+		OpenMenu ();
+		m_Menu.OpenBrowser ();
+		m_Keyboard.SetCaptured (TRUE);
 		break;
 
 	case ActionNMI:

@@ -24,6 +24,7 @@ static const TOptionDef Options[] =
 	{"tapeaccel",	"0|1"},
 	{"joystick",	"none|kempston|fuller|sinclair1|sinclair2|cursor|qaop"},
 	{"cursors",	"both|keys|joystick"},
+	{"f5",		"nmi|files"},
 	{"recreated",	"0|1|auto"},
 	{"multiface",	"0|1"},
 	{"gpiokbd",	"0|off|1|48|128|plus3|plus2a|+3|+2a"},
