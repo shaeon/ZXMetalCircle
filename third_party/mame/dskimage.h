@@ -91,6 +91,7 @@ public:
 
 private:
 	static void DetectSpeedlock (TDskTrack &T);
+	void CompleteLongSector (TDskTrack &T);	// sector largo cortado dentro de otro sector
 	void Clear (void);
 
 	int m_nTracks, m_nSides;

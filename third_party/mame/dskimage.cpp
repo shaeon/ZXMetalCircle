@@ -261,6 +261,7 @@ bool CDskImage::Load (const u8 *pData, unsigned nSize)
 			}
 
 			DetectSpeedlock (T);
+			CompleteLongSector (T);
 		}
 	}
 
@@ -273,6 +274,76 @@ bool CDskImage::Load (const u8 *pData, unsigned nSize)
 // del sector débil es constante, solo cambian 32 bytes desde el 336; si no,
 // el sector entero. Sin esto la zona débil iba del byte 256 al final (como en
 // MAME) y el cargador de Dragon Ninja, que comprueba que los bytes 304-319
+// Un sector largo (N >= 6, no cabe en la pista) cuyos datos guardados
+// terminan dentro de los datos de otro sector de la misma pista: en el disco,
+// al leerlo de largo se pasa por encima de ese otro sector, así que se
+// completa con el resto de sus datos. MOT (Opera Soft), cara B: el sector 8
+// de la pista 40 (N=8) se guardó con 1544 bytes y el sector 7, solapado
+// dentro desde su byte 1298, se quedaba 10 bytes corto; la protección compara
+// 255 bytes del sector 7 con el sector 8 en esa posición y volvía a la
+// pantalla de selección. La cara A trae los 1554 bytes y no cambia.
+void CDskImage::CompleteLongSector (TDskTrack &T)
+{
+	const unsigned MIN_OVERLAP = 64;	// coincidencia mínima para darlo por bueno
+
+	for (unsigned i = 0; i < T.nSectors; i++)
+	{
+		TDskSector &L = T.Sector[i];
+		if (L.N < 6 || L.pData == 0 || L.nLength < MIN_OVERLAP)
+		{
+			continue;
+		}
+
+		for (unsigned j = 0; j < T.nSectors; j++)
+		{
+			const TDskSector &O = T.Sector[j];
+			if (j == i || O.pData == 0 || O.nLength <= MIN_OVERLAP)
+			{
+				continue;
+			}
+
+			// si O ya está entero dentro de L, no falta nada
+			bool bInside = false;
+			for (unsigned k = 0; k + O.nLength <= L.nLength && !bInside; k++)
+			{
+				bInside = memcmp (L.pData + k, O.pData, O.nLength) == 0;
+			}
+			if (bInside)
+			{
+				continue;
+			}
+
+			// el final de L coincide con el principio de O (sin llegar a su final)
+			unsigned nFound = 0;
+			for (unsigned nTail = O.nLength - 1; nTail >= MIN_OVERLAP; nTail--)
+			{
+				if (nTail <= L.nLength && memcmp (L.pData + L.nLength - nTail, O.pData, nTail) == 0)
+				{
+					nFound = nTail;
+					break;
+				}
+			}
+			if (nFound == 0)
+			{
+				continue;
+			}
+
+			unsigned nExtra = O.nLength - nFound;
+			u8 *pNew = new u8[L.nLength + nExtra];
+			if (pNew == 0)
+			{
+				return;
+			}
+			memcpy (pNew, L.pData, L.nLength);
+			memcpy (pNew + L.nLength, O.pData + nFound, nExtra);
+			delete [] L.pData;
+			L.pData = pNew;
+			L.nLength += nExtra;
+			break;
+		}
+	}
+}
+
 // del sector salgan iguales, se quedaba colgado con la pantalla en negro.
 void CDskImage::DetectSpeedlock (TDskTrack &T)
 {
