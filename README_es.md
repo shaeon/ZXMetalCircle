@@ -213,6 +213,7 @@ Todas las opciones van en una sola línea:
 | `beeperfilter=` | `1` (quita el pitido de 1 bit), `0` | `1` |
 | `recreated=` | `0` (nunca), `auto` (por cable USB se reconoce al conectarlo; si no, detección automática), `1` (todos los teclados USB son Recreated) | `auto` |
 | `cursors=` | `both` (cursores = CAPS SHIFT+5-8 y joystick), `keys` (solo teclas), `joystick` (solo joystick) | `both` |
+| `f5=` | `nmi` (F5 = NMI, Alt+F5 = ficheros), `files` (F5 = ficheros, Alt+F5 = NMI) | `nmi` |
 | `aystereo=` | `abc`, `acb`, `bac`, `mono` | `abc` |
 | `tapesound=` | `1` (se oye la carga), `0` (silencio) | `1` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
@@ -371,6 +372,7 @@ Las teclas de función están en una sola tabla (`KeyBindings` en `src/kernel.cp
 | F3 | Cinta: navegador de bloques (lista de lo que hay en la cinta; ENTER la deja en el bloque elegido, Inicio = rebobinar) |
 | F4 | Cambiar joystick |
 | F5 | NMI: Multiface, navegador de esxDOS o menú de la Spectranet |
+| Alt+F5 | Navegador de ficheros (como F1 y ENTER). Con `f5=files` se intercambian: F5 abre los ficheros y Alt+F5 hace la NMI |
 | F6 | Velocidad de carga: instantánea / rápida / real |
 | F7 | Cambiar modelo (16K → 48K → 128K → +2 → +2A → +3 → +3e), con reset |
 | F8 | Grabar snapshot en `snaps/` (.Z80, .SNA o .SZX según `snapformat=`) |

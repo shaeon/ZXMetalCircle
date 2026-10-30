@@ -123,6 +123,10 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                     keys      Spectrum cursor keys only
                     joystick  joystick only
 
+ f5=nmi           What the F5 key does (Alt+F5 does the other):
+                    nmi       NMI: Multiface, esxDOS or Spectranet  (default)
+                    files     file browser (like F1 and ENTER)
+
  recreated=auto   Recreated ZX Spectrum keyboard (Elite) in "Layer A":
                     0     there is none: normal keyboard without delay
                     auto  automatic detection (default); through a USB

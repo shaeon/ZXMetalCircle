@@ -205,6 +205,7 @@ All the options go on a single line:
 | `beeperfilter=` | `1` (removes the 1-bit whine), `0` | `1` |
 | `recreated=` | `0` (never), `auto` (through a USB cable it is recognised when connected; otherwise, automatic detection), `1` (every USB keyboard is a Recreated) | `auto` |
 | `cursors=` | `both` (cursors = CAPS SHIFT+5-8 and joystick), `keys` (keys only), `joystick` (joystick only) | `both` |
+| `f5=` | `nmi` (F5 = NMI, Alt+F5 = files), `files` (F5 = files, Alt+F5 = NMI) | `nmi` |
 | `aystereo=` | `abc`, `acb`, `bac`, `mono` | `abc` |
 | `tapesound=` | `1` (loading is heard), `0` (silent) | `1` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
@@ -363,6 +364,7 @@ The function keys are in a single table (`KeyBindings` in `src/kernel.cpp`). The
 | F3 | Tape: block browser (list of what is on the tape; ENTER leaves it at the chosen block, Home = rewind) |
 | F4 | Change joystick |
 | F5 | NMI: Multiface, esxDOS browser or Spectranet menu |
+| Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI |
 | F6 | Loading speed: instant / fast / real |
 | F7 | Change model (16K → 48K → 128K → +2 → +2A → +3 → +3e), with reset |
 | F8 | Save a snapshot to `snaps/` (.Z80, .SNA or .SZX according to `snapformat=`) |

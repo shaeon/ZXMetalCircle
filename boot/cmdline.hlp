@@ -126,6 +126,10 @@ defecto.
                     keys      solo teclas de cursor del Spectrum
                     joystick  solo joystick
 
+ f5=nmi           Que hace la tecla F5 (Alt+F5 hace la otra cosa):
+                    nmi       NMI: Multiface, esxDOS o Spectranet (por defecto)
+                    files     navegador de ficheros (como F1 y ENTER)
+
  recreated=auto   Teclado Recreated ZX Spectrum (Elite) en "Layer A":
                     0     no hay ninguno: teclado normal sin retardo
                     auto  deteccion automatica (por defecto); por cable USB
