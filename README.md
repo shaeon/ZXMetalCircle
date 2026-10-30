@@ -378,6 +378,7 @@ The function keys are in a single table (`KeyBindings` in `src/kernel.cpp`). The
 | Alt+L / Alt+T / Alt+X | LEC memory / Spectranet / divMMC on/off (with reset) |
 | Alt+F / Alt+E | +3 disk: new / eject |
 | Alt+D | Keyboard diagnostics: what arrives over USB, the keys the Spectrum sees, frames per second and frame times |
+| Alt+V | Press several keys at once (cheats like VICTOR in Profanation) |
 | F12 or Alt+R | Reset |
 | Pause or Alt+P | Pause |
 
@@ -389,6 +390,14 @@ PC keyboard to Spectrum keyboard mapping:
 - **Cursor keys**: they are always the Spectrum's cursor keys (CAPS SHIFT + 5/6/7/8). With a joystick selected, they also move the joystick, and right Ctrl (or keypad 0) is fire. This can be changed with `cursors=`.
 
 To load a tape: press F1 and then ENTER, choose the `.TAP`, `.TZX`, `.PZX` or `.CSW` and type `LOAD ""` (on the 128K/+2A, choose "Tape Loader" or "Loader" in the menu). The tape starts by itself when the ROM or a custom loader starts reading it, and stops by itself when the program stops reading it like a loader for 2 seconds. What counts is reading like a loader (the same IN over and over, with a counter that advances, as Fuse does), not reading a lot: menus that poll the keyboard non-stop neither start the tape nor keep it running, so multiloads find the next block where they left it. In fast mode, the emulator runs at full speed while loading.
+
+## Several keys at once (Alt+V)
+
+Some cheats need many keys pressed together, like **VICTOR** in Profanation for infinite lives. A USB keyboard reports at most six keys at a time, and many cannot detect some combinations of four, five or six keys.
+
+**Alt+V** opens a line where you type the keys (letters, digits and space) and, with ENTER, the emulator holds them all down together for 1.5 seconds. It works with any keyboard. With a real Spectrum keyboard over GPIO or a Recreated ZX it is not needed: all of them can be pressed at once, as on the Spectrum.
+
+If the USB keyboard cannot handle a combination and reports too many keys at once, the emulator keeps the keys it already had pressed until the next valid report, as the USB standard says, instead of releasing them all.
 
 ## Keyboard diagnostics (Alt+D)
 
