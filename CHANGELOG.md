@@ -6,6 +6,11 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## Sin publicar
+
+- **Nuevo**: bus flotante del +2A/+3, como en el core zxp3 de Kyp (Ricardo). Al leer un puerto de la familia del 0x0FFD (A15-A12 = 0, A1 = 0) sin la paginación bloqueada, se devuelve el último valor que pasó por el bus de datos, con el bit 0 a 1. Ese valor lo dejan la Gate Array al leer la memoria de vídeo (bitmap y atributo, cuatro lecturas de cada ocho T-states en la zona de pantalla) y la CPU al leer o escribir entre 0x4000 y 0x5FFF, y se mantiene entre esos momentos. Los demás puertos sin dueño siguen dando 0xFF. El bus flotante del 48K/128K/+2 no cambia. Prueba nueva: `test/host/plus3/floatbus_test.cpp` (también en la Action).
+- Comprobado con el Timing Test v0.3 de Patrik Rak, prueba 0 (NOP con contención): la tabla sale idéntica, celda a celda, a las capturas de referencia de máquinas reales en el 48K, el 128K y el +3. Gracias a Ricardo (Kyp) por las dos sugerencias.
+
 ## 1.05
 
 - **Corregido**: MOT (Opera Soft), cara B, volvía a la pantalla de selección; tampoco carga en Fuse ni en Retro Virtual Machine, pero sí en un +3 real y en ESPectrum. En esta imagen el sector 8 de la pista 40 se guardó con 1544 bytes (en la cara A, 1554) y el sector 7, solapado dentro desde su byte 1298, se quedaba 10 bytes corto: la protección compara 255 bytes y fallaban los 9 últimos. Ahora, si los datos de un sector largo (N >= 6) terminan dentro de los datos de otro sector de la misma pista, se completan con el resto de ese sector, que es lo que hay en el disco. Si el otro sector ya está entero dentro, no se toca nada.

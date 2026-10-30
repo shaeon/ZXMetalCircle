@@ -37,6 +37,10 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_pTiming (&MachineTiming[Model48K]),
 	m_nTstates (0),
 	m_nFrameStart (0),
+	m_bPlus3Bus (FALSE),
+	m_bBusValid (FALSE),
+	m_nBusTstates (0),
+	m_nBusValue (0xFF),
 	m_nFrames (0),
 	m_bFlash (FALSE),
 	m_TapeMode (TapeModeFast),
@@ -266,6 +270,9 @@ void CSpectrum::SetModel (TModel Model)
 	Reset ();
 
 	UpdatePalette ();			// la del 48K o la del 128K
+
+	m_bPlus3Bus = m_pTiming->CodeModel == CodeModelPlus3;	// bus flotante del +2A/+3
+	m_bBusValid = FALSE;
 }
 
 void CSpectrum::Reset (void)
@@ -756,6 +763,10 @@ inline boolean CSpectrum::IsScreenWrite (uint16_t nAddress) const
 
 inline void CSpectrum::WriteByte (uint16_t nAddress, uint8_t nValue)
 {
+	if (m_bPlus3Bus && (nAddress & 0xE000) == 0x4000)
+	{
+		NoteBus (nValue);
+	}
 	if (nAddress < 0x4000 && DivPaged ())
 	{
 		DivWrite (nAddress, nValue);
@@ -838,6 +849,10 @@ void CSpectrum::SetSpectranetEnabled (boolean bOn)
 uint8_t CSpectrum::peek8 (uint16_t address)
 {
 	Contend (address, 3);
+	if (m_bPlus3Bus && (address & 0xE000) == 0x4000)
+	{
+		NoteBus (m_pReadPage[1][address & 0x3FFF]);
+	}
 	if (address < 0x4000 && DivPaged ())
 	{
 		return DivRead (address);
@@ -950,6 +965,12 @@ uint16_t CSpectrum::peek16 (uint16_t address)
 	uint8_t nMSB = (address < 0x4000 && DivPaged ()) ? DivRead (address)
 		     : (address < 0x4000 && m_bSnet && m_Snet.IsPaged ()) ? m_Snet.Read (address)
 							: m_pReadPage[address >> 14][address & 0x3FFF];
+
+	if (m_bPlus3Bus)
+	{
+		if (((address - 1) & 0xE000) == 0x4000) NoteBus (nLSB);
+		if ((address & 0xE000) == 0x4000) NoteBus (nMSB);
+	}
 
 	return (nMSB << 8) | nLSB;
 }
@@ -1082,6 +1103,58 @@ u8 CSpectrum::FloatingBus (void)
 
 	default:
 		return 0xFF;
+	}
+}
+
+// +2A/+3: el último valor que pasó por el bus de datos. Lo dejan la Gate Array
+// al leer la memoria de vídeo (bitmap y atributo, cuatro lecturas de cada
+// ocho T-states en la zona de pantalla) y la CPU al leer o escribir entre
+// 0x4000 y 0x5FFF; se queda con el más reciente. Fuera de esos momentos el
+// valor se mantiene (no vuelve a 0xFF como en el 48K/128K).
+u8 CSpectrum::Plus3FloatingBus (void)
+{
+	const TMachineTiming *T = m_pTiming;
+	int nLine = (int) T->nTstatesLine;
+	int nRow = (int) (m_nTstates / T->nTstatesLine) - (int) T->nUpBorderWidth;
+	int nCol = (int) (m_nTstates % T->nTstatesLine) - (int) T->nOutOffset;
+	s64 nFrame = (s64) m_nFrameStart;
+
+	// última lectura de la Gate Array antes de ahora: fila y columna (0-123)
+	if (nRow > 191 || (nRow == 191 && nCol > 123))
+	{
+		nRow = 191; nCol = 123;
+	}
+	else if (nRow < 0 || (nRow == 0 && nCol < 0))
+	{
+		nRow = 191; nCol = 123;			// la del cuadro anterior
+		nFrame -= (s64) T->nTstatesFrame;
+	}
+	else if (nCol < 0)
+	{
+		nRow--; nCol = 123;
+	}
+	else if (nCol > 123)
+	{
+		nCol = 123;
+	}
+	else if (nCol % 8 > 3)
+	{
+		nCol = nCol - nCol % 8 + 3;
+	}
+
+	s64 nGA = nFrame + (s64) (nRow + (int) T->nUpBorderWidth) * nLine + (int) T->nOutOffset + nCol;
+	if (m_bBusValid && (s64) m_nBusTstates >= nGA)
+	{
+		return m_nBusValue;			// la CPU tocó el bus después
+	}
+
+	unsigned nAddr = m_ScrAddr[nRow] + nCol / 4;
+	switch (nCol % 8)
+	{
+	case 0:	return m_pScreenPage[nAddr];
+	case 1:	return m_pScreenPage[m_Scr2Attr[nAddr]];
+	case 2:	nAddr++; return nAddr < 0x1800 ? m_pScreenPage[nAddr] : 0xFF;
+	default: nAddr++; return nAddr < 0x1800 ? m_pScreenPage[m_Scr2Attr[nAddr]] : 0xFF;
 	}
 }
 
@@ -1264,6 +1337,14 @@ uint8_t CSpectrum::inPort (uint16_t port)
 
 	if (m_pTiming->CodeModel == CodeModelPlus3)
 	{
+		// +2A/+3: el bus flotante solo se ve en la familia del 0x0FFD
+		// (A15-A12 = 0, A1 = 0) y sin bloqueo de paginación, con el bit 0
+		// a 1; los demás puertos sin dueño dan 0xFF. Como el core zxp3 de
+		// Kyp (zxp3.v).
+		if ((port & 0xF002) == 0x0000 && !(m_nPort7FFD & 0x20))
+		{
+			return Plus3FloatingBus () | 0x01;
+		}
 		return 0xFF;
 	}
 

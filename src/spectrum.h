@@ -219,6 +219,8 @@ private:
 
 	inline void Contend (uint16_t nAddress, int nTstates);
 	inline void WriteByte (uint16_t nAddress, uint8_t nValue);
+	u8 Plus3FloatingBus (void);
+	void NoteBus (u8 nValue)	{ m_nBusTstates = GetAbsoluteTstates (); m_nBusValue = nValue; m_bBusValid = TRUE; }
 	inline boolean IsScreenWrite (uint16_t nAddress) const;
 
 	u8 FloatingBus (void);
@@ -243,6 +245,10 @@ private:
 
 	int m_nTstates;			// t-states del cuadro actual
 	u64 m_nFrameStart;		// t-states absolutos al comienzo del cuadro
+	boolean m_bPlus3Bus;		// +2A/+3: se apuntan los accesos a 0x4000-0x5FFF
+	boolean m_bBusValid;
+	u64 m_nBusTstates;		// último acceso de la CPU a 0x4000-0x5FFF
+	u8 m_nBusValue;
 	unsigned m_nFrames;
 
 	// memoria
