@@ -6,7 +6,7 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
-## Sin publicar
+## 1.05
 
 - **Corregido**: MOT (Opera Soft), cara B, volvía a la pantalla de selección; tampoco carga en Fuse ni en Retro Virtual Machine, pero sí en un +3 real y en ESPectrum. En esta imagen el sector 8 de la pista 40 se guardó con 1544 bytes (en la cara A, 1554) y el sector 7, solapado dentro desde su byte 1298, se quedaba 10 bytes corto: la protección compara 255 bytes y fallaban los 9 últimos. Ahora, si los datos de un sector largo (N >= 6) terminan dentro de los datos de otro sector de la misma pista, se completan con el resto de ese sector, que es lo que hay en el disco. Si el otro sector ya está entero dentro, no se toca nada.
 - Probado en el PC: la cara B de MOT pasa al juego. Sin cambios en el arranque de quince discos (Coin-Op Hits, Tomahawk, Ghouls'n Ghosts, The Deep, Dragon Ninja, Fernandez Must Die, The Running Man, Robocop, Guillermo Tell, MOT cara A, Corsarios / Mutan Zone y un disco de 720K) ni al pulsar ESPACIO en Corsarios y en la cara A de MOT; pasan las pruebas del controlador y de protecciones.
