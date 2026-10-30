@@ -613,7 +613,14 @@ bool CDskImage::BuildTrack (int nCyl, int nSide, u8 *pCells, unsigned nCells,
 
 			// sector débil (como build_pc_track_mfm de MAME): desde el byte
 			// 256, o desde donde difieren las copias de la imagen
-			bool bWeak = bBadCRC && !(S.ST2 & 0x40);
+			// Pero no en los sectores largos (N >= 6, 8K o más): no caben en
+			// la pista y lo que sigue a sus datos es el resto de la pista,
+			// no datos débiles. La protección de Opera (Corsarios, MOT) lee
+			// el sector 8 de la pista 40 (N=8) y busca en él, a 1298 bytes de
+			// su comienzo, los datos del sector 7, que está solapado dentro;
+			// al salir al azar desde el byte 256, volvía a la pantalla de
+			// selección. Fuse tampoco los trata como débiles.
+			bool bWeak = bBadCRC && !(S.ST2 & 0x40) && S.N < 6;
 			if (bWeak && pnWeak != 0 && *pnWeak < DSK_MAX_SECTORS
 			    && nDataStart + S.nWeakFrom * 16 < W.Position ())
 			{
