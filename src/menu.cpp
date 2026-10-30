@@ -56,6 +56,7 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nChoiceSelected = 0;
 	m_ChoiceTitle[0] = '\0';
 	m_InputTitle[0] = m_InputHelp[0][0] = m_InputHelp[1][0] = m_InputBuf[0] = '\0';
+	m_bUnitsFromShortcut = FALSE;
 	m_nAboutTop = 0;
 	m_nUnitSelected = 0;
 	m_nUnitTarget = -1;
@@ -375,6 +376,7 @@ boolean CMenu::OpenBrowser (void)
 void CMenu::OpenHelp (void)
 {
 	m_Mode = ModeHelp;
+	m_bUnitsFromShortcut = FALSE;		// desde la ayuda, ESC vuelve a ella
 }
 
 void CMenu::OpenKeyHelp (void)
@@ -851,13 +853,13 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		{
 			Result = MenuResultUnitEject;
 		}
-		else if (nKey == HID_KEY_ESC)
+		else if (nKey == HID_KEY_ESC && !m_bUnitsFromShortcut)
 		{
-			m_Mode = ModeHelp;
+			m_Mode = ModeHelp;			// abiertas desde la ayuda (U)
 		}
-		else if (nKey == HID_KEY_F1)
+		else if (nKey == HID_KEY_ESC || nKey == HID_KEY_F1)
 		{
-			m_Mode = ModeClosed;
+			m_Mode = ModeClosed;			// con Alt+U, ESC cierra
 			Result = MenuResultClose;
 		}
 		return Result;

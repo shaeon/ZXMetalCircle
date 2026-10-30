@@ -59,7 +59,7 @@ static TSettingDef Settings[] =
 	{"joystick",	N_("Joystick"),		3, "none|kempston|fuller|sinclair1|sinclair2|cursor|qaop",
 				   N_("ninguno|Kempston|Fuller|Sinclair 1|Sinclair 2|cursor|QAOP"), "kempston", TRUE},
 	{"cursors",	N_("Cursores del PC"),	3, "both|keys|joystick", N_("teclas y joystick|teclas|joystick"), "both", TRUE},
-	{"f5",		N_("Tecla F5 (Alt+F5: la otra)"), 3, "nmi|files", N_("NMI / Multiface|ficheros"),	"nmi",	TRUE},
+	{"f5",		N_("F5 / Alt+F5"),	3, "nmi|files", N_("NMI / ficheros|ficheros / NMI"),	"nmi",	TRUE},
 	{"recreated",	N_("Recreated ZX"),	3, "0|auto|1", N_("no|automático|sí"),			"auto",	TRUE},
 	{"gpiokbd",	N_("Teclado por GPIO"),	3, "48|plus3|0", N_("48K/128|+2A/+3|ninguno"),		"48",	FALSE},
 

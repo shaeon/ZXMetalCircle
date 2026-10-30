@@ -4284,7 +4284,11 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		break;
 
 	case ActionUnits:
-		OpenUnitsScreen ();
+		{
+			boolean bFromShortcut = !m_Menu.IsOpen ();	// Alt+U con el Spectrum en marcha
+			OpenUnitsScreen ();
+			m_Menu.SetUnitsFromShortcut (bFromShortcut);
+		}
 		break;
 
 	case ActionEjectCartridge:

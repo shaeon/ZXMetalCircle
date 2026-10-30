@@ -72,6 +72,8 @@ public:
 	void OpenUnits (void);
 	void OpenTape (const CTape *pTape);	// navegador de bloques de la cinta (F3)
 	unsigned GetSelectedTapeBlock (void) const	{ return m_nTapeSelected; }
+	// bFromShortcut: abierta con Alt+U (ESC cierra el menú en lugar de volver a la ayuda)
+	void SetUnitsFromShortcut (boolean bFromShortcut)	{ m_bUnitsFromShortcut = bFromShortcut; }
 	void SetUnitLine (unsigned nUnit, const char *pName);
 	unsigned GetSelectedUnit (void) const	{ return m_nUnitSelected; }
 	int TakeUnitTarget (void)		{ int n = m_nUnitTarget; m_nUnitTarget = -1; return n; }
@@ -151,6 +153,7 @@ private:
 	unsigned m_nChangedSetting;
 	char m_ChoiceTitle[48];
 	char m_InputTitle[48];
+	boolean m_bUnitsFromShortcut;	// unidades abiertas con Alt+U
 	char m_InputHelp[2][48];
 	char m_InputBuf[20];		// lo escrito en la línea de texto
 	char m_Choice[MENU_CHOICE_ITEMS][48];
