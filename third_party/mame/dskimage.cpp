@@ -138,6 +138,46 @@ bool CDskImage::Load (const u8 *pData, unsigned nSize)
 				// guarda tres copias de sus sectores de 8K: son iguales en los
 				// 6305 bytes útiles y solo cambian tras la vuelta de la pista.
 				// Antes se escribían las tres seguidas, como un sector de 24K.
+				// Cabecera con N mal guardado: un sector débil con varias
+				// copias, cuyas copias no empiezan igual con el tamaño de su
+				// cabecera pero sí con uno mayor. Robocop (SPIN Disk Man):
+				// sector 2 de la pista 0 con N=0 y 1536 bytes, que son tres
+				// copias de 512 (256 bytes de E5 y 256 débiles); el juego lo
+				// lee con N=2 y, como el uPD765 compara N, con N=0 no lo
+				// encontraba nunca (pantalla de rayas). Se toma ese N mayor.
+				if (   bExtended && nProtection == 0 && (S.ST2 & 0x20) && S.N < 6
+				    && nDataPos + nStored <= nSize)
+				{
+					const u8 *pFirst = pData + nDataPos;
+					auto SamePrefix = [&] (unsigned nCopy) -> bool
+					{
+						unsigned nCmp = nCopy / 2 < 16 ? nCopy / 2 : 16;
+						for (unsigned c = nCopy; c < nStored; c += nCopy)
+						{
+							if (memcmp (pFirst + c, pFirst, nCmp) != 0)
+							{
+								return false;
+							}
+						}
+						return true;
+					};
+
+					unsigned nOwn = 128u << S.N;
+					if (   nStored > nOwn && nStored % nOwn == 0
+					    && !SamePrefix (nOwn))
+					{
+						for (u8 n = S.N + 1; n < 6; n++)
+						{
+							unsigned nCopy = 128u << n;
+							if (nStored % nCopy == 0 && nStored / nCopy >= 2 && SamePrefix (nCopy))
+							{
+								S.N = n;
+								break;
+							}
+						}
+					}
+				}
+
 				unsigned nNative = 128u << (S.N < 6 ? S.N : 6);	// N >= 6: 8K
 				if (   bExtended && nProtection == 0
 				    && nStored > nNative && nStored % nNative == 0
@@ -541,6 +581,20 @@ bool CDskImage::BuildTrack (int nCyl, int nSide, u8 *pCells, unsigned nCells,
 		W.Byte (S.C); W.Byte (S.H); W.Byte (S.R); W.Byte (S.N);
 		W.WriteCRC (bBadID);
 		W.Bytes (0x4E, 22);		// hueco 2
+
+		// Sector sin datos en la imagen pero con error de CRC en los datos
+		// (ST2 0x20): la marca de datos sí estaba; lo que sigue es el resto
+		// de la pista, y el CRC no cuadra. Guillermo Tell (Opera) lee así el
+		// sector 8 de la pista 40 (N=8, 32K, no cabe en la pista) y espera
+		// ese error; sin la marca, el FDC respondía "sin marca de datos" y el
+		// juego se quedaba en la pantalla de carga.
+		if (S.pData == 0 && (S.ST2 & 0x20) && !(S.ST1 & 0x04) && !(S.ST2 & 0x01))
+		{
+			W.Bytes (0x00, 12);
+			W.StartCRC ();
+			W.SyncA1 (); W.SyncA1 (); W.SyncA1 ();
+			W.Byte ((S.ST2 & 0x40) ? 0xF8 : 0xFB);
+		}
 
 		// campo de datos (si el sector tiene datos)
 		if (S.pData != 0)
