@@ -123,7 +123,8 @@ defecto.
  cursors=both     Que hacen los cursores del teclado del PC:
                     both      teclas de cursor del Spectrum (CAPS SHIFT+5-8)
                               y ademas el joystick              (por defecto)
-                    keys      solo teclas de cursor del Spectrum
+                    keys      solo teclas de cursor del Spectrum (y el
+                              Ctrl derecho es SYMBOL SHIFT, no el disparo)
                     joystick  solo joystick
 
  f5=nmi           Que hace la tecla F5 (Alt+F5 hace la otra cosa):

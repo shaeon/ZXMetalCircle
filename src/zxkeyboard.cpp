@@ -274,9 +274,13 @@ void CZXKeyboard::UpdateFromReport (u8 nModifiers, const u8 RawKeys[6])
 	boolean bSuppressCS = FALSE;
 	boolean bJoystick = m_JoystickMode != JoystickNone;
 
-	// Joystick: cursores + Ctrl derecho (o 0 del teclado numérico) como disparo
+	// Joystick: cursores + Ctrl derecho (o 0 del teclado numérico) como disparo.
+	// El Ctrl derecho solo es el disparo cuando los cursores manejan el
+	// joystick (cursors=both o joystick); sin joystick o con cursors=keys es
+	// SYMBOL SHIFT, como el izquierdo.
+	boolean bRCtrlFire = bJoystick && m_CursorMode != CursorKeysOnly;
 	u8 nJoyDirs = 0;	// bits JOY_*
-	if (bJoystick && (nModifiers & HID_MOD_RCTRL))
+	if (bRCtrlFire && (nModifiers & HID_MOD_RCTRL))
 	{
 		nJoyDirs |= 0x10;
 	}
@@ -391,7 +395,7 @@ void CZXKeyboard::UpdateFromReport (u8 nModifiers, const u8 RawKeys[6])
 	{
 		Press (Matrix, ZX_SS);
 	}
-	if ((nModifiers & HID_MOD_RCTRL) && !bJoystick)
+	if ((nModifiers & HID_MOD_RCTRL) && !bRCtrlFire)
 	{
 		Press (Matrix, ZX_SS);
 	}

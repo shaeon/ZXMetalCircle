@@ -397,7 +397,7 @@ Correspondencia del teclado del PC con el del Spectrum:
 - Mayúsculas = CAPS SHIFT y Ctrl = SYMBOL SHIFT.
 - Tab = EXTENDED MODE, Esc = BREAK, Retroceso = DELETE y Bloq Mayús = CAPS LOCK.
 - La puntuación del teclado español (`, . - + ' < >` y sus variantes con mayúsculas) se traduce a su combinación con SYMBOL SHIFT.
-- **Cursores**: siempre son las teclas de cursor del Spectrum (CAPS SHIFT + 5/6/7/8). Con un joystick elegido, además mueven el joystick, y el Ctrl derecho (o el 0 del teclado numérico) es el disparo. Se puede cambiar con `cursors=`.
+- **Cursores**: siempre son las teclas de cursor del Spectrum (CAPS SHIFT + 5/6/7/8). Con un joystick elegido, además mueven el joystick, y el Ctrl derecho (o el 0 del teclado numérico) es el disparo. Se puede cambiar con `cursors=`. Sin joystick, o con `cursors=keys`, el Ctrl derecho es SYMBOL SHIFT, como el izquierdo.
 
 Para cargar una cinta: pulsa F1 y luego ENTER, elige el `.TAP`, `.TZX`, `.PZX` o `.CSW` y escribe `LOAD ""` (en el 128K/+2A, elige "Tape Loader" o "Loader" en el menú). La cinta arranca sola cuando la ROM o un cargador propio empiezan a leerla, y se para sola cuando el programa deja de leerla como un cargador durante 2 segundos. Lo que cuenta es leer como un cargador (el mismo IN una y otra vez, con un contador que avanza, como hace Fuse), no leer mucho: los menús que miran el teclado sin parar no arrancan la cinta ni la mantienen en marcha, y así las multicargas encuentran el siguiente bloque donde lo dejaron. En el modo rápido, el emulador va a toda velocidad mientras dura la carga.
 

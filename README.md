@@ -389,7 +389,7 @@ PC keyboard to Spectrum keyboard mapping:
 - Shift = CAPS SHIFT and Ctrl = SYMBOL SHIFT.
 - Tab = EXTENDED MODE, Esc = BREAK, Backspace = DELETE and Caps Lock = CAPS LOCK.
 - The punctuation of the Spanish keyboard (`, . - + ' < >` and their shifted variants) is translated to its SYMBOL SHIFT combination.
-- **Cursor keys**: they are always the Spectrum's cursor keys (CAPS SHIFT + 5/6/7/8). With a joystick selected, they also move the joystick, and right Ctrl (or keypad 0) is fire. This can be changed with `cursors=`.
+- **Cursor keys**: they are always the Spectrum's cursor keys (CAPS SHIFT + 5/6/7/8). With a joystick selected, they also move the joystick, and right Ctrl (or keypad 0) is fire. This can be changed with `cursors=`. With no joystick, or with `cursors=keys`, right Ctrl is SYMBOL SHIFT, like the left one.
 
 To load a tape: press F1 and then ENTER, choose the `.TAP`, `.TZX`, `.PZX` or `.CSW` and type `LOAD ""` (on the 128K/+2A, choose "Tape Loader" or "Loader" in the menu). The tape starts by itself when the ROM or a custom loader starts reading it, and stops by itself when the program stops reading it like a loader for 2 seconds. What counts is reading like a loader (the same IN over and over, with a counter that advances, as Fuse does), not reading a lot: menus that poll the keyboard non-stop neither start the tape nor keep it running, so multiloads find the next block where they left it. In fast mode, the emulator runs at full speed while loading.
 

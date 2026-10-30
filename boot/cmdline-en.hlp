@@ -120,7 +120,8 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
  cursors=both     What the PC keyboard's cursor keys do:
                     both      Spectrum cursor keys (CAPS SHIFT+5-8)
                               and also the joystick            (default)
-                    keys      Spectrum cursor keys only
+                    keys      Spectrum cursor keys only (and right Ctrl
+                              is SYMBOL SHIFT, not fire)
                     joystick  joystick only
 
  f5=nmi           What the F5 key does (Alt+F5 does the other):

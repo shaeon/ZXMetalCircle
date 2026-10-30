@@ -62,6 +62,26 @@ int main ()
 	n = kb.HoldKeys ("?!", 5);
 	chk ("Alt+V sin teclas válidas: nada", n == 0 && NoKey (kb));
 
+	// Ctrl derecho: disparo solo si los cursores manejan el joystick
+	const u8 NoKeys[6] = {0, 0, 0, 0, 0, 0};
+	kb.SetJoystickMode (JoystickKempston);
+	kb.SetCursorMode (CursorBoth);
+	kb.UpdateFromReport (0x10, NoKeys);		// Ctrl derecho
+	chk ("Kempston y cursors=both: Ctrl derecho no es SYMBOL SHIFT (es el disparo)", !Pressed (kb, 7, 1));
+	kb.UpdateFromReport (0, NoKeys);
+	kb.SetCursorMode (CursorKeysOnly);
+	kb.UpdateFromReport (0x10, NoKeys);
+	chk ("Kempston y cursors=keys: Ctrl derecho es SYMBOL SHIFT", Pressed (kb, 7, 1));
+	kb.UpdateFromReport (0, NoKeys);
+	kb.SetJoystickMode (JoystickNone);
+	kb.SetCursorMode (CursorBoth);
+	kb.UpdateFromReport (0x10, NoKeys);
+	chk ("sin joystick: Ctrl derecho es SYMBOL SHIFT", Pressed (kb, 7, 1));
+	kb.UpdateFromReport (0, NoKeys);
+	kb.UpdateFromReport (0x01, NoKeys);		// Ctrl izquierdo
+	chk ("Ctrl izquierdo: siempre SYMBOL SHIFT", Pressed (kb, 7, 1));
+	kb.UpdateFromReport (0, NoKeys);
+
 	printf (fails ? "%d fallos\n" : "todo OK\n", fails);
 	return fails;
 }
