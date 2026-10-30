@@ -55,6 +55,7 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nChoices = 0;
 	m_nChoiceSelected = 0;
 	m_ChoiceTitle[0] = '\0';
+	m_InputTitle[0] = m_InputHelp[0][0] = m_InputHelp[1][0] = m_InputBuf[0] = '\0';
 	m_nAboutTop = 0;
 	m_nUnitSelected = 0;
 	m_nUnitTarget = -1;
@@ -229,6 +230,18 @@ void CMenu::OpenChoice (const char *pTitle)
 	m_nChoices = 0;
 	m_nChoiceSelected = 0;
 	m_Mode = ModeChoice;
+}
+
+void CMenu::OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp2)
+{
+	strncpy (m_InputTitle, pTitle, sizeof m_InputTitle - 1);
+	m_InputTitle[sizeof m_InputTitle - 1] = '\0';
+	strncpy (m_InputHelp[0], pHelp1 != 0 ? pHelp1 : "", sizeof m_InputHelp[0] - 1);
+	m_InputHelp[0][sizeof m_InputHelp[0] - 1] = '\0';
+	strncpy (m_InputHelp[1], pHelp2 != 0 ? pHelp2 : "", sizeof m_InputHelp[1] - 1);
+	m_InputHelp[1][sizeof m_InputHelp[1] - 1] = '\0';
+	m_InputBuf[0] = '\0';
+	m_Mode = ModeInput;
 }
 
 void CMenu::SetChoiceItem (unsigned nItem, const char *pText)
@@ -921,6 +934,52 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		return Result;
 	}
 
+	if (m_Mode == ModeInput)
+	{
+		unsigned nLen = strlen (m_InputBuf);
+		char c = '\0';
+		if (nKey >= 0x04 && nKey <= 0x1D)
+		{
+			c = 'A' + (nKey - 0x04);
+		}
+		else if (nKey >= 0x1E && nKey <= 0x26)
+		{
+			c = '1' + (nKey - 0x1E);
+		}
+		else if (nKey == 0x27)
+		{
+			c = '0';
+		}
+		else if (nKey == HID_KEY_SPACE)
+		{
+			c = ' ';
+		}
+
+		if (c != '\0')
+		{
+			if (nLen + 1 < sizeof m_InputBuf)
+			{
+				m_InputBuf[nLen] = c;
+				m_InputBuf[nLen + 1] = '\0';
+			}
+		}
+		else if (nKey == HID_KEY_BACKSPACE && nLen > 0)
+		{
+			m_InputBuf[nLen - 1] = '\0';
+		}
+		else if (nKey == HID_KEY_ENTER || nKey == 0x58)
+		{
+			m_Mode = ModeClosed;
+			Result = MenuResultInput;
+		}
+		else if (nKey == HID_KEY_ESC || nKey == HID_KEY_F1)
+		{
+			m_Mode = ModeClosed;
+			Result = MenuResultInputCancel;
+		}
+		return Result;
+	}
+
 	if (m_Mode == ModeChoice)
 	{
 		if (nKey == HID_KEY_UP && m_nChoiceSelected > 0)
@@ -1377,6 +1436,20 @@ void CMenu::Draw (TPixel *pScreen)
 			    (unsigned) ABOUT_LINES);
 		m_pVideo->DrawText (pScreen, tx + (TEXT_COLS - 9) * 8, ROW_Y (1), Pos, COLOR_UI_TEXT, COLOR_UI_PANEL, 9);
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("Cursores y RePág/AvPág   ESC volver"),
+				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		return;
+	}
+
+	if (m_Mode == ModeInput)
+	{
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), m_InputTitle, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		CString Line;
+		Line.Format ("> %s_", m_InputBuf);
+		m_pVideo->FillRect (pScreen, tx - 2, ROW_Y (4) - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (4), Line, COLOR_UI_PANEL, COLOR_UI_HILITE, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (7), m_InputHelp[0], COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (8), m_InputHelp[1], COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ENTER pulsar  BORRAR corregir  ESC salir"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		return;
 	}

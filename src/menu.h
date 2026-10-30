@@ -47,7 +47,9 @@ enum TMenuResult
 	MenuResultChoiceCancel,		// lista de elección: ESC
 	MenuResultUnitEject,		// SUPR en la pantalla de unidades (GetSelectedUnit ())
 	MenuResultTapeSeek,		// ENTER en el navegador de la cinta (GetSelectedTapeBlock ())
-	MenuResultTapeInvert		// P en el navegador de la cinta: invertir la polaridad
+	MenuResultTapeInvert,		// P en el navegador de la cinta: invertir la polaridad
+	MenuResultInput,		// línea de texto: ENTER (GetInput ())
+	MenuResultInputCancel		// línea de texto: ESC
 };
 
 class CMenu : public CTNFSListener
@@ -78,6 +80,11 @@ public:
 	void OpenChoice (const char *pTitle);
 	void SetChoiceItem (unsigned nItem, const char *pText);
 	unsigned GetChoice (void) const		{ return m_nChoiceSelected; }
+
+	// Línea de texto (letras, números y espacio): título y dos líneas de
+	// explicación; ENTER da MenuResultInput y ESC MenuResultInputCancel
+	void OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp2);
+	const char *GetInput (void) const	{ return m_InputBuf; }
 	void Close (void)		{ m_Mode = ModeClosed; }
 	boolean IsOpen (void) const	{ return m_Mode != ModeClosed; }
 
@@ -111,7 +118,7 @@ private:
 	CVideo *m_pVideo;
 
 	enum TMode { ModeClosed, ModeBrowser, ModeHelp, ModeKeyHelp, ModeSettings, ModeChoice, ModeUnits,
-		     ModeAbout, ModeTape };
+		     ModeAbout, ModeTape, ModeInput };
 	unsigned SettingsOnPage (unsigned *pIndex, unsigned nMax) const;
 	void FixSettingsRow (void);
 	TMode m_Mode;
@@ -143,6 +150,9 @@ private:
 	unsigned m_nSettingsRow;
 	unsigned m_nChangedSetting;
 	char m_ChoiceTitle[48];
+	char m_InputTitle[48];
+	char m_InputHelp[2][48];
+	char m_InputBuf[20];		// lo escrito en la línea de texto
 	char m_Choice[MENU_CHOICE_ITEMS][48];
 	unsigned m_nChoices;
 	unsigned m_nChoiceSelected;

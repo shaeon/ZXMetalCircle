@@ -88,6 +88,11 @@ CZXKeyboard::CZXKeyboard (void)
 {
 	ReleaseAll ();
 	memset (m_PrevKeys, 0, sizeof m_PrevKeys);
+	m_nHeldFrames = 0;
+	for (unsigned i = 0; i < 8; i++)
+	{
+		m_HeldMatrix[i] = 0;
+	}
 	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
 	{
 		m_PadJoy[i] = 0;
@@ -203,6 +208,20 @@ boolean CZXKeyboard::GetKeyEvent (TKeyEvent *pEvent)
 
 void CZXKeyboard::UpdateFromReport (u8 nModifiers, const u8 RawKeys[6])
 {
+	// Con demasiadas teclas a la vez (o una combinación que su matriz no
+	// distingue), el teclado manda un informe de error: ErrorRollOver (0x01)
+	// en todas las posiciones. Según la norma HID se mantiene el estado
+	// anterior hasta el siguiente informe válido; antes se soltaba todo y el
+	// juego veía de golpe que no había ninguna tecla pulsada (p. ej. al
+	// teclear a la vez VICTOR en Profanation).
+	for (unsigned i = 0; i < 6; i++)
+	{
+		if (RawKeys[i] >= 0x01 && RawKeys[i] <= 0x03)
+		{
+			return;
+		}
+	}
+
 	// Eventos para el emulador: teclas recién pulsadas
 	for (unsigned i = 0; i < 6; i++)
 	{
@@ -465,6 +484,10 @@ u8 CZXKeyboard::ReadPort (u8 nHighByte) const
 	for (unsigned nRow = 0; nRow < 8; nRow++)
 	{
 		Matrix[nRow] = m_Matrix[nRow] | m_GPIOMatrix[nRow];
+		if (m_nHeldFrames != 0)
+		{
+			Matrix[nRow] |= m_HeldMatrix[nRow];	// Alt+V: varias a la vez
+		}
 	}
 
 	// Joysticks que se leen como teclas
@@ -503,4 +526,62 @@ u8 CZXKeyboard::ReadPort (u8 nHighByte) const
 	}
 
 	return ~nKeys | 0xE0;	// bits 5-7 a 1; el bit 6 (EAR) lo ajusta el llamante
+}
+
+// Alt+V: mantiene pulsadas a la vez las teclas de pKeys (letras, números y
+// espacio) durante nFrames cuadros, para los trucos que piden pulsar varias
+// teclas juntas (VICTOR en Profanation) con teclados que no las registran
+// todas. Devuelve cuántas teclas se van a pulsar.
+unsigned CZXKeyboard::HoldKeys (const char *pKeys, unsigned nFrames)
+{
+	u8 Matrix[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+	unsigned nCount = 0;
+	for (; *pKeys != '\0'; pKeys++)
+	{
+		char c = *pKeys;
+		if (c >= 'a' && c <= 'z')
+		{
+			c -= 'a' - 'A';
+		}
+
+		u8 nPos = NK;
+		if (c >= 'A' && c <= 'Z')
+		{
+			nPos = LetterMap[c - 'A'];
+		}
+		else if (c >= '1' && c <= '9')
+		{
+			nPos = DigitMap[c - '1'];
+		}
+		else if (c == '0')
+		{
+			nPos = DigitMap[9];
+		}
+		else if (c == ' ')
+		{
+			nPos = ZX_SPACE;
+		}
+
+		if (nPos != NK)
+		{
+			Press (Matrix, nPos);
+			nCount++;
+		}
+	}
+
+	m_nHeldFrames = 0;
+	for (unsigned i = 0; i < 8; i++)
+	{
+		m_HeldMatrix[i] = Matrix[i];
+	}
+	m_nHeldFrames = nCount != 0 ? nFrames : 0;
+	return nCount;
+}
+
+void CZXKeyboard::TickHeld (void)
+{
+	if (m_nHeldFrames != 0)
+	{
+		m_nHeldFrames--;
+	}
 }

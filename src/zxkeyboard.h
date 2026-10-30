@@ -128,6 +128,11 @@ public:
 
 	void ReleaseAll (void);
 
+	// Alt+V: pulsar varias teclas a la vez durante unos cuadros
+	unsigned HoldKeys (const char *pKeys, unsigned nFrames);
+	void TickHeld (void);			// una vez por cuadro emulado
+	boolean IsHolding (void) const		{ return m_nHeldFrames != 0; }
+
 private:
 	u8 GetJoystickState (void) const;
 	void PushEvent (u8 nKey, u8 nModifiers);
@@ -135,6 +140,8 @@ private:
 private:
 	volatile u8 m_Matrix[8];
 	volatile u8 m_GPIOMatrix[8];
+	volatile u8 m_HeldMatrix[8];		// Alt+V: teclas mantenidas
+	volatile unsigned m_nHeldFrames;
 	volatile u8 m_nKeyJoy;			// joystick desde los cursores del teclado
 	volatile u8 m_PadJoy[MAX_GAMEPADS];	// joystick desde los mandos
 

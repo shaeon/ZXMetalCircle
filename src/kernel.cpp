@@ -61,6 +61,8 @@ static const char *TapeModeNames[TapeModeCount] =
 
 // Teclas de función. Para cambiar una asignación basta con tocar esta tabla:
 // la ayuda (F1) se genera a partir de ella.
+#define MULTIKEY_FRAMES		75		// Alt+V: las teclas se mantienen 1,5 s
+
 enum TAction
 {
 	ActionHelp,
@@ -83,6 +85,7 @@ enum TAction
 	ActionRecord,
 	ActionRecordEar,
 	ActionKeyDebug,
+	ActionMultiKey,			// Alt+V: pulsar varias teclas a la vez
 	ActionBlankDisk,
 	ActionEjectDisks,
 	ActionBlankMicrodrive,
@@ -130,7 +133,8 @@ static const TKeyBinding KeyBindings[] =
 	{0x0F,           TRUE,  ActionLEC,          "Alt+L/T/X", N_("LEC/Spectranet/divMMC sí/no")},
 	{0x17,           TRUE,  ActionSpectranet,   "Alt+T",  0},
 	{0x1B,           TRUE,  ActionDivMMC,       "Alt+X",  0},
-	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D",  N_("Diagnóstico del teclado")},
+	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D/V", N_("Teclado: diagnóstico / varias a la vez")},
+	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",  0},
 	{0x09,           TRUE,  ActionBlankDisk,    "Alt+F/E", N_("Disco +3: nuevo / expulsar")},
 	{0x08,           TRUE,  ActionEjectDisks,   "Alt+E",  0},
 	{HID_KEY_F12,    FALSE, ActionReset,        "F12",    N_("Reset (también Alt+R)")},
@@ -3909,6 +3913,21 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			EjectUnit (m_Menu.GetSelectedUnit ());
 			UpdateUnitLines ();
 		}
+		else if (Result == MenuResultInput)
+		{
+			// Alt+V: las teclas escritas se pulsan a la vez al volver al Spectrum
+			const char *pKeys = m_Menu.GetInput ();
+			if (m_Keyboard.HoldKeys (pKeys, MULTIKEY_FRAMES) != 0)
+			{
+				CString Message;
+				Message.Format (T ("Pulsando a la vez: %s"), pKeys);
+				ShowMessage (Message);
+			}
+			else
+			{
+				ShowMessage (T ("No hay teclas que pulsar"));
+			}
+		}
 		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bDiskChoice)
 		{
 			m_bDiskChoice = FALSE;
@@ -4176,6 +4195,20 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 
 	case ActionKeyDebug:
 		m_bKeyDebug = !m_bKeyDebug;
+		break;
+
+	case ActionMultiKey:
+		// Alt+V: se escriben las teclas y se pulsan todas a la vez (trucos como
+		// VICTOR en Profanation, con teclados que no registran tantas juntas)
+		if (!m_Menu.IsOpen ())
+		{
+			memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+			OpenMenu ();
+			m_Keyboard.SetCaptured (TRUE);
+		}
+		m_Menu.OpenInput (T ("Pulsar varias teclas a la vez"),
+				  T ("Teclas que se pulsan a la vez (1,5 s):"),
+				  T ("letras, números y espacio. Ej.: VICTOR"));
 		break;
 
 	case ActionBlankDisk:
@@ -4810,6 +4843,7 @@ TShutdownMode CKernel::Run (void)
 			}
 
 			m_pSpectrum->RunFrame ();
+			m_Keyboard.TickHeld ();			// Alt+V: teclas mantenidas
 
 			// Reloj para esxDOS (RTC.SYS): la hora de la Pi, si ya la tiene (NTP)
 			if (m_pSpectrum->IsDivMMCActive ())
