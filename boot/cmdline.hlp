@@ -88,6 +88,11 @@ defecto.
                   Digital Integration...), se salta la espera en los datos.
                   Vale tambien para muchos turbos. 0 = no (si algun juego
                   falla al cargar)
+ diskaccel=0      +3 y +3e: emular tan deprisa como se pueda mientras se usa
+                  la disquetera (1 = si). El disco y el controlador siguen en
+                  tiempo del Spectrum, asi que las protecciones no cambian;
+                  solo carga antes. La musica de las cargas va acelerada.
+
 
  speaker=auto     Modelo del altavoz para el beeper (como en Fuse): auto (48K =
                   altavoz interno, 128K/+2/+3 = televisor), beeper, tv u off

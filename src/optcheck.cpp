@@ -22,6 +22,7 @@ static const TOptionDef Options[] =
 	{"model",	"16k|48k|128k|plus2|+2|plus2a|+2a|plus3|+3|plus3e|+3e"},
 	{"tape",	"flash|fast|normal"},
 	{"tapeaccel",	"0|1"},
+	{"diskaccel",	"0|1"},
 	{"joystick",	"none|kempston|fuller|sinclair1|sinclair2|cursor|qaop"},
 	{"cursors",	"both|keys|joystick"},
 	{"f5",		"nmi|files"},

@@ -51,6 +51,7 @@ static TSettingDef Settings[] =
 	// 2 Cintas y grabación
 	{"tape",	N_("Carga de cintas"),	2, "flash|fast|normal", N_("instantánea|rápida|real"), "flash", TRUE},
 	{"tapeaccel",	N_("Acelerar cargadores"), 2, "1|0", N_("sí|no"),				"1",	TRUE},
+	{"diskaccel",	N_("Acelerar discos"),	2, "0|1", N_("no|sí"),					"0",	TRUE},
 	{"savetrap",	N_("SAVE a la SD"),	2, "1|0", N_("sí|no"),					"1",	TRUE},
 	{"savefmt",	N_("Formato de SAVE"),	2, "tap|tzx", "TAP|TZX",				"tap",	TRUE},
 	{"snapformat",	N_("Formato de F8"),	2, "z80|sna|szx", "Z80|SNA|SZX",			"z80",	TRUE},
@@ -518,6 +519,12 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	{
 		return Is ("ear", "gpio");
 	}
+	// disco acelerado: solo en los modelos con disquetera
+	if (strcmp (pKey, "diskaccel") == 0)
+	{
+		return Is ("model", "plus3") || Is ("model", "plus3e");
+	}
+
 	// negro puro: solo cambia la paleta del 16K/48K (la de los demás ya lo es)
 	if (strcmp (pKey, "pureblack") == 0)
 	{

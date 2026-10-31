@@ -199,6 +199,7 @@ All the options go on a single line:
 | `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e` | `128k` |
 | `tape=` | `flash` (instant), `fast`, `normal` (real) | `flash` |
 | `tapeaccel=` | `1` (accelerate known loaders), `0` | `1` |
+| `diskaccel=` | `1` (+3/+3e: accelerated emulation while the disk drive is in use; copy protections are not affected), `0` | `0` |
 | `joystick=` | `none`, `kempston`, `fuller`, `sinclair1`, `sinclair2`, `cursor`, `qaop` | `kempston` |
 | `sounddev=` | `sndhdmi`, `sndpwm`, `sndusb` (Pi 4/400), `none` | `sndhdmi` |
 | `speaker=` | `auto`, `beeper`, `tv`, `off` (beeper speaker model) | `auto` |

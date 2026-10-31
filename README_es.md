@@ -207,6 +207,7 @@ Todas las opciones van en una sola línea:
 | `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e` | `128k` |
 | `tape=` | `flash` (instantánea), `fast` (rápida), `normal` (real) | `flash` |
 | `tapeaccel=` | `1` (acelerar cargadores conocidos), `0` | `1` |
+| `diskaccel=` | `1` (+3/+3e: emulación acelerada mientras se usa la disquetera; las protecciones no cambian), `0` | `0` |
 | `joystick=` | `none`, `kempston`, `fuller`, `sinclair1`, `sinclair2`, `cursor`, `qaop` | `kempston` |
 | `sounddev=` | `sndhdmi`, `sndpwm`, `sndusb` (Pi 4/400), `none` | `sndhdmi` |
 | `speaker=` | `auto`, `beeper`, `tv`, `off` (modelo del altavoz del beeper) | `auto` |

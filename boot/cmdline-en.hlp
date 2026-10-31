@@ -91,6 +91,11 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                   Digital Integration...), the wait is skipped in the data.
                   It also works with many turbo loaders. 0 = no (if a game
                   fails to load)
+ diskaccel=0      +3 and +3e: emulate as fast as possible while the disk
+                  drive is in use (1 = yes). The disk and the controller stay
+                  in Spectrum time, so copy protections are not affected; it
+                  just loads sooner. Music during loading is sped up.
+
 
  tapesound=1      Hear the tape signal while loading: 1 = yes, 0 = no
 

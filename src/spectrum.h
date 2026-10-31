@@ -85,6 +85,10 @@ public:
 	// Aceleración de cargadores como en Fuse (solo en carga rápida e instantánea)
 	void SetLoaderAcceleration (boolean bOn)	{ m_bLoaderAccel = bOn; m_AccelMode = AccelNone; }
 	boolean GetLoaderAcceleration (void) const	{ return m_bLoaderAccel; }
+	// diskaccel=1: emulación acelerada mientras se usa la disquetera
+	void SetDiskAcceleration (boolean bOn)	{ m_bDiskAccel = bOn; }
+	boolean GetDiskAcceleration (void) const	{ return m_bDiskAccel; }
+	boolean IsDiskAccelerating (void) const;
 
 	// Multiface (MF1 en 48K, MF128 en 128K, MF3 en +2A). Las ROMs (8 KB) se
 	// cargan desde la SD; sin ROM no hay Multiface para ese modelo.
@@ -389,6 +393,7 @@ private:
 	// aceleración de cargadores (ver CheckLoaderAcceleration)
 	enum TAccelMode { AccelNone, AccelIncreasing, AccelDecreasing };
 	boolean m_bLoaderAccel;
+	boolean m_bDiskAccel;
 	TAccelMode m_AccelMode;
 	u16 m_nAccelPC;
 	unsigned m_nAccelEdges;		// flancos acelerados en este cuadro

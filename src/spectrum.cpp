@@ -49,6 +49,7 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_nLoadingFrames (0),
 	m_bAutoStopped (TRUE),
 	m_bLoaderAccel (TRUE),
+	m_bDiskAccel (FALSE),
 	m_AccelMode (AccelNone),
 	m_nAccelPC (0),
 	m_nAccelEdges (0),
@@ -2640,4 +2641,14 @@ void CSpectrum::CountLoaderRead (u16 nPort)
 	m_nLastFEPC = nPC;
 	m_nLastFEPort = nPort;
 	memcpy (m_LastFERegs, Regs, sizeof Regs);
+}
+
+// Disco acelerado (diskaccel=1): mientras el programa usa la disquetera, el
+// kernel emula sin esperar al reloj, como con la cinta en carga rápida. El
+// disco y el controlador siguen en tiempo del Spectrum, así que no cambia
+// nada para las protecciones; solo pasa más deprisa en la realidad.
+boolean CSpectrum::IsDiskAccelerating (void) const
+{
+	return m_bDiskAccel && HasDiskDrive ()
+	       && m_pDisk->RecentlyUsed (m_nFrameStart + m_nTstates, m_pTiming->nClockFreq);
 }

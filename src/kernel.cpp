@@ -464,6 +464,7 @@ void CKernel::ParseOptions (void)
 
 	// Aceleración de cargadores (como en Fuse), en carga rápida e instantánea
 	m_pSpectrum->SetLoaderAcceleration (m_Options.GetAppOptionDecimal ("tapeaccel", 1) != 0);
+	m_pSpectrum->SetDiskAcceleration (m_Options.GetAppOptionDecimal ("diskaccel", 0) != 0);
 
 	const char *pTape = m_Options.GetAppOptionString ("tape", "flash");
 	if (strcasecmp (pTape, "flash") == 0)
@@ -1859,6 +1860,7 @@ void CKernel::SyncSetting (const char *pKey)
 		pValue = TapeMode == TapeModeFlash ? "flash" : (TapeMode == TapeModeNormal ? "normal" : "fast");
 	}
 	else if (strcmp (pKey, "tapeaccel") == 0)	pValue = m_pSpectrum->GetLoaderAcceleration () ? "1" : "0";
+	else if (strcmp (pKey, "diskaccel") == 0)	pValue = m_pSpectrum->GetDiskAcceleration () ? "1" : "0";
 	else if (strcmp (pKey, "joystick") == 0)
 	{
 		static const char *Joy[] = {"none", "kempston", "fuller", "sinclair1", "sinclair2", "cursor", "qaop"};
@@ -1961,6 +1963,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 	}
 	else if (strcmp (pKey, "tapesound") == 0)	m_pSpectrum->GetAudio ()->SetTapeSound (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "tapeaccel") == 0)	m_pSpectrum->SetLoaderAcceleration (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "diskaccel") == 0)	m_pSpectrum->SetDiskAcceleration (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "beeperfilter") == 0)	m_pSpectrum->GetAudio ()->SetBeeperFilter (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "speaker") == 0)
 	{
@@ -4693,12 +4696,15 @@ boolean CKernel::IsTyping (void) const
 {
 	return    m_nLastKeyTime != 0
 	       && CTimer::GetClockTicks64 () - m_nLastKeyTime < TYPING_SLOWDOWN_US
-	       && m_Tape.IsPlaying ();
+	       && (m_Tape.IsPlaying () || m_pSpectrum->IsDiskAccelerating ());
 }
 
+// Cinta en carga rápida o instantánea, o disco acelerado (diskaccel=1) con la
+// disquetera en uso; salvo mientras se escribe (ver IsTyping)
 boolean CKernel::IsAccelerating (void) const
 {
-	return m_pSpectrum->IsTapeAccelerating () && !IsTyping ();
+	return    (m_pSpectrum->IsTapeAccelerating () || m_pSpectrum->IsDiskAccelerating ())
+	       && !IsTyping ();
 }
 
 unsigned CKernel::GetEffectiveSpeed (void) const

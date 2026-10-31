@@ -52,6 +52,8 @@ public:
 
 	boolean IsMotorOn (void) const	{ return m_bMotor; }
 
+	boolean RecentlyUsed (u64 nTstates, unsigned nClock) const;	// ¿en uso? (disco acelerado)
+
 private:
 	void KeepSpinning (u64 nTstates, unsigned nClock);	// sin motor, sigue girando si se usa
 	void SetDriveType (unsigned nUnit, const CDskImage *pDisk);
@@ -63,6 +65,8 @@ private:
 	CDskImage *m_pDisk[2];
 	boolean m_bMotor;
 	u64 m_nMotorOffAt;		// t-states en que se para el disco (0 = no hay parada pendiente)
+	u64 m_nLastAccess;			// último acceso al controlador
+	u64 m_nMotorOnAt;			// cuándo se encendió el motor
 };
 
 #endif

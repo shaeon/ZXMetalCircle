@@ -14,7 +14,9 @@
 
 CPlus3Disk::CPlus3Disk (void)
 :	m_bMotor (FALSE),
-	m_nMotorOffAt (0)
+	m_nMotorOffAt (0),
+	m_nLastAccess (0),
+	m_nMotorOnAt (0)
 {
 	static machine_config Config;
 
@@ -114,6 +116,7 @@ void CPlus3Disk::WriteData (u8 nValue, u64 nTstates, unsigned nClock)
 
 void CPlus3Disk::KeepSpinning (u64 nTstates, unsigned nClock)
 {
+	m_nLastAccess = nTstates;		// para RecentlyUsed (disco acelerado)
 	if (m_nMotorOffAt == 0)
 	{
 		return;				// el motor está encendido (o ya parado)
@@ -127,6 +130,10 @@ void CPlus3Disk::KeepSpinning (u64 nTstates, unsigned nClock)
 
 void CPlus3Disk::SetMotor (boolean bOn, u64 nTstates, unsigned nClock)
 {
+	if (bOn && !m_bMotor)
+	{
+		m_nMotorOnAt = nTstates;	// para RecentlyUsed (disco acelerado)
+	}
 	AdvanceTo (nTstates, nClock);
 	if (bOn == m_bMotor)
 	{
@@ -265,4 +272,17 @@ unsigned CPlus3Disk::Save (unsigned nUnit, u8 *pBuffer, unsigned nSize)
 	}
 	m_pDrive[nUnit]->sync_image ();
 	return m_pDisk[nUnit]->Save (pBuffer, nSize);
+}
+
+// ¿Se está usando la disquetera? Para acelerar la emulación mientras tanto
+// (diskaccel=1): accesos al controlador en los últimos 300 ms, o el motor
+// encendido hace menos de 1,5 s (+3DOS espera con un bucle a que coja
+// velocidad, sin tocar el controlador). Tiempo del Spectrum, no real.
+boolean CPlus3Disk::RecentlyUsed (u64 nTstates, unsigned nClock) const
+{
+	if (m_nLastAccess != 0 && nTstates - m_nLastAccess < (u64) nClock * 3 / 10)
+	{
+		return TRUE;
+	}
+	return m_bMotor && nTstates - m_nMotorOnAt < (u64) nClock * 3 / 2;
 }
