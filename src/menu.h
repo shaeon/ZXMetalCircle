@@ -101,6 +101,8 @@ public:
 
 	// Líneas de estado que se muestran en la ayuda (modelo, joystick, cinta...)
 	void SetStatusLine (unsigned nLine, const char *pText);
+	void DrawMarked (TPixel *pScreen, int x, int y, const char *pText,
+			 u8 nLabel, u8 nValue, u8 nBack, unsigned nMaxCols);
 
 	// Líneas de la ayuda general (teclas de función), generadas por el kernel
 	void SetHelpLine (unsigned nLine, const char *pText);
@@ -145,7 +147,7 @@ private:
 	char m_SelectedPath[MENU_PATH_LEN];
 	char m_Error[64];
 
-	char m_Status[MENU_STATUS_LINES][48];
+	char m_Status[MENU_STATUS_LINES][64];		// con los valores entre |
 	char m_Help[MENU_HELP_LINES][48];
 	CSettings *m_pSettings;
 	unsigned m_nSettingsPage;

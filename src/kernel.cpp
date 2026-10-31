@@ -1059,45 +1059,45 @@ void CKernel::UpdateStatusLines (void)
 		m_Menu.SetHelpLine (nHelpLine++, Line);
 	}
 
-	Line.Format (T ("Modelo: %s%s  Vel. x%u"), m_pSpectrum->GetTiming ()->pName,
+	Line.Format (T ("Modelo: |%s%s|  Vel. |x%u|"), m_pSpectrum->GetTiming ()->pName,
 		     (m_pSpectrum->IsIssue2 () && m_pSpectrum->GetTiming ()->CodeModel == CodeModel48K)
 		     ? (m_pSpectrum->IsLECConnected () ? " +LEC" : " (Issue 2)")
 		     : (m_pSpectrum->IsLECConnected () && m_pSpectrum->GetModel () == Model48K ? " +LEC" : ""),
 		     m_nSpeed);
 	m_Menu.SetStatusLine (0, Line);
 
-	Line.Format (T ("Joystick: %s%s  %u.%02u c/s"), T (JoystickNames[m_Keyboard.GetJoystickMode ()]),
+	Line.Format (T ("Joystick: |%s%s|  |%u.%02u c/s|"), T (JoystickNames[m_Keyboard.GetJoystickMode ()]),
 		     m_Keyboard.IsMouseActive () ? T (" +ratón") : "", m_nFPSx100 / 100, m_nFPSx100 % 100);
 	m_Menu.SetStatusLine (1, Line);
 
 	if (m_pSpectrum->IsIF1Connected ())
 	{
-		Line.Format (T ("Carga: %s  Microdrives: %u"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
+		Line.Format (T ("Carga: |%s|  Microdrives: |%u|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
 			     CountMicrodrives ());
 	}
 	else if (m_pSpectrum->HasDiskDrive ())
 	{
 		CPlus3Disk *pDisk = m_pSpectrum->GetDisk ();
-		Line.Format (T ("Carga: %s  Discos A:%s B:%s%s"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
+		Line.Format (T ("Carga: |%s|  Discos A:|%s| B:|%s%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
 			     pDisk->HasDisk (0) ? T ("sí") : "-", pDisk->HasDisk (1) ? T ("sí") : "-",
 			     m_pSpectrum->HasZXMMC () && m_HardDisk.IsOpen () ? T (" HD:sí") : "");
 	}
 	else if (m_pEarSource != 0)
 	{
-		Line.Format (T ("Carga: %s  Casete: %s"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
+		Line.Format (T ("Carga: |%s|  Casete: |%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
 			     m_pSpectrum->IsEarInputActive () ? T ("con señal") : T ("sin señal"));
 	}
 	else
 	{
-		Line.Format (T ("Carga: %s"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]));
+		Line.Format (T ("Carga: |%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]));
 	}
 	m_Menu.SetStatusLine (2, Line);
 
 	if (m_Tape.IsInserted ())
 	{
-		Line.Format (T ("Cinta: %s"), m_Tape.GetName ());
+		Line.Format (T ("Cinta: |%s|"), m_Tape.GetName ());
 		m_Menu.SetStatusLine (3, Line);
-		Line.Format (T ("Bloque %u de %u%s%s"), m_Tape.GetBlock () + 1 > m_Tape.GetBlockCount ()
+		Line.Format (T ("|Bloque %u de %u%s|%s"), m_Tape.GetBlock () + 1 > m_Tape.GetBlockCount ()
 						? m_Tape.GetBlockCount () : m_Tape.GetBlock () + 1,
 			     m_Tape.GetBlockCount (), m_Tape.IsPlaying () ? T (" (en marcha)") : "",
 			     m_Tape.GetUnsupportedBlocks () > 0 ? T (" *no soportados") : "");
@@ -1105,42 +1105,42 @@ void CKernel::UpdateStatusLines (void)
 	}
 	else
 	{
-		m_Menu.SetStatusLine (3, T ("Cinta: (ninguna)"));
+		m_Menu.SetStatusLine (3, T ("Cinta: |(ninguna)|"));
 		m_Menu.SetStatusLine (4, "");
 	}
 
-	Line.Format (T ("Sonido: %s, AY %s"), T (m_pSoundName),
+	Line.Format (T ("Sonido: |%s|, AY |%s|"), T (m_pSoundName),
 		     AYStereoNames[m_pSpectrum->GetAY ()->GetStereoMode ()]);
 	m_Menu.SetStatusLine (5, Line);
 
 	if (m_pSpectrum->IsCartridgeInserted ())
 	{
-		Line.Format (T ("Cartucho: %s"), m_CartridgeName[0] != '\0' ? m_CartridgeName : T ("(snapshot)"));
+		Line.Format (T ("Cartucho: |%s|"), m_CartridgeName[0] != '\0' ? m_CartridgeName : T ("(snapshot)"));
 	}
 	else
 	{
 		if (m_pSpectrum->IsSpectranetEnabled ())
 		{
-			Line.Format (T ("Spectranet: sí  ULAplus: %s"), m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
+			Line.Format (T ("Spectranet: |sí|  ULAplus: |%s|"), m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
 		}
 		else if (m_pSpectrum->IsDivMMCActive ())
 		{
-			Line.Format (T ("divMMC: esxDOS  ULAplus: %s"), m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
+			Line.Format (T ("divMMC: |esxDOS|  ULAplus: |%s|"), m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
 		}
 		else
 		{
-			Line.Format (T ("Multiface: %s  ULAplus: %s"),
+			Line.Format (T ("Multiface: |%s|  ULAplus: |%s|"),
 				     m_pSpectrum->IsMultifaceAvailable () ? T ("sí") : T ("no"),
 				     m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
 		}
 	}
 	m_Menu.SetStatusLine (6, Line);
 
-	Line.Format (T ("Borde: %s, scanlines: %s"), T (CVideo::GetBorderName (m_BorderSize)),
+	Line.Format (T ("Borde: |%s|, scanlines: |%s|"), T (CVideo::GetBorderName (m_BorderSize)),
 		     m_bScanlines ? T ("sí") : T ("no"));
 	m_Menu.SetStatusLine (7, Line);
 
-	Line.Format (T ("Red: %s"), m_Network.GetStateText ());
+	Line.Format (T ("Red: |%s|"), m_Network.GetStateText ());
 	m_Menu.SetStatusLine (8, Line);
 }
 

@@ -51,6 +51,7 @@ static const u32 UIPaletteRGB[COLOR_COUNT - 16] =
 	0xEEEB46,	// COLOR_UI_TITLE
 	0x8A8CA0,	// COLOR_UI_DIM
 	0x7FD6FF,	// COLOR_UI_DIR
+	0x8CE678,	// COLOR_UI_VALUE (verde claro)
 };
 
 // Parte visible de la imagen generada para cada tamaño de borde

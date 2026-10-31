@@ -81,6 +81,40 @@ CMenu::~CMenu (void)
 	m_pEntries = 0;
 }
 
+// Texto con los valores entre '|' (FAT no lo admite en nombres de fichero,
+// así que no puede venir de una cinta o un disco): fuera, nLabel; dentro,
+// nValue. Las líneas de estado de la ayuda.
+void CMenu::DrawMarked (TPixel *pScreen, int x, int y, const char *pText,
+			u8 nLabel, u8 nValue, u8 nBack, unsigned nMaxCols)
+{
+	char Part[64];
+	unsigned nCol = 0;
+	boolean bValue = FALSE;
+	const char *p = pText;
+	while (*p != '\0' && nCol < nMaxCols)
+	{
+		unsigned n = 0;
+		while (p[n] != '\0' && p[n] != '|' && n < sizeof Part - 1)
+		{
+			Part[n] = p[n];
+			n++;
+		}
+		Part[n] = '\0';
+		if (n > 0)
+		{
+			m_pVideo->DrawText (pScreen, x + nCol * 8, y, Part, bValue ? nValue : nLabel, nBack,
+					    nMaxCols - nCol);
+			nCol += UTF8Length (Part);
+		}
+		p += n;
+		if (*p == '|')
+		{
+			bValue = !bValue;
+			p++;
+		}
+	}
+}
+
 void CMenu::SetStatusLine (unsigned nLine, const char *pText)
 {
 	if (nLine < MENU_STATUS_LINES)
@@ -1294,8 +1328,8 @@ void CMenu::Draw (TPixel *pScreen)
 		{
 			if (m_Status[i][0] != '\0')
 			{
-				m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow++), m_Status[i],
-						    COLOR_UI_HILITE, COLOR_UI_PANEL, TEXT_COLS);
+				DrawMarked (pScreen, tx, ROW_Y (nRow++), m_Status[i],
+					    COLOR_UI_HILITE, COLOR_UI_VALUE, COLOR_UI_PANEL, TEXT_COLS);
 			}
 		}
 
@@ -1330,7 +1364,8 @@ void CMenu::Draw (TPixel *pScreen)
 				}
 			}
 			char Name[MENU_PATH_LEN];
-			if (*pName == '\0')
+			boolean bEmpty = *pName == '\0';
+			if (bEmpty)
 			{
 				strcpy (Name, i == UNIT_TAPE ? T ("(vacía)") : T ("(vacío)"));
 			}
@@ -1340,11 +1375,6 @@ void CMenu::Draw (TPixel *pScreen)
 			}
 
 			CString Line (Label);
-			for (unsigned n = UTF8Length (Label); n < 14; n++)
-			{
-				Line.Append (" ");
-			}
-			Line.Append (Name);
 
 			unsigned nRow = 3 + i + (i >= UNIT_MICRODRIVE ? 1 : 0);
 			boolean bSel = i == m_nUnitSelected;
@@ -1352,9 +1382,13 @@ void CMenu::Draw (TPixel *pScreen)
 			{
 				m_pVideo->FillRect (pScreen, tx - 2, ROW_Y (nRow) - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
 			}
+			// unidad en blanco; lo montado en verde y "(vacío)" en gris
 			m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow), Line,
 					    bSel ? COLOR_UI_PANEL : COLOR_UI_TEXT,
-					    bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL, TEXT_COLS);
+					    bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL, 14);
+			m_pVideo->DrawText (pScreen, tx + 14 * 8, ROW_Y (nRow), Name,
+					    bSel ? COLOR_UI_PANEL : (bEmpty ? COLOR_UI_DIM : COLOR_UI_VALUE),
+					    bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL, TEXT_COLS - 14);
 		}
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 4), T ("Lo montado aquí vale para esta sesión."),
 				    COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
@@ -1495,18 +1529,15 @@ void CMenu::Draw (TPixel *pScreen)
 			const char *pLabel = T (Def.pLabel);
 			CString Line;
 			Line.Format ("%c%s", Def.bLive ? ' ' : '*', pLabel);
-			for (unsigned n = UTF8Length (pLabel); n < 22; n++)
-			{
-				Line.Append (" ");
-			}
+			CString Value;
 			if (m_bEditing && i == m_nSettingsRow)
 			{
-				Line.Append (m_EditBuf);	// escribiendo: lo escrito y el cursor
-				Line.Append ("_");
+				Value = m_EditBuf;		// escribiendo: lo escrito y el cursor
+				Value.Append ("_");
 			}
 			else
 			{
-				Line.Append (m_pSettings->GetValueName (Index[i]));
+				Value = m_pSettings->GetValueName (Index[i]);
 			}
 			bRestart |= !Def.bLive;
 			boolean bSel = i == m_nSettingsRow;
@@ -1517,9 +1548,22 @@ void CMenu::Draw (TPixel *pScreen)
 				m_pVideo->FillRect (pScreen, tx - 2, ROW_Y (3 + 2 * i) - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
 				bSelApplies = bApplies;
 			}
+			// etiqueta en blanco y valor en verde (en gris si no se usa); en la
+			// fila elegida, el valor entre < y > (se cambia con las flechas)
+			u8 nBack = bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL;
 			m_pVideo->DrawText (pScreen, tx, ROW_Y (3 + 2 * i), Line,
-					    bSel ? COLOR_UI_PANEL : (bApplies ? COLOR_UI_TEXT : COLOR_UI_DIM),
-					    bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL, TEXT_COLS);
+					    bSel ? COLOR_UI_PANEL : (bApplies ? COLOR_UI_TEXT : COLOR_UI_DIM), nBack, 22);
+			m_pVideo->DrawText (pScreen, tx + 23 * 8, ROW_Y (3 + 2 * i), Value,
+					    bSel ? COLOR_UI_PANEL : (bApplies ? COLOR_UI_VALUE : COLOR_UI_DIM), nBack, TEXT_COLS - 23);
+			if (bSel && !m_bEditing)
+			{
+				unsigned nEnd = 23 + UTF8Length (Value);
+				m_pVideo->DrawText (pScreen, tx + 22 * 8, ROW_Y (3 + 2 * i), "<", COLOR_UI_PANEL, nBack, 1);
+				if (nEnd <= TEXT_COLS)
+				{
+					m_pVideo->DrawText (pScreen, tx + nEnd * 8, ROW_Y (3 + 2 * i), ">", COLOR_UI_PANEL, nBack, 1);
+				}
+			}
 		}
 
 		unsigned nRow = 4 + 2 * nRows;

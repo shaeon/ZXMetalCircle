@@ -23,7 +23,8 @@
 #define COLOR_UI_TITLE		20
 #define COLOR_UI_DIM		21
 #define COLOR_UI_DIR		22
-#define COLOR_COUNT		23
+#define COLOR_UI_VALUE		23		// valores (configuración, unidades, estado)
+#define COLOR_COUNT		24
 
 // Tamaños de borde (los de JSpeccy)
 enum TBorderSize
