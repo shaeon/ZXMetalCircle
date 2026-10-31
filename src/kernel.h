@@ -31,6 +31,7 @@
 #include "tape.h"
 #include "spectrum.h"
 #include "menu.h"
+#include "zipfile.h"
 #include "gpiokeyboard.h"
 #include "recreated.h"
 #include "network.h"
@@ -78,6 +79,12 @@ private:
 	void UpdateKeyRepeat (void);		// repetición de los cursores en los menús
 	boolean LoadTape (const char *pPath);
 	boolean LoadSnapshot (const char *pPath);
+	// ZIP: cintas y snapshots al vuelo, discos y Microdrive a SD:/tmp
+	void OpenZip (const char *pPath);
+	void LoadZipEntry (unsigned nEntry);
+	void ExtractZipToTmp (unsigned nEntry, boolean bOverwrite);
+	int SourceSize (const char *pPath);		// SD o "ZIP:nombre"
+	boolean ReadSource (const char *pPath, u8 *pBuffer, unsigned nSize);
 	boolean SaveSnapshot (void);
 	boolean LoadCartridge (const char *pPath);
 	void ToggleRecording (boolean bEarInput = FALSE);
@@ -284,6 +291,16 @@ private:
 	unsigned		m_nFPSx100;		// cuadros por segundo x 100
 	u64			m_nMotorStop;		// último momento con un microdrive girando
 	boolean			m_bKeyDebug;		// Alt+D
+	CZipFile		m_Zip;
+	u8			*m_pZipData;		// el ZIP abierto
+	u8			*m_pZipEntry;		// entrada descomprimida (cintas y snapshots)
+	unsigned		m_nZipEntrySize;
+	char			m_ZipEntryPath[ZIP_NAME_LEN + 8];
+	unsigned		m_ZipChoice[MENU_CHOICE_ITEMS];	// entradas que se pueden cargar
+	unsigned		m_nZipChoices;
+	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
+	boolean			m_bZipOverwriteChoice;	// pregunta: usar el de tmp o sobrescribir
+	unsigned		m_nZipPending;
 	boolean			m_bF5Files;		// f5=files: F5 abre los ficheros y Alt+F5 hace la NMI
 	volatile u8		m_LastReport[8];	// último informe USB (modificadores + 6 teclas)
 	unsigned		m_nSkippedFrames;	// cuadros no mostrados por ir con retraso

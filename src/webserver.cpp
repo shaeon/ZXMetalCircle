@@ -173,7 +173,7 @@ static boolean IsLoadable (const char *pName)
 {
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx",
 				    ".rom", ".mdr", ".mdv", ".dsk",
-				    ".vhd", ".img", ".raw", ".hdf"};
+				    ".vhd", ".img", ".raw", ".hdf", ".zip"};
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (HasExtension (pName, Ext[i]))

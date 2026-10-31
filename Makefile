@@ -7,7 +7,7 @@
 CIRCLEHOME ?= ../circle
 
 OBJS	= src/main.o src/kernel.o src/spectrum.o src/ay8912.o src/audiomixer.o \
-	  src/tape.o src/inflate.o src/snapshot.o src/interface1.o src/zxkeyboard.o src/gpiokeyboard.o src/recreated.o src/video.o src/menu.o src/network.o src/webserver.o src/plus3disk.o src/sdcard.o src/harddisk.o src/tnfs.o src/tnfsbrowser.o src/earinput.o src/earsource.o src/exclusions.o src/optcheck.o src/spectranet.o src/snetcircle.o src/settings.o src/esxfolder.o src/zxnet.o src/if1link.o src/i18n.o src/videocore.o \
+	  src/tape.o src/inflate.o src/zipfile.o src/snapshot.o src/interface1.o src/zxkeyboard.o src/gpiokeyboard.o src/recreated.o src/video.o src/menu.o src/network.o src/webserver.o src/plus3disk.o src/sdcard.o src/harddisk.o src/tnfs.o src/tnfsbrowser.o src/earinput.o src/earsource.o src/exclusions.o src/optcheck.o src/spectranet.o src/snetcircle.o src/settings.o src/esxfolder.o src/zxnet.o src/if1link.o src/i18n.o src/videocore.o \
 	  src/download/httpsclient.o src/download/zxinfo.o src/download/circleglue.o src/roms.o \
 	  third_party/z80cpp/z80.o \
 	  third_party/mame/upd765.o third_party/mame/fdc_pll.o third_party/mame/dskimage.o \

@@ -333,6 +333,15 @@ Desde la ayuda (F1), la tecla **C** abre la configuración: siete páginas con l
 - **R** reinicia la Raspberry Pi. Pide confirmación ("No" es la opción marcada) y, si hay cambios sin guardar, ofrece guardarlos antes. Antes de reiniciar se guarda todo lo pendiente: discos del +3, cartuchos de microdrive, la flash de la Spectranet, lo grabado por esxDOS y la salida del RS232.
 - La configuración muestra lo que hay en `cmdline.txt` (se vuelve a leer al abrirla si no hay cambios pendientes, por si se ha cambiado desde la web), más lo que se cambie con las teclas: F4, F6, F7, F9, F10, Alt+B, Alt+S y los periféricos (Alt+T/X/L). Así G también sirve para guardar esos cambios. Lo que cambia solo, como el modelo al cargar un snapshot de 128K, no pasa a la configuración, para no guardarlo sin querer. Si hay algo sin guardar, se avisa en la pantalla.
 
+## Ficheros ZIP
+
+Los `.zip` se cargan directamente desde el selector (F1) o la web, sin descomprimirlos antes:
+
+- **Si el ZIP tiene un solo fichero que se pueda cargar**, se carga al elegir el ZIP. Si tiene varios (por ejemplo, las dos caras de un juego), sale una lista para elegir; los demás ficheros (textos, instrucciones) no aparecen.
+- **Cintas, snapshots y cartuchos** (`.tap`, `.tzx`, `.pzx`, `.csw`, `.z80`, `.sna`, `.szx`, `.rom`) se cargan al vuelo, desde memoria, sin escribir nada en la tarjeta.
+- **Discos y cartuchos de Microdrive** (`.dsk`, `.mdr`, `.mdv`), que el programa puede escribir, se sacan a la carpeta `tmp` de la tarjeta (se crea si no existe) y se cargan desde ahí, así que lo que se grabe queda en ese fichero. Si ya está en `tmp`, se pregunta si usar el que hay (con sus cambios) o sobrescribirlo con el del ZIP.
+- Se admiten los ZIP normales (sin comprimir o con deflate, que son casi todos), hasta 8 MB. No los cifrados.
+
 ## Unidades (F1 y luego U, o Alt+U)
 
 Una pantalla con lo que hay metido en cada unidad: **cinta**, **disco A:** y **disco B:** del +3, **disco duro** (+3e o divMMC), **cartucho del Interface 2** y **microdrives 1 a 8**.
@@ -1034,6 +1043,7 @@ src/ay8912.*      chip de sonido AY-3-8912
 src/audiomixer.*  generación de muestras (beeper + AY) por t-states
 src/tape.*        cinta TAP/TZX/PZX/CSW (pulsos, carga instantánea y bloques)
 src/inflate.*     descompresor zlib (bloques CSW Z-RLE y páginas de .SZX)
+src/zipfile.*     lector de ficheros ZIP (directorio central, deflate y CRC)
 src/snapshot.*    snapshots .Z80/.SNA/.SZX
 src/interface1.*  Interface 1, microdrives (.MDR y .MDV) y RS232
 src/zxnet.*       red ZX Net del Interface 1 (de SpectRusty)

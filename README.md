@@ -325,6 +325,15 @@ From the help screen (F1), the **C** key opens the settings: seven pages with th
 - **R** restarts the Raspberry Pi. It asks for confirmation ("No" is the highlighted option) and, if there are unsaved changes, offers to save them first. Before restarting, everything pending is saved: +3 disks, microdrive cartridges, the Spectranet flash, what esxDOS wrote and the RS232 output.
 - The settings show what is in `cmdline.txt` (read again when opened if there are no pending changes, in case it was changed from the web page), plus whatever is changed with the keys: F4, F6, F7, F9, F10, Alt+B, Alt+S and the peripherals (Alt+T/X/L). So G also saves those changes. What changes by itself, such as the model when loading a 128K snapshot, does not go into the settings, so it is not saved by accident. If something is unsaved, the screen says so.
 
+## ZIP files
+
+`.zip` files load straight from the file browser (F1) or the web page, without unzipping them first:
+
+- **If the ZIP holds a single loadable file**, it loads when you choose the ZIP. If it holds several (for example, both sides of a game), a list lets you choose; other files (texts, instructions) are not shown.
+- **Tapes, snapshots and cartridges** (`.tap`, `.tzx`, `.pzx`, `.csw`, `.z80`, `.sna`, `.szx`, `.rom`) load on the fly, from memory, without writing anything to the card.
+- **Disks and Microdrive cartridges** (`.dsk`, `.mdr`, `.mdv`), which the program may write to, are extracted to the `tmp` folder on the card (created if missing) and loaded from there, so whatever is saved stays in that file. If it is already in `tmp`, you are asked whether to use the existing one (with its changes) or overwrite it with the one in the ZIP.
+- Normal ZIP files are supported (stored or deflate, which is almost all of them), up to 8 MB. Not encrypted ones.
+
 ## Drives (F1 and then U, or Alt+U)
 
 A screen with what is inserted in each drive: **tape**, the +3 **disk A:** and **disk B:**, **hard disk** (+3e or divMMC), **Interface 2 cartridge** and **microdrives 1 to 8**.
@@ -1023,6 +1032,7 @@ src/ay8912.*       AY-3-8912 sound chip
 src/audiomixer.*   sample generation (beeper + AY) per t-state, speaker model
 src/tape.*         TAP/TZX/PZX/CSW tape (pulses, instant loading and blocks)
 src/inflate.*      zlib decompressor (CSW Z-RLE blocks and .SZX pages)
+src/zipfile.*      ZIP file reader (central directory, deflate and CRC)
 src/snapshot.*     .Z80/.SNA/.SZX snapshots
 src/interface1.*   Interface 1, microdrives (.MDR and .MDV) and RS232
 src/zxnet.*        Interface 1 ZX Net network (from SpectRusty)

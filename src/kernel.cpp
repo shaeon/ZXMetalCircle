@@ -167,6 +167,14 @@ CKernel::CKernel (void)
 	m_nSpeed = 1;
 	m_nLastKeyTime = 0;
 	m_bF5Files = FALSE;
+	m_pZipData = 0;
+	m_pZipEntry = 0;
+	m_nZipEntrySize = 0;
+	m_ZipEntryPath[0] = '\0';
+	m_nZipChoices = 0;
+	m_bZipChoice = FALSE;
+	m_bZipOverwriteChoice = FALSE;
+	m_nZipPending = 0;
 	m_nFPSStart = 0;
 	m_nFPSFrames = 0;
 	m_nFPSx100 = 0;
@@ -1521,6 +1529,10 @@ void CKernel::LoadAnyFile (const char *pPath)
 	{
 		InsertDisk (pPath);
 	}
+	else if (strcasecmp (pExt, ".zip") == 0)
+	{
+		OpenZip (pPath);
+	}
 	else if (   strcasecmp (pExt, ".vhd") == 0 || strcasecmp (pExt, ".img") == 0
 		 || strcasecmp (pExt, ".raw") == 0 || strcasecmp (pExt, ".hdf") == 0)
 	{
@@ -1530,6 +1542,228 @@ void CKernel::LoadAnyFile (const char *pPath)
 	{
 		LoadTape (pPath);
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Ficheros ZIP. Las cintas, snapshots y cartuchos se cargan al vuelo, desde la
+// entrada descomprimida en memoria (ruta "ZIP:nombre"); los discos y los
+// cartuchos de Microdrive, que el programa puede escribir, se sacan a SD:/tmp
+// (se crea si no existe) y se cargan desde ahí. Si en el ZIP hay varios
+// ficheros que se pueden cargar, se elige uno en una lista.
+
+#define ZIP_MAX_SIZE		(8 * 1024 * 1024)
+#define ZIP_TMP_DIR		"SD:/tmp"
+#define ZIP_PREFIX		"ZIP:"
+
+static boolean ZipLoadable (const char *pName, boolean *pWritable)
+{
+	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx", ".rom",
+				    ".dsk", ".mdr", ".mdv"};
+	unsigned nLen = strlen (pName);
+	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
+	{
+		if (nLen > 4 && strcasecmp (pName + nLen - 4, Ext[i]) == 0)
+		{
+			if (pWritable != 0)
+			{
+				*pWritable = i >= 8;		// .dsk, .mdr, .mdv
+			}
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+// Tamaño de un fichero de la SD o de la entrada del ZIP ya descomprimida
+int CKernel::SourceSize (const char *pPath)
+{
+	if (strncmp (pPath, ZIP_PREFIX, 4) == 0)
+	{
+		return m_pZipEntry != 0 && strcmp (pPath, m_ZipEntryPath) == 0 ? (int) m_nZipEntrySize : -1;
+	}
+
+	FILINFO Info;
+	if (f_stat (pPath, &Info) != FR_OK)
+	{
+		return -1;
+	}
+	return (int) Info.fsize;
+}
+
+boolean CKernel::ReadSource (const char *pPath, u8 *pBuffer, unsigned nSize)
+{
+	if (strncmp (pPath, ZIP_PREFIX, 4) == 0)
+	{
+		if (m_pZipEntry == 0 || strcmp (pPath, m_ZipEntryPath) != 0 || nSize > m_nZipEntrySize)
+		{
+			return FALSE;
+		}
+		memcpy (pBuffer, m_pZipEntry, nSize);
+		return TRUE;
+	}
+
+	FIL File;
+	if (f_open (&File, pPath, FA_READ | FA_OPEN_EXISTING) != FR_OK)
+	{
+		return FALSE;
+	}
+	unsigned nRead = 0;
+	boolean bOK = f_read (&File, pBuffer, nSize, &nRead) == FR_OK && nRead == nSize;
+	f_close (&File);
+	return bOK;
+}
+
+void CKernel::OpenZip (const char *pPath)
+{
+	FIL File;
+	if (f_open (&File, pPath, FA_READ | FA_OPEN_EXISTING) != FR_OK)
+	{
+		ShowMessage (T ("No se puede abrir el fichero"));
+		return;
+	}
+	unsigned nSize = f_size (&File);
+	if (nSize == 0 || nSize > ZIP_MAX_SIZE)
+	{
+		f_close (&File);
+		ShowMessage (T ("ZIP demasiado grande"));
+		return;
+	}
+
+	delete [] m_pZipData;
+	m_pZipData = new u8[nSize];
+	unsigned nRead = 0;
+	boolean bOK = m_pZipData != 0 && f_read (&File, m_pZipData, nSize, &nRead) == FR_OK && nRead == nSize;
+	f_close (&File);
+	if (!bOK || !m_Zip.Open (m_pZipData, nSize))
+	{
+		ShowMessage (T ("ZIP no válido"));
+		return;
+	}
+
+	// ficheros que se pueden cargar (sin carpetas ni restos de macOS)
+	m_nZipChoices = 0;
+	for (unsigned i = 0; i < m_Zip.GetCount () && m_nZipChoices < MENU_CHOICE_ITEMS; i++)
+	{
+		const char *pName = m_Zip.GetName (i);
+		const char *pBase = m_Zip.GetBaseName (i);
+		if (   m_Zip.IsDirectory (i) || strncmp (pName, "__MACOSX", 8) == 0
+		    || pBase[0] == '.' || !ZipLoadable (pBase, 0))
+		{
+			continue;
+		}
+		m_ZipChoice[m_nZipChoices++] = i;
+	}
+
+	if (m_nZipChoices == 0)
+	{
+		ShowMessage (T ("El ZIP no tiene nada que cargar"));
+		return;
+	}
+	if (m_nZipChoices == 1)
+	{
+		LoadZipEntry (m_ZipChoice[0]);
+		return;
+	}
+
+	// varios: se elige en una lista
+	if (!m_Menu.IsOpen ())
+	{
+		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		OpenMenu ();
+		m_Keyboard.SetCaptured (TRUE);
+	}
+	m_bZipChoice = TRUE;
+	m_Menu.OpenChoice (T ("Elige el fichero del ZIP"));
+	for (unsigned i = 0; i < m_nZipChoices; i++)
+	{
+		m_Menu.SetChoiceItem (i, m_Zip.GetBaseName (m_ZipChoice[i]));
+	}
+}
+
+void CKernel::LoadZipEntry (unsigned nEntry)
+{
+	const char *pBase = m_Zip.GetBaseName (nEntry);
+	boolean bWritable = FALSE;
+	if (!ZipLoadable (pBase, &bWritable))
+	{
+		return;
+	}
+
+	if (bWritable)
+	{
+		// discos y Microdrive: a SD:/tmp, preguntando si ya están
+		f_mkdir (ZIP_TMP_DIR);
+		CString Path;
+		Path.Format ("%s/%s", ZIP_TMP_DIR, pBase);
+		FILINFO Info;
+		if (f_stat (Path, &Info) == FR_OK)
+		{
+			if (!m_Menu.IsOpen ())
+			{
+				memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+				OpenMenu ();
+				m_Keyboard.SetCaptured (TRUE);
+			}
+			m_nZipPending = nEntry;
+			m_bZipOverwriteChoice = TRUE;
+			CString Title;
+			Title.Format (T ("Ya está en tmp: %s"), pBase);
+			m_Menu.OpenChoice (Title);
+			m_Menu.SetChoiceItem (0, T ("Usar el que hay (con sus cambios)"));
+			m_Menu.SetChoiceItem (1, T ("Sobrescribir con el del ZIP"));
+			return;
+		}
+		ExtractZipToTmp (nEntry, TRUE);
+		return;
+	}
+
+	// cintas, snapshots y cartuchos: al vuelo, desde memoria
+	delete [] m_pZipEntry;
+	m_nZipEntrySize = m_Zip.GetSize (nEntry);
+	m_pZipEntry = new u8[m_nZipEntrySize > 0 ? m_nZipEntrySize : 1];
+	if (m_pZipEntry == 0 || m_Zip.Extract (nEntry, m_pZipEntry, m_nZipEntrySize) != (int) m_nZipEntrySize)
+	{
+		delete [] m_pZipEntry;
+		m_pZipEntry = 0;
+		ShowMessage (T ("No se pudo descomprimir el fichero"));
+		return;
+	}
+	strcpy (m_ZipEntryPath, ZIP_PREFIX);
+	strncat (m_ZipEntryPath, pBase, sizeof m_ZipEntryPath - strlen (m_ZipEntryPath) - 1);
+	LoadAnyFile (m_ZipEntryPath);
+}
+
+// Saca un disco o cartucho de Microdrive a SD:/tmp (si bOverwrite, o si no
+// está) y lo carga desde ahí
+void CKernel::ExtractZipToTmp (unsigned nEntry, boolean bOverwrite)
+{
+	const char *pBase = m_Zip.GetBaseName (nEntry);
+	CString Path;
+	Path.Format ("%s/%s", ZIP_TMP_DIR, pBase);
+
+	if (bOverwrite)
+	{
+		unsigned nSize = m_Zip.GetSize (nEntry);
+		u8 *pData = new u8[nSize > 0 ? nSize : 1];
+		boolean bOK = pData != 0 && m_Zip.Extract (nEntry, pData, nSize) == (int) nSize;
+		if (bOK)
+		{
+			f_mkdir (ZIP_TMP_DIR);
+			FIL File;
+			unsigned nWritten = 0;
+			bOK =    f_open (&File, Path, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK
+			      && f_write (&File, pData, nSize, &nWritten) == FR_OK && nWritten == nSize;
+			f_close (&File);
+		}
+		delete [] pData;
+		if (!bOK)
+		{
+			ShowMessage (T ("No se pudo sacar el fichero a tmp"));
+			return;
+		}
+	}
+
+	LoadAnyFile (Path);
 }
 
 // Spectranet: la flash (firmware y ajustes) está en SD:/spectranet.flash; la
@@ -3454,18 +3688,16 @@ boolean CKernel::LoadCartridge (const char *pPath)
 		return FALSE;
 	}
 
-	FIL File;
-	if (f_open (&File, pPath, FA_READ | FA_OPEN_EXISTING) != FR_OK)
+	int nSourceSize = SourceSize (pPath);
+	if (nSourceSize < 0)
 	{
 		ShowMessage (T ("No se puede abrir el fichero"));
 		return FALSE;
 	}
 
-	unsigned nSize = f_size (&File);
-	unsigned nRead = 0;
-	boolean bOK =    nSize > 0 && nSize <= SNAPSHOT_MAX_SIZE
-		      && f_read (&File, Buffer, nSize, &nRead) == FR_OK && nRead == nSize;
-	f_close (&File);
+	unsigned nSize = (unsigned) nSourceSize;
+	boolean bOK =    nSize > 0 && nSize <= sizeof Buffer
+		      && ReadSource (pPath, Buffer, nSize);
 
 	if (!bOK || !m_pSpectrum->InsertCartridge (Buffer, nSize))
 	{
@@ -3497,18 +3729,16 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 {
 	u8 *Buffer = m_pWork;	// SNAPSHOT_MAX_SIZE < WORK_BUFFER_SIZE
 
-	FIL File;
-	if (f_open (&File, pPath, FA_READ | FA_OPEN_EXISTING) != FR_OK)
+	int nSourceSize = SourceSize (pPath);
+	if (nSourceSize < 0)
 	{
 		ShowMessage (T ("No se puede abrir el fichero"));
 		return FALSE;
 	}
 
-	unsigned nSize = f_size (&File);
-	unsigned nRead = 0;
+	unsigned nSize = (unsigned) nSourceSize;
 	boolean bOK =    nSize > 0 && nSize <= SNAPSHOT_MAX_SIZE
-		      && f_read (&File, Buffer, nSize, &nRead) == FR_OK && nRead == nSize;
-	f_close (&File);
+		      && ReadSource (pPath, Buffer, nSize);
 
 	if (!bOK)
 	{
@@ -3639,17 +3869,16 @@ boolean CKernel::SaveSnapshot (void)
 
 boolean CKernel::LoadTape (const char *pPath)
 {
-	FIL File;
-	if (f_open (&File, pPath, FA_READ | FA_OPEN_EXISTING) != FR_OK)
+	int nSourceSize = SourceSize (pPath);
+	if (nSourceSize < 0)
 	{
 		ShowMessage (T ("No se puede abrir el fichero"));
 		return FALSE;
 	}
 
-	unsigned nSize = f_size (&File);
+	unsigned nSize = (unsigned) nSourceSize;
 	if (nSize == 0 || nSize > TAPE_MAX_SIZE)
 	{
-		f_close (&File);
 		ShowMessage (T ("Tamaño de cinta no válido"));
 		return FALSE;
 	}
@@ -3657,14 +3886,12 @@ boolean CKernel::LoadTape (const char *pPath)
 	u8 *pBuffer = new u8[nSize];
 	if (pBuffer == 0)
 	{
-		f_close (&File);
 		ShowMessage (T ("Sin memoria"));
 		return FALSE;
 	}
 
-	unsigned nRead = 0;
-	FRESULT Result = f_read (&File, pBuffer, nSize, &nRead);
-	f_close (&File);
+	unsigned nRead = ReadSource (pPath, pBuffer, nSize) ? nSize : 0;
+	FRESULT Result = nRead == nSize ? FR_OK : FR_DISK_ERR;
 
 	// nombre sin la ruta
 	const char *pName = pPath;
@@ -3944,6 +4171,24 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			else
 			{
 				ShowMessage (T ("No hay teclas que pulsar"));
+			}
+		}
+		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bZipChoice)
+		{
+			m_bZipChoice = FALSE;
+			if (Result == MenuResultChoice && m_Menu.GetChoice () < m_nZipChoices)
+			{
+				m_Menu.Close ();
+				LoadZipEntry (m_ZipChoice[m_Menu.GetChoice ()]);
+			}
+		}
+		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bZipOverwriteChoice)
+		{
+			m_bZipOverwriteChoice = FALSE;
+			if (Result == MenuResultChoice)
+			{
+				m_Menu.Close ();
+				ExtractZipToTmp (m_nZipPending, m_Menu.GetChoice () == 1);
 			}
 		}
 		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bDiskChoice)

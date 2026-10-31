@@ -387,7 +387,7 @@ void CMenu::OpenKeyHelp (void)
 static boolean IsLoadableName (const char *pName)
 {
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".z80", ".sna", ".szx", ".csw", ".rom", ".mdr",
-				    ".mdv", ".dsk", ".vhd", ".img", ".raw", ".hdf"};
+				    ".mdv", ".dsk", ".vhd", ".img", ".raw", ".hdf", ".zip"};
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (HasExtension (pName, Ext[i]))
