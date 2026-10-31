@@ -212,6 +212,7 @@ All the options go on a single line:
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (on), `0` | `0` |
 | `pureblack=` | `1` (pure black also in the 16K/48K palette), `0` | `0` |
+| `indicators=` | `1` (the D, H, M1-M8 and recording dot at the top of the picture), `0` (none of them; the keyboard extended-mode icon is still shown) | `1` |
 | `multicore=` | `1` (image scaling on core 1, Pi 2/3/4), `0` | `1` |
 | `issue=` | `3` (Issue 3), `2` (Issue 2, only affects the 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |

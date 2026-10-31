@@ -206,6 +206,11 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                   the other models the usual one with pure black. 1 = pure
                   black on the 16K and 48K too
 
+ indicators=1     Drive indicators at the top of the picture: D (+3 disk
+                  drive), H (hard disk), M1-M8 (Microdrive) and the red
+                  recording dot (1 = yes, 0 = no). The keyboard extended
+                  mode icon is always shown.
+
  multicore=1      Pi 2, 3, 4 and Zero 2 W: the image scaling runs on core 1
                   (0 = everything on core 0)
 

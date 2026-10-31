@@ -25,6 +25,7 @@ static const TOptionDef Options[] =
 	{"diskaccel",	"0|1"},
 	{"joystick",	"none|kempston|fuller|sinclair1|sinclair2|cursor|qaop"},
 	{"cursors",	"both|keys|joystick"},
+	{"indicators",	"0|1"},
 	{"f5",		"nmi|files"},
 	{"recreated",	"0|1|auto"},
 	{"multiface",	"0|1"},

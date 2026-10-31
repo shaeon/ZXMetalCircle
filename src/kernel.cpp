@@ -167,6 +167,7 @@ CKernel::CKernel (void)
 	m_nSpeed = 1;
 	m_nLastKeyTime = 0;
 	m_bF5Files = FALSE;
+	m_bIndicators = TRUE;
 	m_pZipData = 0;
 	m_pZipEntry = 0;
 	m_nZipEntrySize = 0;
@@ -507,6 +508,9 @@ void CKernel::ParseOptions (void)
 	strncpy (m_Speaker, m_Options.GetAppOptionString ("speaker", "auto"), sizeof m_Speaker - 1);
 	m_Speaker[sizeof m_Speaker - 1] = '\0';
 	ApplySpeaker ();
+
+	// Indicadores de unidad (D, H, M1-M8, grabación): sí por defecto
+	m_bIndicators = m_Options.GetAppOptionDecimal ("indicators", 1) != 0;
 
 	// F5: NMI (por defecto) o navegador de ficheros; Alt+F5 hace lo otro
 	m_bF5Files = strcasecmp (m_Options.GetAppOptionString ("f5", "nmi"), "files") == 0;
@@ -2083,6 +2087,7 @@ void CKernel::SyncSetting (const char *pKey)
 	}
 	else if (strcmp (pKey, "scanlines") == 0)	pValue = m_bScanlines ? "1" : "0";
 	else if (strcmp (pKey, "pureblack") == 0)	pValue = m_pSpectrum->IsPureBlack () ? "1" : "0";
+	else if (strcmp (pKey, "indicators") == 0)	pValue = m_bIndicators ? "1" : "0";
 	else if (strcmp (pKey, "aystereo") == 0)
 	{
 		static const char *Stereo[] = {"abc", "acb", "bac", "mono"};
@@ -2165,6 +2170,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "speed") == 0)		m_nSpeed = atoi (pValue);
 	else if (strcmp (pKey, "ulaplus") == 0)		m_pSpectrum->SetULAplusEnabled (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "pureblack") == 0)	m_pSpectrum->SetPureBlack (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "indicators") == 0)	m_bIndicators = strcmp (pValue, "1") == 0;
 	else if (strcmp (pKey, "border") == 0 || strcmp (pKey, "scanlines") == 0)
 	{
 		static const char *Borders[] = {"none", "standard", "full", "huge"};
@@ -4838,38 +4844,43 @@ void CKernel::MenuClosed (void)
 
 void CKernel::DrawIndicators (TPixel *pScreen)
 {
-	int nRunning = m_pSpectrum->IsIF1Connected () ? m_pSpectrum->GetInterface1 ()->GetRunningDrive () : -1;
-	if (nRunning >= 0)
+	// indicators=0: sin los de las unidades ni el de grabación; el icono del
+	// modo extendido del teclado se ve siempre (es un estado del teclado)
+	if (m_bIndicators)
 	{
-		// "M1".."M8" arriba a la derecha mientras gira un microdrive
-		const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
-		char Text[3] = {'M', (char) ('1' + nRunning), '\0'};
-		m_Video.DrawText (pScreen, rVisible.x + rVisible.nWidth - 24, rVisible.y + 6, Text,
-				  COLOR_UI_HILITE_TEXT, 4 /* verde */);
-	}
+		int nRunning = m_pSpectrum->IsIF1Connected () ? m_pSpectrum->GetInterface1 ()->GetRunningDrive () : -1;
+		if (nRunning >= 0)
+		{
+			// "M1".."M8" arriba a la derecha mientras gira un microdrive
+			const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
+			char Text[3] = {'M', (char) ('1' + nRunning), '\0'};
+			m_Video.DrawText (pScreen, rVisible.x + rVisible.nWidth - 24, rVisible.y + 6, Text,
+					  COLOR_UI_HILITE_TEXT, 4 /* verde */);
+		}
 
-	if (m_HardDisk.IsOpen () && CTimer::GetClockTicks64 () - m_nHDActivity < 200000)
-	{
-		// "H" arriba a la derecha mientras se usa el disco duro
-		const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
-		m_Video.DrawText (pScreen, rVisible.x + rVisible.nWidth - 56, rVisible.y + 6, "H",
-				  COLOR_UI_HILITE_TEXT, 1 /* azul */);
-	}
+		if (m_HardDisk.IsOpen () && CTimer::GetClockTicks64 () - m_nHDActivity < 200000)
+		{
+			// "H" arriba a la derecha mientras se usa el disco duro
+			const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
+			m_Video.DrawText (pScreen, rVisible.x + rVisible.nWidth - 56, rVisible.y + 6, "H",
+					  COLOR_UI_HILITE_TEXT, 1 /* azul */);
+		}
 
-	if (m_pSpectrum->HasDiskDrive () && m_pSpectrum->GetDisk ()->IsMotorOn ())
-	{
-		// "D" arriba a la derecha mientras gira el disco del +3
-		const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
-		m_Video.DrawText (pScreen, rVisible.x + rVisible.nWidth - 40, rVisible.y + 6, "D",
-				  COLOR_UI_HILITE_TEXT, 2 /* rojo */);
-	}
+		if (m_pSpectrum->HasDiskDrive () && m_pSpectrum->GetDisk ()->IsMotorOn ())
+		{
+			// "D" arriba a la derecha mientras gira el disco del +3
+			const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
+			m_Video.DrawText (pScreen, rVisible.x + rVisible.nWidth - 40, rVisible.y + 6, "D",
+					  COLOR_UI_HILITE_TEXT, 2 /* rojo */);
+		}
 
-	if (m_pSpectrum->IsRecording ())
-	{
-		// punto rojo arriba a la izquierda mientras se graba
-		const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
-		m_Video.FillRect (pScreen, rVisible.x + 6, rVisible.y + 6, 10, 10, 15);
-		m_Video.FillRect (pScreen, rVisible.x + 7, rVisible.y + 7, 8, 8, 10);
+		if (m_pSpectrum->IsRecording ())
+		{
+			// punto rojo arriba a la izquierda mientras se graba
+			const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
+			m_Video.FillRect (pScreen, rVisible.x + 6, rVisible.y + 6, 10, 10, 15);
+			m_Video.FillRect (pScreen, rVisible.x + 7, rVisible.y + 7, 8, 8, 10);
+		}
 	}
 
 	if (!m_bExtendedMode)

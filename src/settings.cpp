@@ -39,7 +39,8 @@ static TSettingDef Settings[] =
 	// 1 Imagen y sonido
 	{"border",	N_("Borde"),		1, "none|standard|full|huge", N_("sin borde|estándar|completo|enorme"), "full", TRUE},
 	{"scanlines",	N_("Scanlines"),	1, "0|1", N_("no|sí"),					"0",	TRUE},
-	{"pureblack",	N_("Negro puro (paleta 48K)"), 1, "0|1", N_("no|sí"),			"0",	TRUE},
+	{"pureblack",	N_("Negro puro (48K)"), 1, "0|1", N_("no|sí"),			"0",	TRUE},
+	{"indicators",	N_("Indicadores de unidad"), 1, "1|0", N_("sí|no"),			"1",	TRUE},
 	{"aystereo",	N_("Sonido AY"),	1, "abc|acb|bac|mono", "ABC|ACB|BAC|mono",		"abc",	TRUE},
 	{"tapesound",	N_("Oír la carga"),	1, "1|0", N_("sí|no"),					"1",	TRUE},
 	{"speaker",	N_("Altavoz"),		1, "auto|beeper|tv|off", N_("automático|el del 48K|televisor|sin modelo"), "auto", TRUE},

@@ -202,6 +202,11 @@ defecto.
                   modelos, la de siempre con negro puro. 1 = negro puro
                   tambien en el 16K y el 48K
 
+ indicators=1     Indicadores de unidad arriba de la imagen: la D (disquetera
+                  del +3), la H (disco duro), M1-M8 (Microdrive) y el punto
+                  rojo de grabacion (1 = si, 0 = no). El icono del modo
+                  extendido del teclado sale siempre.
+
 ------------------------------------------------------------------------------
  PERIFERICOS
 ------------------------------------------------------------------------------

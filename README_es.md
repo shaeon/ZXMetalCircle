@@ -220,6 +220,7 @@ Todas las opciones van en una sola línea:
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (activadas), `0` | `0` |
 | `pureblack=` | `1` (negro puro también en la paleta del 16K/48K), `0` | `0` |
+| `indicators=` | `1` (la D, la H, M1-M8 y el punto de grabación arriba de la imagen), `0` (sin ellos; el icono del modo extendido del teclado sigue saliendo) | `1` |
 | `multicore=` | `1` (ampliación de la imagen en el núcleo 1, Pi 2/3/4), `0` | `1` |
 | `issue=` | `3` (Issue 3), `2` (Issue 2, solo afecta al 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |

@@ -301,6 +301,7 @@ private:
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZipOverwriteChoice;	// pregunta: usar el de tmp o sobrescribir
 	unsigned		m_nZipPending;
+	boolean			m_bIndicators;		// indicators=1: D, H, M1-M8 y grabación
 	boolean			m_bF5Files;		// f5=files: F5 abre los ficheros y Alt+F5 hace la NMI
 	volatile u8		m_LastReport[8];	// último informe USB (modificadores + 6 teclas)
 	unsigned		m_nSkippedFrames;	// cuadros no mostrados por ir con retraso
