@@ -207,7 +207,7 @@ Todas las opciones van en una sola línea:
 | --- | --- | --- |
 | `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95` | `128k` |
 | `tkula=` | ULA del TK90X y el TK95: `50` (Microdigital a 50 Hz: Uruguay), `60` (Microdigital a 60 Hz: Brasil) o `ferranti` (los primeros de exportación; los tiempos del 48K) | `50` |
-| `tkrom=` | ROM del TK90X: `v1` (original, la más difundida), `v2` (original; el TK95 siempre la lleva) o `v3` (la de Rodolfo Guerra). Se aplica al reiniciar | `v1` |
+| `tkrom=` | ROM del TK90X: `v3` (la de Rodolfo Guerra, la más compatible), `v1` (original, la más difundida) o `v2` (original; el TK95 siempre la lleva). Se aplica al reiniciar | `v3` |
 | `tklang=` | Idioma de la ROM del TK90X y del TK95: `auto` (el del menú), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. Las originales solo tienen español y portugués (los demás idiomas usan el español): la v1 elige con el diodo de los TK90X brasileños (el bit 7 del puerto 254 a 0 da el portugués) y la v2 y el TK95 con su ROM española o brasileña. La v3 tiene los 17. Se aplica al reiniciar | `auto` |
 | `tape=` | `flash` (instantánea), `fast` (rápida), `normal` (real) | `flash` |
 | `tapeaccel=` | `1` (acelerar cargadores conocidos), `0` | `1` |
@@ -338,6 +338,16 @@ Desde la ayuda (F1), la tecla **C** abre la configuración: siete páginas con l
 - **R** reinicia la Raspberry Pi. Pide confirmación ("No" es la opción marcada) y, si hay cambios sin guardar, ofrece guardarlos antes. Antes de reiniciar se guarda todo lo pendiente: discos del +3, cartuchos de microdrive, la flash de la Spectranet, lo grabado por esxDOS y la salida del RS232.
 - La configuración muestra lo que hay en `cmdline.txt` (se vuelve a leer al abrirla si no hay cambios pendientes, por si se ha cambiado desde la web), más lo que se cambie con las teclas: F4, F6, F7, F9, F10, Alt+B, Alt+S y los periféricos (Alt+T/X/L). Así G también sirve para guardar esos cambios. Lo que cambia solo, como el modelo al cargar un snapshot de 128K, no pasa a la configuración, para no guardarlo sin querer. Si hay algo sin guardar, se avisa en la pantalla.
 
+## Microdigital TK90X y TK95
+
+Los TK90X y TK95 de Microdigital (Brasil) eran clones del ZX Spectrum 48K. Se eligen con F7 o con `model=tk90x` / `model=tk95`.
+
+- **ULA** (`tkula=`): la de Microdigital a 50 Hz (Uruguay; por defecto), la de Microdigital a 60 Hz (Brasil) o la Ferranti original (los primeros TK90X exportados). Cambian los tiempos de la imagen y el reloj (unos 3,58 MHz en la de Microdigital).
+- **ROM del TK90X** (`tkrom=`): la v3 de Rodolfo Guerra (por defecto), o las originales v1 (la más difundida) y v2. El TK95 siempre lleva la v2.
+- **Idioma de la ROM** (`tklang=`): «automático» sigue al idioma del menú. Las originales solo tienen español y portugués: la v1 los lleva los dos en la misma ROM y elige al arrancar con un diodo que tenían los TK90X vendidos en Brasil (el emulador lo simula con el portugués); la v2 y el TK95 tienen una ROM para cada idioma. La v3 está en 17 idiomas.
+
+**La ROM v3 de Rodolfo Guerra** (2021, no oficial) es el resultado de tres años de trabajo a partir de la v1, la más consistente, incorporando lo que aportaba la v2. Es la ROM más compatible para los TK hasta la fecha, e incluye, entre otras muchas mejoras: carga turbo nativa a 4000 baudios (sin perder la carga normal: la ROM detecta cuál viene en la cinta), un editor BASIC mejorado y una lectura del teclado más rápida. Para ganar espacio cada ROM tiene un solo idioma, y por eso hay una para cada uno de los 17. Todas sus novedades están en los manuales (en español, inglés y portugués) de su página: https://sites.google.com/view/rodolfoguerra . En el emulador, la carga turbo debería funcionar con la carga real de cintas, que reproduce la cinta a su velocidad; con la instantánea o la rápida, de momento solo se acelera la carga normal.
+
 ## Ficheros ZIP
 
 Los `.zip` se cargan directamente desde el selector (F1) o la web, sin descomprimirlos antes:
@@ -381,6 +391,7 @@ Las teclas de función están en una sola tabla (`KeyBindings` en `src/kernel.cp
 | Tecla | Función |
 | --- | --- |
 | F1 | Ayuda y estado; desde ahí, ENTER abre el selector, C la configuración, U las unidades y A los créditos |
+| Alt+F1 | La configuración directamente (ESC vuelve al Spectrum) |
 | Alt+U | Unidades: ver, montar y vaciar cada unidad |
 | Alt+K | Ayuda de teclado |
 | F2 | Cinta: reproducir / parar |

@@ -74,6 +74,8 @@ public:
 	unsigned GetSelectedTapeBlock (void) const	{ return m_nTapeSelected; }
 	// bFromShortcut: abierta con Alt+U (ESC cierra el menú en lugar de volver a la ayuda)
 	void SetUnitsFromShortcut (boolean bFromShortcut)	{ m_bUnitsFromShortcut = bFromShortcut; }
+	// Alt+F1: ESC en la configuración cierra el menú en lugar de volver a la ayuda
+	void SetSettingsFromShortcut (boolean bFromShortcut)	{ m_bSettingsFromShortcut = bFromShortcut; }
 	void SetUnitLine (unsigned nUnit, const char *pName);
 	unsigned GetSelectedUnit (void) const	{ return m_nUnitSelected; }
 	int TakeUnitTarget (void)		{ int n = m_nUnitTarget; m_nUnitTarget = -1; return n; }
@@ -158,6 +160,7 @@ private:
 	char m_ChoiceTitle[48];
 	char m_InputTitle[48];
 	boolean m_bUnitsFromShortcut;	// unidades abiertas con Alt+U
+	boolean m_bSettingsFromShortcut;	// configuración abierta con Alt+F1
 	char m_InputHelp[2][48];
 	char m_InputBuf[20];		// lo escrito en la línea de texto
 	char m_Choice[MENU_CHOICE_ITEMS][100];	// nombres de ZIP de hasta 96

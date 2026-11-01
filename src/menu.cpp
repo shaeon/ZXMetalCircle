@@ -58,6 +58,7 @@ CMenu::CMenu (CVideo *pVideo)
 	m_ChoiceTitle[0] = '\0';
 	m_InputTitle[0] = m_InputHelp[0][0] = m_InputHelp[1][0] = m_InputBuf[0] = '\0';
 	m_bUnitsFromShortcut = FALSE;
+	m_bSettingsFromShortcut = FALSE;
 	m_nAboutTop = 0;
 	m_nUnitSelected = 0;
 	m_nUnitTarget = -1;
@@ -418,6 +419,7 @@ void CMenu::OpenHelp (void)
 {
 	m_Mode = ModeHelp;
 	m_bUnitsFromShortcut = FALSE;		// desde la ayuda, ESC vuelve a ella
+	m_bSettingsFromShortcut = FALSE;
 }
 
 void CMenu::OpenKeyHelp (void)
@@ -1168,13 +1170,13 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		{
 			Result = MenuResultReboot;
 		}
-		else if (nKey == HID_KEY_ESC || nKey == HID_KEY_BACKSPACE)
+		else if ((nKey == HID_KEY_ESC || nKey == HID_KEY_BACKSPACE) && !m_bSettingsFromShortcut)
 		{
-			m_Mode = ModeHelp;
+			m_Mode = ModeHelp;			// abierta desde la ayuda (C)
 		}
-		else if (nKey == HID_KEY_F1)
+		else if (nKey == HID_KEY_ESC || nKey == HID_KEY_BACKSPACE || nKey == HID_KEY_F1)
 		{
-			m_Mode = ModeClosed;
+			m_Mode = ModeClosed;			// con Alt+F1, ESC cierra
 			Result = MenuResultClose;
 		}
 		if (m_Mode == ModeSettings)

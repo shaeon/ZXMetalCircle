@@ -199,7 +199,7 @@ All the options go on a single line:
 | --- | --- | --- |
 | `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95` | `128k` |
 | `tkula=` | TK90X and TK95 ULA: `50` (Microdigital at 50 Hz: Uruguay), `60` (Microdigital at 60 Hz: Brazil) or `ferranti` (the first export units; 48K timings) | `50` |
-| `tkrom=` | TK90X ROM: `v1` (original, the most widespread), `v2` (original; the TK95 always has it) or `v3` (Rodolfo Guerra's). Applied on restart | `v1` |
+| `tkrom=` | TK90X ROM: `v3` (Rodolfo Guerra's, the most compatible), `v1` (original, the most widespread) or `v2` (original; the TK95 always has it). Applied on restart | `v3` |
 | `tklang=` | Language of the TK90X and TK95 ROM: `auto` (the menu's), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. The originals only have Spanish and Portuguese (other languages use Spanish): v1 chooses with the diode of the Brazilian TK90X (bit 7 of port 254 at 0 gives Portuguese), v2 and the TK95 with their Spanish or Brazilian ROM. v3 has all 17. Applied on restart | `auto` |
 | `tape=` | `flash` (instant), `fast`, `normal` (real) | `flash` |
 | `tapeaccel=` | `1` (accelerate known loaders), `0` | `1` |
@@ -330,6 +330,16 @@ From the help screen (F1), the **C** key opens the settings: seven pages with th
 - **R** restarts the Raspberry Pi. It asks for confirmation ("No" is the highlighted option) and, if there are unsaved changes, offers to save them first. Before restarting, everything pending is saved: +3 disks, microdrive cartridges, the Spectranet flash, what esxDOS wrote and the RS232 output.
 - The settings show what is in `cmdline.txt` (read again when opened if there are no pending changes, in case it was changed from the web page), plus whatever is changed with the keys: F4, F6, F7, F9, F10, Alt+B, Alt+S and the peripherals (Alt+T/X/L). So G also saves those changes. What changes by itself, such as the model when loading a 128K snapshot, does not go into the settings, so it is not saved by accident. If something is unsaved, the screen says so.
 
+## Microdigital TK90X and TK95
+
+Microdigital's TK90X and TK95 (Brazil) were ZX Spectrum 48K clones. Choose them with F7 or with `model=tk90x` / `model=tk95`.
+
+- **ULA** (`tkula=`): Microdigital's at 50 Hz (Uruguay; default), Microdigital's at 60 Hz (Brazil) or the original Ferranti one (the first exported TK90X). The picture timings and the clock change (about 3.58 MHz with Microdigital's).
+- **TK90X ROM** (`tkrom=`): Rodolfo Guerra's v3 (default), or the original v1 (the most widespread) and v2. The TK95 always has v2.
+- **ROM language** (`tklang=`): "automatic" follows the menu language. The originals only have Spanish and Portuguese: v1 has both in the same ROM and chooses at boot with a diode fitted to the TK90X sold in Brazil (the emulator simulates it with Portuguese); v2 and the TK95 have one ROM per language. v3 comes in 17 languages.
+
+**Rodolfo Guerra's v3 ROM** (2021, unofficial) is the result of three years of work starting from v1, the most consistent one, adding what v2 brought. It is the most compatible TK ROM to date and includes, among many other improvements: native turbo loading at 4000 baud (without losing normal loading: the ROM detects which one is on the tape), an improved BASIC editor and faster keyboard reading. To gain space each ROM has a single language, hence one for each of the 17. All its features are described in the manuals (in Spanish, English and Portuguese) on his page: https://sites.google.com/view/rodolfoguerra . In the emulator, turbo loading should work with real tape loading, which plays the tape at its own speed; instant and fast loading only speed up normal loading for now.
+
 ## ZIP files
 
 `.zip` files load straight from the file browser (F1) or the web page, without unzipping them first:
@@ -373,6 +383,7 @@ The function keys are in a single table (`KeyBindings` in `src/kernel.cpp`). The
 | Key | Function |
 | --- | --- |
 | F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives and A the credits |
+| Alt+F1 | The settings directly (ESC goes back to the Spectrum) |
 | Alt+U | Drives: see, mount and empty each drive |
 | Alt+K | Keyboard help |
 | F2 | Tape: play / stop |

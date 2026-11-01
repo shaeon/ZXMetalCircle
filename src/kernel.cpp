@@ -72,6 +72,7 @@ enum TAction
 	ActionJoystick,
 	ActionNMI,
 	ActionTapeMode,
+	ActionSettings,			// Alt+F1: la configuración directamente
 	ActionModel,			// F7: lista de modelos
 	ActionModelNext,		// Alt+F7: el siguiente modelo
 	ActionReset,
@@ -111,7 +112,8 @@ struct TKeyBinding
 
 static const TKeyBinding KeyBindings[] =
 {
-	{HID_KEY_F1,     FALSE, ActionHelp,         "F1",     N_("Ayuda, cintas y snapshots")},
+	{HID_KEY_F1,     FALSE, ActionHelp,         "F1/Alt", N_("Ayuda, cintas / configuración")},
+	{HID_KEY_F1,     TRUE,  ActionSettings,     "Alt+F1", 0},
 	{0x0E,           TRUE,  ActionKeyHelp,      "Alt+K",  N_("Ayuda de teclado")},
 	{HID_KEY_F1 + 1, FALSE, ActionTapePlayStop, "F2/F3",  N_("Cinta: play-stop / bloques")},
 	{HID_KEY_F1 + 2, FALSE, ActionTapeRewind,   "F3",     0},
@@ -3032,12 +3034,12 @@ void CKernel::LoadROMs (void)
 	}
 
 	// TK90X y TK95 (Microdigital). Idioma (tklang, "auto" = el del menú):
-	// - TK90X v1 (por defecto): una sola ROM con español y portugués; elige al
+	// - TK90X v3 (Rodolfo Guerra, por defecto): una ROM por idioma, en 17.
+	// - TK90X v1: una sola ROM con español y portugués; elige al
 	//   arrancar con el bit 7 del puerto 254, que en los vendidos en Brasil un
 	//   diodo pone a 0 (portugués). Sin el diodo sale en español.
 	// - TK90X v2 y TK95 (siempre v2): una ROM por idioma, español o brasileña
 	//   (solo cambia el byte 0x04BB).
-	// - TK90X v3 (Rodolfo Guerra): una ROM por idioma, en 17 idiomas.
 	// Las originales solo tienen español y portugués: otro idioma = español.
 	// Son opcionales: si no están, el modelo sale como "falta la ROM".
 	{
@@ -3050,11 +3052,12 @@ void CKernel::LoadROMs (void)
 		boolean bPT = strcasecmp (pLang, "pt") == 0;
 
 		CString TKName;
-		const char *pTKROM = m_Options.GetAppOptionString ("tkrom", "v1");
+		const char *pTKROM = m_Options.GetAppOptionString ("tkrom", "v3");
 		boolean bDiode = FALSE;
-		if (strcasecmp (pTKROM, "v3") == 0)
+		if (strcasecmp (pTKROM, "v1") == 0)
 		{
-			TKName.Format ("tk90x-v3-%s.rom", pLang);
+			TKName = "tk90x-v1.rom";
+			bDiode = bPT;
 		}
 		else if (strcasecmp (pTKROM, "v2") == 0)
 		{
@@ -3062,8 +3065,7 @@ void CKernel::LoadROMs (void)
 		}
 		else
 		{
-			TKName = "tk90x-v1.rom";
-			bDiode = bPT;
+			TKName.Format ("tk90x-v3-%s.rom", pLang);
 		}
 		m_pSpectrum->SetTKDiode (bDiode);
 
@@ -4430,6 +4432,20 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		UpdateStatusLines ();
 		OpenMenu ();
 		m_Menu.OpenHelp ();
+		m_Keyboard.SetCaptured (TRUE);
+		break;
+
+	case ActionSettings:
+		// Alt+F1: la configuración directamente; ESC vuelve al Spectrum
+		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		UpdateStatusLines ();
+		OpenMenu ();
+		if (!m_Settings.IsDirty ())
+		{
+			LoadSettings ();		// cmdline.txt puede haber cambiado desde la web
+		}
+		m_Menu.OpenSettings ();
+		m_Menu.SetSettingsFromShortcut (TRUE);
 		m_Keyboard.SetCaptured (TRUE);
 		break;
 

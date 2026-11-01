@@ -37,7 +37,7 @@
 	"instantánea": "instantânea",
 	"rápida": "rápida",
 	"real": "real",
-	"Ayuda, cintas y snapshots": "Ajuda, fitas e snapshots",
+	"Ayuda, cintas / configuración": "Ajuda, fitas / configuração",
 	"Ayuda de teclado": "Ajuda do teclado",
 	"Cinta: play-stop / bloques": "Fita: play-stop / blocos",
 	"Cambiar joystick": "Trocar joystick",
@@ -408,7 +408,7 @@
 	"ULA del TK": "ULA do TK",
 	"Microdigital 50Hz|Microdigital 60Hz|Ferranti": "Microdigital 50Hz|Microdigital 60Hz|Ferranti",
 	"ROM del TK90X": "ROM do TK90X",
-	"original v1|original v2|Rodolfo Guerra v3": "original v1|original v2|Rodolfo Guerra v3",
+	"Rodolfo Guerra v3|original v1|original v2": "Rodolfo Guerra v3|original v1|original v2",
 	"Idioma ROM del TK": "Idioma da ROM do TK",
 	"automático|español|inglés|portugués|catalán|checo|alemán|esperanto|euskera|gallego|italiano|neerlandés|noruego|polaco|rumano|ruso|sueco|valenciano": "automático|espanhol|inglês|português|catalão|tcheco|alemão|esperanto|basco|galego|italiano|holandês|norueguês|polonês|romeno|russo|sueco|valenciano",
 	"Disco duro al inicio": "Disco rígido inicial",
@@ -550,5 +550,6 @@
 	"Red: descargando de ZXDB...": "Rede: baixando do ZXDB...",
 	"No se pudo descargar: %s": "Não foi possível baixar: %s",
 	"Descargado y cargando en el Spectrum: %s (%u KB)": "Baixado e carregando no Spectrum: %s (%u KB)",
-	"_huerfano|Rodolfo Guerra v3|original v1|original v2": "Rodolfo Guerra v3|original v1|original v2"
+	"_huerfano|Ayuda, cintas y snapshots": "Ajuda, fitas e snapshots",
+	"_huerfano|original v1|original v2|Rodolfo Guerra v3": "original v1|original v2|Rodolfo Guerra v3"
 }
