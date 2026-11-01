@@ -1364,10 +1364,20 @@ uint8_t CSpectrum::inPort (uint16_t port)
 		{
 			nValue &= 0xBF;
 		}
-		if (m_Model == ModelTK90X && m_bTKDiode)
+		if (m_Model == ModelTK90X || m_Model == ModelTK95)
 		{
-			nValue &= 0x7F;			// TK90X brasileño: el diodo D1 pone el
-		}					// bit 7 a 0 (la ROM v1 sale en portugués)
+			// TK: los bits 5 y 7 no están conectados y dan lo que haya en el
+			// bus: el byte que lee la ULA de la memoria de vídeo, o 1 cuando
+			// no lee (Cantinho do TK90X, "ROM e Porta 254"). En los TK90X
+			// vendidos en Brasil el diodo D1 pone el bit 7 a 0, y la ROM v1
+			// sale en portugués; sin él, en español.
+			u8 nBus = FloatingBus ();
+			nValue = (nValue & 0x5F) | (nBus & 0xA0);
+			if (m_Model == ModelTK90X && m_bTKDiode)
+			{
+				nValue &= 0x7F;
+			}
+		}
 
 		return nValue;
 	}

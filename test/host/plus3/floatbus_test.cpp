@@ -87,6 +87,35 @@ int main ()
 	s->m_nTstates = 10;
 	chk ("48K: en el borde, 0xFF (no se mantiene el último valor)", s->inPort (0x0FFD) == 0xFF);
 
+	// TK90X: los bits 5 y 7 del puerto 254 son los del bus (Cantinho do TK90X)
+	{
+		static u8 TKROM[16384];
+		s->SetModelROM (ModelTK90X, TKROM);
+		s->SetTKDiode (FALSE);
+		s->SetModel (ModelTK90X);
+		const TMachineTiming *K = s->m_pTiming;
+		for (int i = 0; i < 0x1800; i++) s->m_pScreenPage[i] = 0xFF;
+		for (int i = 0x1800; i < 0x1B00; i++) s->m_pScreenPage[i] = 0x18;	// bits 5 y 7 a 0
+		s->m_nTstates = 10;
+		u8 b = s->FloatingBus ();
+		chk ("TK90X, borde: el bus da 0xFF", b == 0xFF);
+		int tAttr = K->nUpBorderWidth * K->nTstatesLine + K->nPaperCol + K->nOutOffset + 1;
+		s->m_nTstates = tAttr;
+		b = s->FloatingBus ();
+		chk ("TK90X, leyendo un atributo 0x18: el bus da 0x18", b == 0x18);
+		s->m_nTstates = tAttr - 4;	// inPort suma el tiempo de la E/S
+		u8 v = s->inPort (0xFFFE);
+		chk ("TK90X sin diodo: bits 5 y 7 del puerto 254 = los del bus", (v & 0xA0) == (s->FloatingBus () & 0xA0));
+		s->SetTKDiode (TRUE);
+		s->m_nTstates = 10;
+		v = s->inPort (0xFFFE);
+		chk ("TK90X con diodo, en el borde: bit 7 a 0 y bit 5 a 1", (v & 0x80) == 0 && (v & 0x20) != 0);
+		s->SetTKDiode (FALSE);
+		s->m_nTstates = 10;
+		v = s->inPort (0xFFFE);
+		chk ("TK90X sin diodo, en el borde: bits 5 y 7 a 1", (v & 0xA0) == 0xA0);
+	}
+
 	printf (fails ? "%d fallos\n" : "todo OK\n", fails);
 	return fails;
 }
