@@ -143,6 +143,7 @@ private:
 	unsigned m_nTop;
 	unsigned m_nScrollTick;		// desplazamiento de nombres largos
 	unsigned m_nScrollSelected;
+	unsigned m_nScrollChoice;	// opción elegida en la lista (para su desplazamiento)
 
 	char m_CurrentDir[MENU_PATH_LEN];
 	char m_SelectedPath[MENU_PATH_LEN];
@@ -159,7 +160,7 @@ private:
 	boolean m_bUnitsFromShortcut;	// unidades abiertas con Alt+U
 	char m_InputHelp[2][48];
 	char m_InputBuf[20];		// lo escrito en la línea de texto
-	char m_Choice[MENU_CHOICE_ITEMS][48];
+	char m_Choice[MENU_CHOICE_ITEMS][100];	// nombres de ZIP de hasta 96
 	unsigned m_nChoices;
 	unsigned m_nChoiceSelected;
 	unsigned m_nAboutTop;		// primera línea visible de los créditos

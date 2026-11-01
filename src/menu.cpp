@@ -46,7 +46,8 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nSelected (0),
 	m_nTop (0),
 	m_nScrollTick (0),
-	m_nScrollSelected (0)
+	m_nScrollSelected (0),
+	m_nScrollChoice (0)
 {
 	m_pSettings = 0;
 	m_nSettingsPage = 0;
@@ -264,6 +265,8 @@ void CMenu::SetUnitLine (unsigned nUnit, const char *pName)
 
 void CMenu::OpenChoice (const char *pTitle)
 {
+	m_nScrollTick = 0;			// el nombre elegido, desde el principio
+	m_nScrollChoice = 0;
 	strncpy (m_ChoiceTitle, pTitle, sizeof m_ChoiceTitle - 1);
 	m_ChoiceTitle[sizeof m_ChoiceTitle - 1] = '\0';
 	m_nChoices = 0;
@@ -1294,6 +1297,11 @@ void CMenu::Draw (TPixel *pScreen)
 		m_nScrollSelected = m_nSelected;
 		m_nScrollTick = 0;
 	}
+	if (m_Mode == ModeChoice && m_nChoiceSelected != m_nScrollChoice)
+	{
+		m_nScrollChoice = m_nChoiceSelected;	// lista: otra opción, otra vez desde el principio
+		m_nScrollTick = 0;
+	}
 	m_nScrollTick++;
 
 	if (m_Mode == ModeClosed)
@@ -1497,18 +1505,51 @@ void CMenu::Draw (TPixel *pScreen)
 	if (m_Mode == ModeChoice)
 	{
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), m_ChoiceTitle, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		const unsigned nNameCols = TEXT_COLS - 2;	// tras el número y el espacio
 		for (unsigned i = 0; i < m_nChoices; i++)
 		{
-			CString Line;
-			Line.Format ("%u %s", i + 1, m_Choice[i]);
 			boolean bSel = i == m_nChoiceSelected;
+			u8 nInk = bSel ? COLOR_UI_PANEL : COLOR_UI_TEXT;
+			u8 nPaper = bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL;
+			int y = ROW_Y (3 + 2 * i);
 			if (bSel)
 			{
-				m_pVideo->FillRect (pScreen, tx - 2, ROW_Y (3 + 2 * i) - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
+				m_pVideo->FillRect (pScreen, tx - 2, y - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
 			}
-			m_pVideo->DrawText (pScreen, tx, ROW_Y (3 + 2 * i), Line,
-					    bSel ? COLOR_UI_PANEL : COLOR_UI_TEXT,
-					    bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL, TEXT_COLS);
+
+			char Number[4] = {(char) ('1' + i), ' ', '\0', '\0'};
+			if (i >= 9)
+			{
+				Number[0] = ' ';			// 10-14: solo con los cursores
+			}
+			m_pVideo->DrawText (pScreen, tx, y, Number, nInk, nPaper, 2);
+
+			// Si el nombre no cabe, el de la opción elegida se desplaza poco a
+			// poco (como en el selector de ficheros) y los demás acaban en '>'
+			const char *pName = m_Choice[i];
+			unsigned nLen = UTF8Length (pName);
+			if (nLen > nNameCols)
+			{
+				if (bSel)
+				{
+					unsigned nSkip = ScrollOffset (nLen - nNameCols);
+					while (nSkip > 0 && *pName != '\0')
+					{
+						pName++;
+						while ((*pName & 0xC0) == 0x80)	// sin partir un carácter UTF-8
+						{
+							pName++;
+						}
+						nSkip--;
+					}
+				}
+				else
+				{
+					m_pVideo->DrawText (pScreen, tx + (TEXT_COLS - 1) * 8, y, ">", nInk, nPaper, 1);
+				}
+			}
+			m_pVideo->DrawText (pScreen, tx + 2 * 8, y, pName, nInk, nPaper,
+					    bSel || nLen <= nNameCols ? nNameCols : nNameCols - 1);
 		}
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ENTER o 1-9: elegir   ESC: seguir"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
