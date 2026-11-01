@@ -4,6 +4,6 @@
 #ifndef _zx_version_h
 #define _zx_version_h
 
-#define ZXCIRCLE_VERSION	"1.05"
+#define ZXCIRCLE_VERSION	"1.06"
 
 #endif

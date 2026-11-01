@@ -6,7 +6,7 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
-## Sin publicar
+## 1.06
 
 - **Corregido**: al cambiar en la configuración "ROM del TK90X" o "Idioma ROM del TK" no pasaba nada hasta guardar y reiniciar la Pi, así que seguía saliendo la ROM de antes. Ahora se aplican al momento: se cargan las ROM nuevas y, si el modelo es un TK, se reinicia con ellas (si la ROM elegida no está en `roms/`, pasa al 48K con un aviso). Las ROM anteriores se liberan.
 - **Corregido**: en la fila elegida de la configuración, cuando el valor es largo el `>` cae en el margen derecho y quedaba más bajo que la barra; ahora la barra llega hasta el borde del panel y lo cubre entero.
