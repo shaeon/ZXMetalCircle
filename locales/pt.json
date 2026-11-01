@@ -408,7 +408,7 @@
 	"ULA del TK": "ULA do TK",
 	"Microdigital 50Hz|Microdigital 60Hz|Ferranti": "Microdigital 50Hz|Microdigital 60Hz|Ferranti",
 	"ROM del TK90X": "ROM do TK90X",
-	"Rodolfo Guerra v3|original v1|original v2": "Rodolfo Guerra v3|original v1|original v2",
+	"original v1|original v2|Rodolfo Guerra v3": "original v1|original v2|Rodolfo Guerra v3",
 	"Idioma ROM del TK": "Idioma da ROM do TK",
 	"automático|español|inglés|portugués|catalán|checo|alemán|esperanto|euskera|gallego|italiano|neerlandés|noruego|polaco|rumano|ruso|sueco|valenciano": "automático|espanhol|inglês|português|catalão|tcheco|alemão|esperanto|basco|galego|italiano|holandês|norueguês|polonês|romeno|russo|sueco|valenciano",
 	"Disco duro al inicio": "Disco rígido inicial",
@@ -549,5 +549,6 @@
 	"No hay memoria para la descarga": "Não há memória para o download",
 	"Red: descargando de ZXDB...": "Rede: baixando do ZXDB...",
 	"No se pudo descargar: %s": "Não foi possível baixar: %s",
-	"Descargado y cargando en el Spectrum: %s (%u KB)": "Baixado e carregando no Spectrum: %s (%u KB)"
+	"Descargado y cargando en el Spectrum: %s (%u KB)": "Baixado e carregando no Spectrum: %s (%u KB)",
+	"_huerfano|Rodolfo Guerra v3|original v1|original v2": "Rodolfo Guerra v3|original v1|original v2"
 }

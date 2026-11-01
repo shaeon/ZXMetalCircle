@@ -41,9 +41,10 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
 
  tkula=50         TK90X and TK95 ULA: 50 (Microdigital at 50 Hz), 60
                   (Microdigital at 60 Hz) or ferranti (48K timings)
- tkrom=v3         TK90X ROM: v3 (Rodolfo Guerra), v1 or v2 (originals)
- tklang=auto      Language of the TK90X v3 ROM: auto (the menu's), es, en,
-                  pt, ca, cs, de, eo, eu, gl, it, nl, no, pl, ro, ru, sv, vl
+ tkrom=v1         TK90X ROM: v1 or v2 (originals) or v3 (Rodolfo Guerra)
+ tklang=auto      TK ROM language: auto (the menu's), es, en, pt, ca, cs, de,
+                  eo, eu, gl, it, nl, no, pl, ro, ru, sv, vl. The originals
+                  only have es and pt (v1, with the diode)
 
  hdd=             +3e hard disk image mounted at boot (switches to the
                   +3e). Path inside the SD card, for example:

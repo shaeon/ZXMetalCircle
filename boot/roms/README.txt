@@ -45,10 +45,11 @@ non-commercial use. The Spectranet firmware is by Dylan Smith (MIT licence).
                                                    enough.
 
  tk90x-v1.rom    16384 bytes  Microdigital TK90X   No TK90X.
- tk90x-v2.rom                 (originals v1/v2 and The one chosen with tkrom=
- tk90x-v3-XX.rom              Rodolfo Guerra's v3  and tklang= is used.
-                              in 17 languages)
+ tk90x-v2-es.rom              (originals v1 and v2 The one chosen with tkrom=
+ tk90x-v2-br.rom              and Rodolfo Guerra's and tklang= is used.
+ tk90x-v3-XX.rom              v3 in 17 languages)
  tk95-es.rom     16384 bytes  Microdigital TK95    No TK95.
+ tk95-br.rom
 
  if1.rom          8192 bytes  Interface 1 (v2)     No Interface 1: no
                                                    microdrives (.mdr .mdv,

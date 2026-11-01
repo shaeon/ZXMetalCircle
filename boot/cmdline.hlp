@@ -38,9 +38,10 @@ defecto.
 
  tkula=50         ULA del TK90X y el TK95: 50 (Microdigital a 50 Hz), 60
                   (Microdigital a 60 Hz) o ferranti (tiempos del 48K)
- tkrom=v3         ROM del TK90X: v3 (Rodolfo Guerra), v1 o v2 (originales)
- tklang=auto      Idioma de la ROM v3 del TK90X: auto (el del menu), es, en,
-                  pt, ca, cs, de, eo, eu, gl, it, nl, no, pl, ro, ru, sv, vl
+ tkrom=v1         ROM del TK90X: v1 o v2 (originales) o v3 (Rodolfo Guerra)
+ tklang=auto      Idioma de la ROM del TK: auto (el del menu), es, en, pt, ca,
+                  cs, de, eo, eu, gl, it, nl, no, pl, ro, ru, sv, vl. Las
+                  originales solo tienen es y pt (la v1, con el diodo)
 
  hdd=             Imagen de disco duro del +3e que se monta al arrancar
                   (pasa al +3e). Ruta dentro de la SD, por ejemplo:

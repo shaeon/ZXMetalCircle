@@ -35,7 +35,7 @@ static TSettingDef Settings[] =
 	{"ulaplus",	N_("ULAplus (64 colores)"), 0, "1|0", N_("sí|no"),			"1",	TRUE},
 	{"p3elang",	N_("Idioma del +3e"),	0, "es|en", N_("español|inglés"),		"es",	FALSE},
 	{"tkula",	N_("ULA del TK"),		0, "50|60|ferranti", N_("Microdigital 50Hz|Microdigital 60Hz|Ferranti"), "50", TRUE},
-	{"tkrom",	N_("ROM del TK90X"),	0, "v3|v1|v2", N_("Rodolfo Guerra v3|original v1|original v2"), "v3", FALSE},
+	{"tkrom",	N_("ROM del TK90X"),	0, "v1|v2|v3", N_("original v1|original v2|Rodolfo Guerra v3"), "v1", FALSE},
 	{"tklang",	N_("Idioma ROM del TK"),	0, "auto|es|en|pt|ca|cs|de|eo|eu|gl|it|nl|no|pl|ro|ru|sv|vl",
 					   N_("automático|español|inglés|portugués|catalán|checo|alemán|esperanto|euskera|gallego|italiano|neerlandés|noruego|polaco|rumano|ruso|sueco|valenciano"), "auto", FALSE},
 	{"hdd",		N_("Disco duro al inicio"), 0, "none", N_("ninguno"),			"none",	FALSE},
@@ -537,7 +537,7 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	}
 	if (strcmp (pKey, "tklang") == 0)
 	{
-		return Is ("model", "tk90x") && Is ("tkrom", "v3");
+		return Is ("model", "tk90x") || Is ("model", "tk95");
 	}
 
 	// disco acelerado: solo en los modelos con disquetera

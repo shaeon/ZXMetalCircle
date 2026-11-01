@@ -89,6 +89,8 @@ public:
 	void SetDiskAcceleration (boolean bOn)	{ m_bDiskAccel = bOn; }
 	boolean GetDiskAcceleration (void) const	{ return m_bDiskAccel; }
 	boolean IsDiskAccelerating (void) const;
+	// TK90X con el diodo D1 de los vendidos en Brasil: bit 7 del puerto 254 a 0
+	void SetTKDiode (boolean bOn)		{ m_bTKDiode = bOn; }
 
 	// TK90X/TK95: ULA Ferranti (tiempos del 48K) o de Microdigital a 50/60 Hz;
 	// se aplica al elegir el modelo (SetModel)
@@ -401,6 +403,7 @@ private:
 	enum TAccelMode { AccelNone, AccelIncreasing, AccelDecreasing };
 	boolean m_bLoaderAccel;
 	boolean m_bDiskAccel;
+	boolean m_bTKDiode;
 	TTKULA m_nTKULA;
 	boolean m_bTKMicro;		// TK con ULA de Microdigital (tiempos propios)
 	TAccelMode m_AccelMode;

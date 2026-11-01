@@ -3031,32 +3031,48 @@ void CKernel::LoadROMs (void)
 		}
 	}
 
-	// TK90X: tkrom = v3 (Rodolfo Guerra, por defecto), v1 o v2 (originales);
-	// la v3, en el idioma de tklang ("auto" = el del menú). TK95: la suya.
+	// TK90X y TK95 (Microdigital). Idioma (tklang, "auto" = el del menú):
+	// - TK90X v1 (por defecto): una sola ROM con español y portugués; elige al
+	//   arrancar con el bit 7 del puerto 254, que en los vendidos en Brasil un
+	//   diodo pone a 0 (portugués). Sin el diodo sale en español.
+	// - TK90X v2 y TK95 (siempre v2): una ROM por idioma, español o brasileña
+	//   (solo cambia el byte 0x04BB).
+	// - TK90X v3 (Rodolfo Guerra): una ROM por idioma, en 17 idiomas.
+	// Las originales solo tienen español y portugués: otro idioma = español.
 	// Son opcionales: si no están, el modelo sale como "falta la ROM".
 	{
-		CString TKName;
-		const char *pTKROM = m_Options.GetAppOptionString ("tkrom", "v3");
-		if (strcasecmp (pTKROM, "v1") == 0 || strcasecmp (pTKROM, "v2") == 0)
+		const char *pLang = m_Options.GetAppOptionString ("tklang", "auto");
+		if (strcasecmp (pLang, "auto") == 0)
 		{
-			TKName.Format ("tk90x-%s.rom", pTKROM);
+			const char *pMenu = m_Options.GetAppOptionString ("lang", "es");
+			pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strcasecmp (pMenu, "pt") == 0 ? "pt" : "es";
+		}
+		boolean bPT = strcasecmp (pLang, "pt") == 0;
+
+		CString TKName;
+		const char *pTKROM = m_Options.GetAppOptionString ("tkrom", "v1");
+		boolean bDiode = FALSE;
+		if (strcasecmp (pTKROM, "v3") == 0)
+		{
+			TKName.Format ("tk90x-v3-%s.rom", pLang);
+		}
+		else if (strcasecmp (pTKROM, "v2") == 0)
+		{
+			TKName = bPT ? "tk90x-v2-br.rom" : "tk90x-v2-es.rom";
 		}
 		else
 		{
-			const char *pLang = m_Options.GetAppOptionString ("tklang", "auto");
-			if (strcasecmp (pLang, "auto") == 0)
-			{
-				const char *pMenu = m_Options.GetAppOptionString ("lang", "es");
-				pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strcasecmp (pMenu, "pt") == 0 ? "pt" : "es";
-			}
-			TKName.Format ("tk90x-v3-%s.rom", pLang);
+			TKName = "tk90x-v1.rom";
+			bDiode = bPT;
 		}
+		m_pSpectrum->SetTKDiode (bDiode);
+
 		const u8 *pTK = LoadROMFile (TKName, 0x4000);
 		if (pTK != 0)
 		{
 			m_pSpectrum->SetModelROM (ModelTK90X, pTK);
 		}
-		const u8 *pTK95 = LoadROMFile ("tk95-es.rom", 0x4000);
+		const u8 *pTK95 = LoadROMFile (bPT ? "tk95-br.rom" : "tk95-es.rom", 0x4000);
 		if (pTK95 != 0)
 		{
 			m_pSpectrum->SetModelROM (ModelTK95, pTK95);

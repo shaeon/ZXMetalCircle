@@ -50,6 +50,7 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_bAutoStopped (TRUE),
 	m_bLoaderAccel (TRUE),
 	m_bDiskAccel (FALSE),
+	m_bTKDiode (FALSE),
 	m_nTKULA (TKULA50Hz),
 	m_bTKMicro (FALSE),
 	m_AccelMode (AccelNone),
@@ -1363,10 +1364,10 @@ uint8_t CSpectrum::inPort (uint16_t port)
 		{
 			nValue &= 0xBF;
 		}
-		if (m_Model == ModelTK90X)
+		if (m_Model == ModelTK90X && m_bTKDiode)
 		{
-			nValue &= 0x7F;			// TK90X: el bit 7 siempre a 0 (F. Matsumoto)
-		}
+			nValue &= 0x7F;			// TK90X brasileño: el diodo D1 pone el
+		}					// bit 7 a 0 (la ROM v1 sale en portugués)
 
 		return nValue;
 	}
