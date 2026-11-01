@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Corregido**: un disco de 3" de una cara con unas pistas de más (Tomahawk, 45) pasaba a una unidad de 3,5" de 80 pistas y doble cara, y la pantalla de unidades decía "(unidad de 3,5")". Ahora la unidad es de 3,5" solo con dos caras o más de 50 pistas; si no, es de 3" de una cara con las pistas que tenga la imagen (como mínimo 42), así que esas pistas de más siguen siendo accesibles. Probado: diez discos (Tomahawk, el de 720K y ocho con protecciones) dan la misma pantalla que antes; en QEMU, Tomahawk ya no sale como de 3,5" y el de 720K sí.
 - **Nuevo**: Alt+F1 abre directamente la configuración; con ESC se vuelve al Spectrum (desde la ayuda, F1 y C, ESC sigue volviendo a la ayuda). En la ayuda, la línea queda "F1/Alt Ayuda, cintas / configuración".
 - **Cambiado**: la ROM del TK90X por defecto vuelve a ser la v3 de Rodolfo Guerra, la más compatible, de acuerdo con él. Nueva sección "Microdigital TK90X y TK95" en el README, con las ULA, las ROM, los idiomas y las mejoras de la v3.
 - **Corregido**: en las listas de elección (el fichero de un ZIP, el modelo con F7…) los nombres largos se cortaban sin forma de verlos enteros. Ahora el de la opción elegida se desplaza poco a poco, como en el selector de ficheros, y los demás acaban en `>`; el número de la opción se queda fijo. Caben nombres de hasta 96 caracteres (antes se guardaban cortados a 47). Probado en QEMU con un ZIP con un nombre de 73 caracteres.
