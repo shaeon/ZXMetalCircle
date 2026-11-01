@@ -115,6 +115,15 @@ for T in $TARGETS; do
 		build_circle_libs "$C" clean
 	fi
 
+	# Zona del kernel de 4 MB en lugar de los 2 MB de Circle: margen para los
+	# modelos nuevos. Circle lo permite con KERNEL_MAX_SIZE (múltiplo de 16 KB);
+	# cambia el mapa de memoria (pilas, tablas de páginas y heap van detrás),
+	# así que hay que recompilarlo entero, como con el multinúcleo.
+	if ! grep -q "KERNEL_MAX_SIZE" "$C/Config.mk"; then
+		echo "DEFINE += -DKERNEL_MAX_SIZE=0x400000" >> "$C/Config.mk"
+		build_circle_libs "$C" clean
+	fi
+
 	# FatFs con f_mkfs y f_expand (esxDOS sobre una carpeta crea su imagen FAT).
 	# No cambian el tamaño de ninguna estructura: basta con recompilar FatFs.
 	if ! grep -q "define FF_USE_MKFS[[:space:]]*1" "$C/addon/fatfs/ffconf.h"; then
@@ -150,15 +159,15 @@ for T in $TARGETS; do
 	fi
 	make -C "$B" CIRCLEHOME="$C" -j"$JOBS"
 
-	# Circle reserva 2 MB para el kernel (código + datos + BSS): si se pasa,
-	# pisa la pila y el heap y falla al arrancar sin decir nada
+	# Zona reservada para el kernel (código + datos + BSS): 4 MB (ver
+	# KERNEL_MAX_SIZE arriba). Si se pasa, Circle se detiene al arrancar.
 	ELF="$B/${KERNEL[$T]%.img}.elf"
 	TOTAL=$(${P}size "$ELF" | awk 'NR==2 {print $4}')
-	if [ "$TOTAL" -ge $((2 * 1024 * 1024)) ]; then
-		echo "ERROR: el kernel ocupa $TOTAL bytes (máximo 2 MB). Mueve búferes grandes al heap."
+	if [ "$TOTAL" -ge $((4 * 1024 * 1024)) ]; then
+		echo "ERROR: el kernel ocupa $TOTAL bytes (máximo 4 MB). Mueve búferes grandes al heap."
 		exit 1
 	fi
-	echo "Tamaño del kernel en memoria: $TOTAL bytes ($((TOTAL * 100 / (2 * 1024 * 1024))) % de 2 MB)"
+	echo "Tamaño del kernel en memoria: $TOTAL bytes ($((TOTAL * 100 / (4 * 1024 * 1024))) % de 4 MB)"
 
 	if [ "$QEMU" = 1 ]; then
 		mkdir -p "$ROOT/qemu"
