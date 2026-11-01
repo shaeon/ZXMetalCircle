@@ -172,6 +172,8 @@ CKernel::CKernel (void)
 	m_nLastKeyTime = 0;
 	m_bF5Files = FALSE;
 	m_bModelList = FALSE;
+	m_pTKROM = 0;
+	m_pTK95ROM = 0;
 	m_bIndicators = TRUE;
 	m_pZipData = 0;
 	m_pZipEntry = 0;
@@ -2228,6 +2230,13 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "tapesound") == 0)	m_pSpectrum->GetAudio ()->SetTapeSound (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "tapeaccel") == 0)	m_pSpectrum->SetLoaderAcceleration (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "diskaccel") == 0)	m_pSpectrum->SetDiskAcceleration (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "tkrom") == 0 || strcmp (pKey, "tklang") == 0)
+	{
+		// la ROM o su idioma: se cargan ya y, con un TK, se reinicia con ella
+		const char *pROM = strcmp (pKey, "tkrom") == 0 ? pValue : m_Settings.GetValue (m_Settings.Find ("tkrom"));
+		const char *pLang = strcmp (pKey, "tklang") == 0 ? pValue : m_Settings.GetValue (m_Settings.Find ("tklang"));
+		LoadTKROMs (pROM, pLang, m_Settings.GetValue (m_Settings.Find ("lang")), TRUE);
+	}
 	else if (strcmp (pKey, "tkula") == 0)
 	{
 		m_pSpectrum->SetTKULA (strcmp (pValue, "60") == 0 ? TKULA60Hz
@@ -2931,6 +2940,70 @@ void CKernel::CheckCmdLine (void)
 	}
 }
 
+// ROMs del TK90X y el TK95 según tkrom, tklang y el idioma del menú (para
+// tklang=auto). Al arrancar y al cambiar esas opciones (bReset: si el modelo
+// actual es un TK, se reinicia con la ROM nueva).
+void CKernel::LoadTKROMs (const char *pTKROM, const char *pTKLang, const char *pMenu, boolean bReset)
+{
+	// TK90X y TK95 (Microdigital). Idioma (tklang, "auto" = el del menú):
+	// - TK90X v3 (Rodolfo Guerra, por defecto): una ROM por idioma, en 17.
+	// - TK90X v1: una sola ROM con español y portugués; elige al
+	//   arrancar con el bit 7 del puerto 254, que en los vendidos en Brasil un
+	//   diodo pone a 0 (portugués). Sin el diodo sale en español.
+	// - TK90X v2 y TK95 (siempre v2): una ROM por idioma, español o brasileña
+	//   (solo cambia el byte 0x04BB).
+	// Las originales solo tienen español y portugués: otro idioma = español.
+	// Son opcionales: si no están, el modelo sale como "falta la ROM".
+	{
+		const char *pLang = pTKLang;
+		if (strcasecmp (pLang, "auto") == 0)
+		{
+			pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strcasecmp (pMenu, "pt") == 0 ? "pt" : "es";
+		}
+		boolean bPT = strcasecmp (pLang, "pt") == 0;
+
+		CString TKName;
+		boolean bDiode = FALSE;
+		if (strcasecmp (pTKROM, "v1") == 0)
+		{
+			TKName = "tk90x-v1.rom";
+			bDiode = bPT;
+		}
+		else if (strcasecmp (pTKROM, "v2") == 0)
+		{
+			TKName = bPT ? "tk90x-v2-br.rom" : "tk90x-v2-es.rom";
+		}
+		else
+		{
+			TKName.Format ("tk90x-v3-%s.rom", pLang);
+		}
+		m_pSpectrum->SetTKDiode (bDiode);
+
+		// las anteriores se liberan cuando ya no las usa el Spectrum
+		const u8 *pOldTK = m_pTKROM, *pOldTK95 = m_pTK95ROM;
+		m_pTKROM = LoadROMFile (TKName, 0x4000);
+		m_pSpectrum->SetModelROM (ModelTK90X, m_pTKROM);
+		m_pTK95ROM = LoadROMFile (bPT ? "tk95-br.rom" : "tk95-es.rom", 0x4000);
+		m_pSpectrum->SetModelROM (ModelTK95, m_pTK95ROM);
+
+		TModel Current = m_pSpectrum->GetModel ();
+		if (bReset && (Current == ModelTK90X || Current == ModelTK95))
+		{
+			if (m_pSpectrum->IsModelAvailable (Current))
+			{
+				SetModel (Current);		// con la ROM nueva
+			}
+			else
+			{
+				SetModel (Model48K);		// esa ROM no está en roms/
+				ShowMessage (T ("Falta la ROM de ese modelo (mira el README)"));
+			}
+		}
+		delete [] pOldTK;
+		delete [] pOldTK95;
+	}
+}
+
 // ROMs de la carpeta roms de la SD. Solo las del 48K y el 128K van dentro del
 // kernel; las demás se cargan aquí y, si falta alguna, la máquina o el
 // periférico que la necesita no está disponible (ver roms/LEEME.txt):
@@ -3033,53 +3106,9 @@ void CKernel::LoadROMs (void)
 		}
 	}
 
-	// TK90X y TK95 (Microdigital). Idioma (tklang, "auto" = el del menú):
-	// - TK90X v3 (Rodolfo Guerra, por defecto): una ROM por idioma, en 17.
-	// - TK90X v1: una sola ROM con español y portugués; elige al
-	//   arrancar con el bit 7 del puerto 254, que en los vendidos en Brasil un
-	//   diodo pone a 0 (portugués). Sin el diodo sale en español.
-	// - TK90X v2 y TK95 (siempre v2): una ROM por idioma, español o brasileña
-	//   (solo cambia el byte 0x04BB).
-	// Las originales solo tienen español y portugués: otro idioma = español.
-	// Son opcionales: si no están, el modelo sale como "falta la ROM".
-	{
-		const char *pLang = m_Options.GetAppOptionString ("tklang", "auto");
-		if (strcasecmp (pLang, "auto") == 0)
-		{
-			const char *pMenu = m_Options.GetAppOptionString ("lang", "es");
-			pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strcasecmp (pMenu, "pt") == 0 ? "pt" : "es";
-		}
-		boolean bPT = strcasecmp (pLang, "pt") == 0;
-
-		CString TKName;
-		const char *pTKROM = m_Options.GetAppOptionString ("tkrom", "v3");
-		boolean bDiode = FALSE;
-		if (strcasecmp (pTKROM, "v1") == 0)
-		{
-			TKName = "tk90x-v1.rom";
-			bDiode = bPT;
-		}
-		else if (strcasecmp (pTKROM, "v2") == 0)
-		{
-			TKName = bPT ? "tk90x-v2-br.rom" : "tk90x-v2-es.rom";
-		}
-		else
-		{
-			TKName.Format ("tk90x-v3-%s.rom", pLang);
-		}
-		m_pSpectrum->SetTKDiode (bDiode);
-
-		const u8 *pTK = LoadROMFile (TKName, 0x4000);
-		if (pTK != 0)
-		{
-			m_pSpectrum->SetModelROM (ModelTK90X, pTK);
-		}
-		const u8 *pTK95 = LoadROMFile (bPT ? "tk95-br.rom" : "tk95-es.rom", 0x4000);
-		if (pTK95 != 0)
-		{
-			m_pSpectrum->SetModelROM (ModelTK95, pTK95);
-		}
-	}
+	LoadTKROMs (m_Options.GetAppOptionString ("tkrom", "v3"),
+		    m_Options.GetAppOptionString ("tklang", "auto"),
+		    m_Options.GetAppOptionString ("lang", "es"), FALSE);
 
 	const u8 *pIF1 = LoadROMFile (ROMOption ("romif1", "if1.rom"), 0x2000);
 	if (pIF1 != 0)

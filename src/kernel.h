@@ -80,6 +80,7 @@ private:
 	boolean LoadTape (const char *pPath);
 	boolean LoadSnapshot (const char *pPath);
 	// ZIP: cintas y snapshots al vuelo, discos y Microdrive a SD:/tmp
+	void LoadTKROMs (const char *pTKROM, const char *pTKLang, const char *pMenu, boolean bReset);
 	void OpenZip (const char *pPath);
 	void LoadZipEntry (unsigned nEntry);
 	void ExtractZipToTmp (unsigned nEntry, boolean bOverwrite);
@@ -298,6 +299,8 @@ private:
 	char			m_ZipEntryPath[ZIP_NAME_LEN + 8];
 	unsigned		m_ZipChoice[MENU_CHOICE_ITEMS];	// entradas que se pueden cargar
 	unsigned		m_nZipChoices;
+	const u8		*m_pTKROM;		// ROMs del TK cargadas (LoadTKROMs)
+	const u8		*m_pTK95ROM;
 	boolean			m_bModelList;		// pregunta: F7, lista de modelos
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZipOverwriteChoice;	// pregunta: usar el de tmp o sobrescribir

@@ -207,8 +207,8 @@ Todas las opciones van en una sola línea:
 | --- | --- | --- |
 | `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95` | `128k` |
 | `tkula=` | ULA del TK90X y el TK95: `50` (Microdigital a 50 Hz: Uruguay), `60` (Microdigital a 60 Hz: Brasil) o `ferranti` (los primeros de exportación; los tiempos del 48K) | `50` |
-| `tkrom=` | ROM del TK90X: `v3` (la de Rodolfo Guerra, la más compatible), `v1` (original, la más difundida) o `v2` (original; el TK95 siempre la lleva). Se aplica al reiniciar | `v3` |
-| `tklang=` | Idioma de la ROM del TK90X y del TK95: `auto` (el del menú), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. Las originales solo tienen español y portugués (los demás idiomas usan el español): la v1 elige con el diodo de los TK90X brasileños (el bit 7 del puerto 254 a 0 da el portugués) y la v2 y el TK95 con su ROM española o brasileña. La v3 tiene los 17. Se aplica al reiniciar | `auto` |
+| `tkrom=` | ROM del TK90X: `v3` (la de Rodolfo Guerra, la más compatible), `v1` (original, la más difundida) o `v2` (original; el TK95 siempre la lleva). Se aplica al momento: con un TK, se reinicia con la ROM nueva | `v3` |
+| `tklang=` | Idioma de la ROM del TK90X y del TK95: `auto` (el del menú), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. Las originales solo tienen español y portugués (los demás idiomas usan el español): la v1 elige con el diodo de los TK90X brasileños (el bit 7 del puerto 254 a 0 da el portugués) y la v2 y el TK95 con su ROM española o brasileña. La v3 tiene los 17. Se aplica al momento | `auto` |
 | `tape=` | `flash` (instantánea), `fast` (rápida), `normal` (real) | `flash` |
 | `tapeaccel=` | `1` (acelerar cargadores conocidos), `0` | `1` |
 | `diskaccel=` | `1` (+3/+3e: emulación acelerada mientras se usa la disquetera; las protecciones no cambian), `0` | `0` |

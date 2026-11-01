@@ -1592,7 +1592,14 @@ void CMenu::Draw (TPixel *pScreen)
 			boolean bApplies = m_pSettings->IsApplicable (Index[i]);
 			if (bSel)
 			{
-				m_pVideo->FillRect (pScreen, tx - 2, ROW_Y (3 + 2 * i) - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
+				// si el '>' del valor cae en la columna 40 (el margen derecho),
+				// la barra llega hasta el borde del panel para cubrirlo entero
+				unsigned nWidth = TEXT_COLS * 8 + 4;
+				if (!m_bEditing && 23 + UTF8Length (Value) >= TEXT_COLS)
+				{
+					nWidth = TEXT_COLS * 8 + 10;
+				}
+				m_pVideo->FillRect (pScreen, tx - 2, ROW_Y (3 + 2 * i) - 1, nWidth, 10, COLOR_UI_HILITE);
 				bSelApplies = bApplies;
 			}
 			// etiqueta en blanco y valor en verde (en gris si no se usa); en la
