@@ -19,6 +19,7 @@ Author: **Shaeon (Carlos Palmero)**, © 2026.
 - To the **RetroWiki** group (https://www.retrowiki.es), for their help and for keeping the community alive.
 - To **Jordi** (https://jbinary.itch.io), for his advice about the Spectrum.
 - To **Víctor Iborra (EremusOne)**, for **ESPectrum** (https://github.com/EremusOne/ESPectrum), the Spectrum emulator for ESP32.
+- To **Rodolfo Guerra**, for the TK90X v3 ROMs in 17 languages, included with his permission, and for his help with the TK90X and TK95 (https://sites.google.com/view/rodolfoguerra).
 
 The licence and the credits can also be seen in the emulator itself: F1 and then **A**.
 
@@ -196,7 +197,9 @@ All the options go on a single line:
 
 | Option | Values | Default |
 | --- | --- | --- |
-| `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e` | `128k` |
+| `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95` | `128k` |
+| `tkrom=` | TK90X ROM: `v3` (Rodolfo Guerra's), `v1` or `v2` (Microdigital's originals). Applied on restart | `v3` |
+| `tklang=` | Language of the TK90X v3 ROM: `auto` (the menu's: Spanish, English or Portuguese), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. Applied on restart | `auto` |
 | `tape=` | `flash` (instant), `fast`, `normal` (real) | `flash` |
 | `tapeaccel=` | `1` (accelerate known loaders), `0` | `1` |
 | `diskaccel=` | `1` (+3/+3e: accelerated emulation while the disk drive is in use; copy protections are not affected), `0` | `0` |

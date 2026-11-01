@@ -196,7 +196,7 @@ void CSpectrum::SetIF1ROM (const u8 *pROM)
 // 48K, la de siempre en los demás. pureblack: negro puro también en la del 48K.
 void CSpectrum::UpdatePalette (void)
 {
-	boolean b48 = m_Model == Model16K || m_Model == Model48K;
+	boolean b48 = m_pTiming->CodeModel == CodeModel48K;	// también los TK
 	for (unsigned i = 0; i < 16; i++)
 	{
 		u32 nRGB = b48 ? SpectrumPaletteRGB[i] : SpectrumPalette128RGB[i];
@@ -1310,6 +1310,10 @@ uint8_t CSpectrum::inPort (uint16_t port)
 		if (!bEar)
 		{
 			nValue &= 0xBF;
+		}
+		if (m_Model == ModelTK90X)
+		{
+			nValue &= 0x7F;			// TK90X: el bit 7 siempre a 0 (F. Matsumoto)
 		}
 
 		return nValue;

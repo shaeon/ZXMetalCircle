@@ -401,6 +401,14 @@ void CKernel::ParseOptions (void)
 	{
 		Model = ModelPlus3E;
 	}
+	else if (strcasecmp (pModel, "tk90x") == 0)
+	{
+		Model = ModelTK90X;
+	}
+	else if (strcasecmp (pModel, "tk95") == 0)
+	{
+		Model = ModelTK95;
+	}
 
 	// Idioma (lang=, SD:/locales): antes de los avisos de las opciones
 	SetupLanguages ();
@@ -2067,8 +2075,8 @@ void CKernel::SyncSetting (const char *pKey)
 
 	if (strcmp (pKey, "model") == 0)
 	{
-		static const char *Models[] = {"16k", "48k", "128k", "plus2", "plus2a", "plus3", "plus3e"};
-		static const TModel ModelIDs[] = {Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E};
+		static const char *Models[] = {"16k", "48k", "128k", "plus2", "plus2a", "plus3", "plus3e", "tk90x", "tk95"};
+		static const TModel ModelIDs[] = {Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E, ModelTK90X, ModelTK95};
 		for (unsigned i = 0; i < sizeof Models / sizeof Models[0]; i++)
 		{
 			if (m_pSpectrum->GetModel () == ModelIDs[i])
@@ -2152,8 +2160,8 @@ void CKernel::ApplySetting (unsigned nIndex)
 	}
 	else if (strcmp (pKey, "model") == 0)
 	{
-		static const char *Models[] = {"16k", "48k", "128k", "plus2", "plus2a", "plus3", "plus3e"};
-		static const TModel ModelIDs[] = {Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E};
+		static const char *Models[] = {"16k", "48k", "128k", "plus2", "plus2a", "plus3", "plus3e", "tk90x", "tk95"};
+		static const TModel ModelIDs[] = {Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E, ModelTK90X, ModelTK95};
 		for (unsigned i = 0; i < sizeof Models / sizeof Models[0]; i++)
 		{
 			if (strcmp (pValue, Models[i]) == 0)
@@ -2999,6 +3007,38 @@ void CKernel::LoadROMs (void)
 		{
 			m_MissingROMs.Append (m_MissingROMs.GetLength () > 0 ? " " : "");
 			m_MissingROMs.Append (ROMs[i].pShort);
+		}
+	}
+
+	// TK90X: tkrom = v3 (Rodolfo Guerra, por defecto), v1 o v2 (originales);
+	// la v3, en el idioma de tklang ("auto" = el del menú). TK95: la suya.
+	// Son opcionales: si no están, el modelo sale como "falta la ROM".
+	{
+		CString TKName;
+		const char *pTKROM = m_Options.GetAppOptionString ("tkrom", "v3");
+		if (strcasecmp (pTKROM, "v1") == 0 || strcasecmp (pTKROM, "v2") == 0)
+		{
+			TKName.Format ("tk90x-%s.rom", pTKROM);
+		}
+		else
+		{
+			const char *pLang = m_Options.GetAppOptionString ("tklang", "auto");
+			if (strcasecmp (pLang, "auto") == 0)
+			{
+				const char *pMenu = m_Options.GetAppOptionString ("lang", "es");
+				pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strcasecmp (pMenu, "pt") == 0 ? "pt" : "es";
+			}
+			TKName.Format ("tk90x-v3-%s.rom", pLang);
+		}
+		const u8 *pTK = LoadROMFile (TKName, 0x4000);
+		if (pTK != 0)
+		{
+			m_pSpectrum->SetModelROM (ModelTK90X, pTK);
+		}
+		const u8 *pTK95 = LoadROMFile ("tk95-es.rom", 0x4000);
+		if (pTK95 != 0)
+		{
+			m_pSpectrum->SetModelROM (ModelTK95, pTK95);
 		}
 	}
 

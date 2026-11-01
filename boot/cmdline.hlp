@@ -31,8 +31,14 @@ defecto.
                     plus3   ZX Spectrum +3 (con disquetera, discos .DSK)
                     plus3e  ZX Spectrum +3e (el +3 con las ROMs de Garry
                             Lancaster y disco duro en una tarjeta ZXMMC)
+                    tk90x   Microdigital TK90X (clon brasileno del 48K)
+                    tk95    Microdigital TK95
 
  p3elang=es       Idioma de las ROMs del +3e incluidas:  es  o  en
+
+ tkrom=v3         ROM del TK90X: v3 (Rodolfo Guerra), v1 o v2 (originales)
+ tklang=auto      Idioma de la ROM v3 del TK90X: auto (el del menu), es, en,
+                  pt, ca, cs, de, eo, eu, gl, it, nl, no, pl, ro, ru, sv, vl
 
  hdd=             Imagen de disco duro del +3e que se monta al arrancar
                   (pasa al +3e). Ruta dentro de la SD, por ejemplo:

@@ -502,6 +502,8 @@ unsigned CSnapshot::SaveZ80 (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 	switch (p->m_Model)
 	{
 	case Model48K:
+	case ModelTK90X:
+	case ModelTK95:
 	case Model16K:		pBuffer[34] = 0;	break;
 	case Model128K:		pBuffer[34] = 4;	break;
 	case ModelPlus2:	pBuffer[34] = 12;	break;

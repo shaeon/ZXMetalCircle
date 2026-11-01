@@ -28,12 +28,15 @@ static TSettingDef Settings[] =
 {
 	// 0 Máquina
 	{"lang",	N_("Idioma"),		0, "es", "Español",					"es",	TRUE},
-	{"model",	N_("Modelo"),		0, "16k|48k|128k|plus2|plus2a|plus3|plus3e",
-					   "16K|48K|128K|+2|+2A|+3|+3e",			"128k",	TRUE},
+	{"model",	N_("Modelo"),		0, "16k|48k|128k|plus2|plus2a|plus3|plus3e|tk90x|tk95",
+					   "16K|48K|128K|+2|+2A|+3|+3e|TK90X|TK95",			"128k",	TRUE},
 	{"issue",	N_("Teclado"),		0, "3|2", "Issue 3|Issue 2",				"3",	TRUE},
 	{"speed",	N_("Velocidad"),	0, "1|2|4|10", "x1|x2|x4|x10",				"1",	TRUE},
 	{"ulaplus",	N_("ULAplus (64 colores)"), 0, "1|0", N_("sí|no"),			"1",	TRUE},
 	{"p3elang",	N_("Idioma del +3e"),	0, "es|en", N_("español|inglés"),		"es",	FALSE},
+	{"tkrom",	N_("ROM del TK90X"),	0, "v3|v1|v2", N_("Rodolfo Guerra v3|original v1|original v2"), "v3", FALSE},
+	{"tklang",	N_("Idioma ROM del TK"),	0, "auto|es|en|pt|ca|cs|de|eo|eu|gl|it|nl|no|pl|ro|ru|sv|vl",
+					   N_("automático|español|inglés|portugués|catalán|checo|alemán|esperanto|euskera|gallego|italiano|neerlandés|noruego|polaco|rumano|ruso|sueco|valenciano"), "auto", FALSE},
 	{"hdd",		N_("Disco duro al inicio"), 0, "none", N_("ninguno"),			"none",	FALSE},
 
 	// 1 Imagen y sonido
@@ -520,6 +523,16 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	{
 		return Is ("ear", "gpio");
 	}
+	// ROM del TK90X: solo con ese modelo; el idioma, solo con la v3
+	if (strcmp (pKey, "tkrom") == 0)
+	{
+		return Is ("model", "tk90x");
+	}
+	if (strcmp (pKey, "tklang") == 0)
+	{
+		return Is ("model", "tk90x") && Is ("tkrom", "v3");
+	}
+
 	// disco acelerado: solo en los modelos con disquetera
 	if (strcmp (pKey, "diskaccel") == 0)
 	{

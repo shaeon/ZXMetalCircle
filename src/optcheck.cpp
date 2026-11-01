@@ -19,7 +19,7 @@ struct TOptionDef
 // Opciones del emulador (cmdline.hlp) y de Circle
 static const TOptionDef Options[] =
 {
-	{"model",	"16k|48k|128k|plus2|+2|plus2a|+2a|plus3|+3|plus3e|+3e"},
+	{"model",	"16k|48k|128k|plus2|+2|plus2a|+2a|plus3|+3|plus3e|+3e|tk90x|tk95"},
 	{"tape",	"flash|fast|normal"},
 	{"tapeaccel",	"0|1"},
 	{"diskaccel",	"0|1"},
@@ -58,6 +58,8 @@ static const TOptionDef Options[] =
 	{"tlsverify",	"0|1"},
 	{"hdd",		0},
 	{"p3elang",	"es|en"},
+	{"tkrom",	"v3|v1|v2"},
+	{"tklang",	"auto|es|en|pt|ca|cs|de|eo|eu|gl|it|nl|no|pl|ro|ru|sv|vl"},
 	{"divmmc",	"0|esxdos"},
 	{"spectranet",	"0|1"},
 	{"lang",	0},

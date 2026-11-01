@@ -30,12 +30,15 @@ enum TModel
 	ModelPlus2,		// +2 gris (Amstrad), electrónicamente un 128K
 	ModelPlus3,		// +3: el +2A con disquetera (ROMs 4.0)
 	ModelPlus3E,		// +3e: el +3 con las ROMs de Garry Lancaster y una ZXMMC
+	ModelTK90X,		// Microdigital TK90X (clon brasileño del 48K)
+	ModelTK95,		// Microdigital TK95 (sucesor del TK90X)
 	ModelCount
 };
 
 static const TModel ModelCycle[ModelCount] =
 {
-	Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E
+	Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E,
+	ModelTK90X, ModelTK95
 };
 
 struct TMachineTiming
@@ -79,6 +82,13 @@ static const TMachineTiming MachineTiming[ModelCount] =
 	// +3e (mismo hardware que el +3)
 	{"ZX Spectrum +3e", "+3e", CodeModelPlus3, 3546900, 70908, 228, 63, 311,
 	 14364, 58044, 1, -1, 32, true},
+	// TK90X y TK95 con ULA Ferranti: los tiempos del 48K (los primeros de
+	// exportación a Uruguay y Argentina). La ULA de Microdigital (50 y 60 Hz)
+	// tiene otros tiempos y vendrá aparte.
+	{"Microdigital TK90X", "tk90x", CodeModel48K, 3500000, 69888, 224, 64, 312,
+	 14336, 57246, 3, 0, 32, false},
+	{"Microdigital TK95", "tk95", CodeModel48K, 3500000, 69888, 224, 64, 312,
+	 14336, 57246, 3, 0, 32, false}
 };
 
 // Geometría de la imagen generada: el borde más grande ("Huge border" de JSpeccy).

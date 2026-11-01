@@ -29,6 +29,8 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                     plus3   ZX Spectrum +3 (with disk drive, .DSK disks)
                     plus3e  ZX Spectrum +3e (the +3 with Garry Lancaster's
                             ROMs and a hard disk on a ZXMMC card)
+                    tk90x   Microdigital TK90X (Brazilian 48K clone)
+                    tk95    Microdigital TK95
 
  lang=es          Language of the menus and the web page: es (Spanish),
                   en (English) or pt (Portuguese), or any other in the
@@ -36,6 +38,10 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                   changed in the settings (F1 and then C).
 
  p3elang=es       Language of the included +3e ROMs:  es  or  en
+
+ tkrom=v3         TK90X ROM: v3 (Rodolfo Guerra), v1 or v2 (originals)
+ tklang=auto      Language of the TK90X v3 ROM: auto (the menu's), es, en,
+                  pt, ca, cs, de, eo, eu, gl, it, nl, no, pl, ro, ru, sv, vl
 
  hdd=             +3e hard disk image mounted at boot (switches to the
                   +3e). Path inside the SD card, for example:
