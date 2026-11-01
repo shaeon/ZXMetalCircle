@@ -39,6 +39,8 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
 
  p3elang=es       Language of the included +3e ROMs:  es  or  en
 
+ tkula=50         TK90X and TK95 ULA: 50 (Microdigital at 50 Hz), 60
+                  (Microdigital at 60 Hz) or ferranti (48K timings)
  tkrom=v3         TK90X ROM: v3 (Rodolfo Guerra), v1 or v2 (originals)
  tklang=auto      Language of the TK90X v3 ROM: auto (the menu's), es, en,
                   pt, ca, cs, de, eo, eu, gl, it, nl, no, pl, ro, ru, sv, vl

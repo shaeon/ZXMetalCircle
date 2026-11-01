@@ -50,6 +50,8 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_bAutoStopped (TRUE),
 	m_bLoaderAccel (TRUE),
 	m_bDiskAccel (FALSE),
+	m_nTKULA (TKULA50Hz),
+	m_bTKMicro (FALSE),
 	m_AccelMode (AccelNone),
 	m_nAccelPC (0),
 	m_nAccelEdges (0),
@@ -225,6 +227,12 @@ void CSpectrum::SetModel (TModel Model)
 
 	m_Model = Model;
 	m_pTiming = &MachineTiming[Model];
+	// TK90X/TK95 con la ULA de Microdigital (50 o 60 Hz): sus propios tiempos
+	m_bTKMicro = (Model == ModelTK90X || Model == ModelTK95) && m_nTKULA != TKULAFerranti;
+	if (m_bTKMicro)
+	{
+		m_pTiming = &TKMicroTiming[Model == ModelTK95][m_nTKULA == TKULA60Hz];
+	}
 
 	const u8 *pROM = m_pModelROM[Model];
 	switch (m_pTiming->CodeModel)
@@ -1038,6 +1046,12 @@ void CSpectrum::PreIO (uint16_t nPort)
 
 void CSpectrum::PostIO (uint16_t nPort)
 {
+	if (m_bTKMicro)
+	{
+		m_nTstates += 3 + TKIOContention (nPort);	// ULA de Microdigital
+		return;
+	}
+
 	if (m_pTiming->CodeModel == CodeModelPlus3)
 	{
 		m_nTstates += 3;
@@ -1064,6 +1078,44 @@ void CSpectrum::PostIO (uint16_t nPort)
 	}
 }
 
+// Contención de E/S de la ULA de Microdigital (TK90X/TK95 a 50 y 60 Hz), como
+// ESPectrum (Ports.cpp, tkIOcon): en las 192 líneas del papel, si el puerto
+// está en 0x4000-0x7FFF o es par, un retardo según el T-state de la línea.
+static const u8 TKContention2[8] = {6, 6, 5, 4, 3, 2, 1, 0};
+static const u8 TKContention3[129] = {
+	6,  6,  12, 12, 11, 10, 9,  8,  7,  6,  12, 12, 11, 10, 9,  8,  7,  6,  12,
+	12, 11, 10, 9,  8,  7,  6,  12, 12, 11, 10, 9,  8,  7,  6,  12, 12, 11, 10,
+	9,  8,  7,  6,  12, 12, 11, 10, 9,  8,  7,  6,  12, 12, 11, 10, 9,  8,  7,
+	6,  12, 12, 11, 10, 9,  8,  7,  6,  12, 12, 11, 10, 9,  8,  7,  6,  12, 12,
+	11, 10, 9,  8,  7,  6,  12, 12, 11, 10, 9,  8,  7,  6,  12, 12, 11, 10, 9,
+	8,  7,  6,  12, 12, 11, 10, 9,  8,  7,  6,  12, 12, 11, 10, 9,  8,  7,  6,
+	12, 12, 11, 10, 9,  8,  7,  6,  6,  6,  5,  4,  3,  2,  1};
+
+unsigned CSpectrum::TKIOContention (u16 nPort) const
+{
+	const TMachineTiming *T = m_pTiming;
+	int nLine = m_nTstates / T->nTstatesLine - T->nUpBorderWidth;
+	int nT = m_nTstates % T->nTstatesLine - (T->nPaperCol - 3);	// 93
+	if (nT < 0)
+	{
+		nT += T->nTstatesLine;
+		nLine--;
+	}
+	if (nLine < 0 || nLine >= 192)
+	{
+		return 0;
+	}
+	if ((nPort & 0xC000) == 0x4000)
+	{
+		return nT < 129 ? TKContention3[nT] : 0;
+	}
+	if (nPort & 0x0001)
+	{
+		return 0;
+	}
+	return nT < 128 ? TKContention2[nT & 7] : 0;
+}
+
 u8 CSpectrum::FloatingBus (void)
 {
 	const TMachineTiming *T = m_pTiming;
@@ -1073,13 +1125,13 @@ u8 CSpectrum::FloatingBus (void)
 		return 0xFF;
 	}
 
-	int nCol = (m_nTstates % T->nTstatesLine) - T->nOutOffset;
+	int nCol = ((m_nTstates - T->nPaperCol) % T->nTstatesLine) - T->nOutOffset;
 	if (nCol < 0 || nCol > 124)
 	{
 		return 0xFF;
 	}
 
-	int nRow = m_nTstates / T->nTstatesLine - T->nUpBorderWidth;
+	int nRow = (m_nTstates - T->nPaperCol) / T->nTstatesLine - T->nUpBorderWidth;
 	if (nRow < 0 || nRow > 191)
 	{
 		return 0xFF;
@@ -1559,16 +1611,21 @@ int CSpectrum::TstatesToBorderPix (int nTstates)
 {
 	const TMachineTiming *T = m_pTiming;
 
+	// relativo al principio del papel en su línea (nPaperCol: 0 salvo en
+	// la ULA de Microdigital de los TK). Un tiempo negativo es el final de
+	// la línea anterior a la primera (el borde izquierdo de la línea 0 en el
+	// TK a 60 Hz), no el final del cuadro.
 	nTstates %= T->nTstatesFrame;
-	int nRow = nTstates / T->nTstatesLine;
-	int nCol = nTstates % T->nTstatesLine;
+	nTstates -= T->nPaperCol;
+	int nRow = nTstates >= 0 ? nTstates / T->nTstatesLine : -1;
+	int nCol = nTstates - nRow * T->nTstatesLine;
 
 	// Primera línea visible y primera columna del borde izquierdo
 	int nFirstRow, nLeftStart;
 	if (T->CodeModel == CodeModel48K)
 	{
-		nFirstRow = 64;
-		nLeftStart = 200 + (24 - BORDER_LEFT / 2);
+		nFirstRow = T->nUpBorderWidth;			// 64 (38 en el TK a 60 Hz)
+		nLeftStart = (T->nTstatesLine - 24) + (24 - BORDER_LEFT / 2);	// 200 en el 48K
 	}
 	else
 	{
@@ -1629,7 +1686,7 @@ void CSpectrum::BuildTables (void)
 	{
 	case CodeModel48K:
 	default:
-		nStart = T->nFirstScrByte; nEnd = 57248; nOffset = 2;
+		nStart = T->nFirstScrByte; nEnd = T->nLastScrUpdate + 2; nOffset = 2;	// 57248 en el 48K
 		break;
 
 	case CodeModel128K:
@@ -1644,13 +1701,13 @@ void CSpectrum::BuildTables (void)
 	m_nSteps = 0;
 	for (int t = nStart; t < nEnd && m_nSteps < 6144; t += 4)
 	{
-		int nCol = (t % T->nTstatesLine) / 4;
+		int nCol = ((t - T->nPaperCol) % T->nTstatesLine) / 4;
 		if (nCol > 31)
 		{
 			continue;
 		}
 
-		int nScan = t / T->nTstatesLine - T->nUpBorderWidth;
+		int nScan = (t - T->nPaperCol) / T->nTstatesLine - T->nUpBorderWidth;
 		if (nScan < 0 || nScan > 191)
 		{
 			continue;
@@ -1664,8 +1721,17 @@ void CSpectrum::BuildTables (void)
 	// Borde
 	if (T->CodeModel == CodeModel48K)
 	{
-		m_nFirstBorderUpdate = (64 - BORDER_TOP) * T->nTstatesLine - BORDER_LEFT / 2;
-		m_nLastBorderUpdate = (255 + BORDER_BOTTOM) * T->nTstatesLine + 128 + BORDER_RIGHT;
+		m_nFirstBorderUpdate = (T->nUpBorderWidth - BORDER_TOP) * T->nTstatesLine - BORDER_LEFT / 2 + T->nPaperCol;
+		m_nLastBorderUpdate = (T->nUpBorderWidth + 191 + BORDER_BOTTOM) * T->nTstatesLine + 128 + BORDER_RIGHT
+				      + T->nPaperCol;
+		if (m_nFirstBorderUpdate < 0)
+		{
+			m_nFirstBorderUpdate = 0;	// TK a 60 Hz: menos líneas por encima del papel
+		}
+		if (m_nLastBorderUpdate > MAX_TSTATES_FRAME)
+		{
+			m_nLastBorderUpdate = MAX_TSTATES_FRAME;
+		}
 	}
 	else
 	{
@@ -1691,7 +1757,8 @@ void CSpectrum::BuildTables (void)
 	{
 	case CodeModel48K:
 	default:
-		for (int nIdx = 14335; nIdx < 57247; nIdx += T->nTstatesLine)
+		// 14335 a 57247 en el 48K; desde el primer byte de pantalla en los TK
+		for (int nIdx = T->nFirstScrByte - 1; nIdx < T->nLastScrUpdate + 1; nIdx += T->nTstatesLine)
 		{
 			for (int n = 0; n < 128; n += 8)
 			{
@@ -1826,6 +1893,32 @@ void CSpectrum::RunFrame (void)
 
 	UpdateScreen (0x7FFFFFFF);
 	UpdateBorder (m_nLastBorderUpdate + 4);
+
+	// Cuadros con menos líneas de borde de las que tiene la imagen (TK a
+	// 60 Hz: 38 por encima del papel y 32 por debajo): esas líneas no
+	// existen y se pintan del color del borde, en vez de quedarse como
+	// estuvieran. En los demás modelos sobran líneas y no se hace nada.
+	{
+		const TMachineTiming *T = m_pTiming;
+		int nTop = BORDER_TOP - T->nUpBorderWidth;
+		int nBottom = BORDER_BOTTOM - (T->nScanLines - T->nUpBorderWidth - 192);
+		if (nTop > 0 || nBottom > 0)
+		{
+			TPixel nColor = m_bULAplusActive ? m_ULAplusColor[8 + (m_nPortFE & 0x07)]
+							 : m_StdColor[m_nPortFE & 0x07];
+			for (int y = 0; y < SCREEN_HEIGHT; y++)
+			{
+				if ((nTop > 0 && y < nTop) || (nBottom > 0 && y >= SCREEN_HEIGHT - nBottom))
+				{
+					TPixel *pRow = &m_Screen[y * SCREEN_WIDTH];
+					for (int x = 0; x < SCREEN_WIDTH; x++)
+					{
+						pRow[x] = nColor;
+					}
+				}
+			}
+		}
+	}
 
 	// grabación de la entrada EAR externa: sus cambios de este cuadro
 	if (m_bRecording && m_bRecordEar && m_pEarInput != 0)

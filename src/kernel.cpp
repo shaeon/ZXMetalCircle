@@ -453,6 +453,12 @@ void CKernel::ParseOptions (void)
 				MachineTiming[Model].pName);
 		Model = Model48K;
 	}
+	// ULA de los TK (antes de elegir el modelo: de ella dependen sus tiempos)
+	{
+		const char *pULA = m_Options.GetAppOptionString ("tkula", "50");
+		m_pSpectrum->SetTKULA (strcasecmp (pULA, "60") == 0 ? TKULA60Hz
+				       : strcasecmp (pULA, "ferranti") == 0 ? TKULAFerranti : TKULA50Hz);
+	}
 	m_pSpectrum->SetModel (Model);
 
 	// Tarjeta SD: hdd=hdd/imagen.vhd. Con divmmc=esxdos y sin hdd=, se usa
@@ -2111,6 +2117,11 @@ void CKernel::SyncSetting (const char *pKey)
 	}
 	else if (strcmp (pKey, "tapeaccel") == 0)	pValue = m_pSpectrum->GetLoaderAcceleration () ? "1" : "0";
 	else if (strcmp (pKey, "diskaccel") == 0)	pValue = m_pSpectrum->GetDiskAcceleration () ? "1" : "0";
+	else if (strcmp (pKey, "tkula") == 0)
+	{
+		static const char *ULAs[] = {"50", "60", "ferranti"};
+		pValue = ULAs[m_pSpectrum->GetTKULA ()];
+	}
 	else if (strcmp (pKey, "joystick") == 0)
 	{
 		static const char *Joy[] = {"none", "kempston", "fuller", "sinclair1", "sinclair2", "cursor", "qaop"};
@@ -2215,6 +2226,16 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "tapesound") == 0)	m_pSpectrum->GetAudio ()->SetTapeSound (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "tapeaccel") == 0)	m_pSpectrum->SetLoaderAcceleration (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "diskaccel") == 0)	m_pSpectrum->SetDiskAcceleration (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "tkula") == 0)
+	{
+		m_pSpectrum->SetTKULA (strcmp (pValue, "60") == 0 ? TKULA60Hz
+				       : strcmp (pValue, "ferranti") == 0 ? TKULAFerranti : TKULA50Hz);
+		TModel Current = m_pSpectrum->GetModel ();
+		if (Current == ModelTK90X || Current == ModelTK95)
+		{
+			SetModel (Current);		// con los tiempos de la ULA nueva
+		}
+	}
 	else if (strcmp (pKey, "beeperfilter") == 0)	m_pSpectrum->GetAudio ()->SetBeeperFilter (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "speaker") == 0)
 	{

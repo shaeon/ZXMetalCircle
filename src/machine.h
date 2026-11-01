@@ -35,6 +35,13 @@ enum TModel
 	ModelCount
 };
 
+enum TTKULA
+{
+	TKULA50Hz,		// Microdigital a 50 Hz (Uruguay, Argentina)
+	TKULA60Hz,		// Microdigital a 60 Hz (Brasil)
+	TKULAFerranti		// Ferranti (los primeros de exportación): tiempos del 48K
+};
+
 static const TModel ModelCycle[ModelCount] =
 {
 	Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E,
@@ -57,6 +64,8 @@ struct TMachineTiming
 	int nOutBorderOffset;
 	int nLengthINT;
 	bool bHasAY;
+	int nPaperCol;		// columna de la línea en la que empieza el papel (0 si no se
+				// indica; 96 en la ULA de Microdigital de los TK)
 };
 
 static const TMachineTiming MachineTiming[ModelCount] =
@@ -90,6 +99,27 @@ static const TMachineTiming MachineTiming[ModelCount] =
 	{"Microdigital TK95", "tk95", CodeModel48K, 3500000, 69888, 224, 64, 312,
 	 14336, 57246, 3, 0, 32, false}
 };
+// TK90X y TK95 con la ULA de Microdigital (la que hicieron clonando la de
+// Ferranti; funciona a 50 y a 60 Hz). Tiempos de ESPectrum: 228 T-states por
+// línea, el papel empieza 96 T-states después del principio de la línea y el
+// reloj es de unos 3,58 MHz (3,5 MHz x 1,021591929, el ajuste de cinta de
+// ESPectrum). [modelo: 0 TK90X, 1 TK95][ULA: 0 a 50 Hz, 1 a 60 Hz]
+static const TMachineTiming TKMicroTiming[2][2] =
+{
+	{
+		{"Microdigital TK90X", "tk90x", CodeModel48K, 3575572, 71136, 228, 64, 312,
+		 14688, 58362, 3, 0, 32, false, 96},
+		{"Microdigital TK90X", "tk90x", CodeModel48K, 3575572, 59736, 228, 38, 262,
+		 8760, 52434, 3, 0, 32, false, 96}
+	},
+	{
+		{"Microdigital TK95", "tk95", CodeModel48K, 3575572, 71136, 228, 64, 312,
+		 14688, 58362, 3, 0, 32, false, 96},
+		{"Microdigital TK95", "tk95", CodeModel48K, 3575572, 59736, 228, 38, 262,
+		 8760, 52434, 3, 0, 32, false, 96}
+	}
+};
+
 
 // Geometría de la imagen generada: el borde más grande ("Huge border" de JSpeccy).
 // Los demás tamaños de borde se obtienen recortando esta imagen al mostrarla.
@@ -100,6 +130,6 @@ static const TMachineTiming MachineTiming[ModelCount] =
 #define SCREEN_WIDTH	(BORDER_LEFT + 256 + BORDER_RIGHT)	// 384
 #define SCREEN_HEIGHT	(BORDER_TOP + 192 + BORDER_BOTTOM)	// 304
 
-#define MAX_TSTATES_FRAME	71000	// mayor que cualquier nTstatesFrame + margen
+#define MAX_TSTATES_FRAME	72000	// mayor que cualquier nTstatesFrame + margen (TK a 50 Hz: 71136)
 
 #endif

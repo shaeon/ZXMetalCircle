@@ -34,6 +34,7 @@ static TSettingDef Settings[] =
 	{"speed",	N_("Velocidad"),	0, "1|2|4|10", "x1|x2|x4|x10",				"1",	TRUE},
 	{"ulaplus",	N_("ULAplus (64 colores)"), 0, "1|0", N_("sí|no"),			"1",	TRUE},
 	{"p3elang",	N_("Idioma del +3e"),	0, "es|en", N_("español|inglés"),		"es",	FALSE},
+	{"tkula",	N_("ULA del TK"),		0, "50|60|ferranti", N_("Microdigital 50Hz|Microdigital 60Hz|Ferranti"), "50", TRUE},
 	{"tkrom",	N_("ROM del TK90X"),	0, "v3|v1|v2", N_("Rodolfo Guerra v3|original v1|original v2"), "v3", FALSE},
 	{"tklang",	N_("Idioma ROM del TK"),	0, "auto|es|en|pt|ca|cs|de|eo|eu|gl|it|nl|no|pl|ro|ru|sv|vl",
 					   N_("automático|español|inglés|portugués|catalán|checo|alemán|esperanto|euskera|gallego|italiano|neerlandés|noruego|polaco|rumano|ruso|sueco|valenciano"), "auto", FALSE},
@@ -523,6 +524,12 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	{
 		return Is ("ear", "gpio");
 	}
+	// ULA del TK: con el TK90X o el TK95
+	if (strcmp (pKey, "tkula") == 0)
+	{
+		return Is ("model", "tk90x") || Is ("model", "tk95");
+	}
+
 	// ROM del TK90X: solo con ese modelo; el idioma, solo con la v3
 	if (strcmp (pKey, "tkrom") == 0)
 	{

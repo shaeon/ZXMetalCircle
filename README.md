@@ -198,6 +198,7 @@ All the options go on a single line:
 | Option | Values | Default |
 | --- | --- | --- |
 | `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95` | `128k` |
+| `tkula=` | TK90X and TK95 ULA: `50` (Microdigital at 50 Hz: Uruguay, Argentina), `60` (Microdigital at 60 Hz: Brazil) or `ferranti` (the first export units; 48K timings) | `50` |
 | `tkrom=` | TK90X ROM: `v3` (Rodolfo Guerra's), `v1` or `v2` (Microdigital's originals). Applied on restart | `v3` |
 | `tklang=` | Language of the TK90X v3 ROM: `auto` (the menu's: Spanish, English or Portuguese), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. Applied on restart | `auto` |
 | `tape=` | `flash` (instant), `fast`, `normal` (real) | `flash` |

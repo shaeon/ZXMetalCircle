@@ -90,6 +90,12 @@ public:
 	boolean GetDiskAcceleration (void) const	{ return m_bDiskAccel; }
 	boolean IsDiskAccelerating (void) const;
 
+	// TK90X/TK95: ULA Ferranti (tiempos del 48K) o de Microdigital a 50/60 Hz;
+	// se aplica al elegir el modelo (SetModel)
+	void SetTKULA (TTKULA ULA)		{ m_nTKULA = ULA; }
+	TTKULA GetTKULA (void) const		{ return m_nTKULA; }
+	boolean IsTKMicrodigital (void) const	{ return m_bTKMicro; }
+
 	// Multiface (MF1 en 48K, MF128 en 128K, MF3 en +2A). Las ROMs (8 KB) se
 	// cargan desde la SD; sin ROM no hay Multiface para ese modelo.
 	void SetMultifaceROM (TCodeModel CodeModel, const u8 *pROM);
@@ -224,6 +230,7 @@ private:
 	inline void Contend (uint16_t nAddress, int nTstates);
 	inline void WriteByte (uint16_t nAddress, uint8_t nValue);
 	u8 Plus3FloatingBus (void);
+	unsigned TKIOContention (u16 nPort) const;
 	void NoteBus (u8 nValue)	{ m_nBusTstates = GetAbsoluteTstates (); m_nBusValue = nValue; m_bBusValid = TRUE; }
 	inline boolean IsScreenWrite (uint16_t nAddress) const;
 
@@ -394,6 +401,8 @@ private:
 	enum TAccelMode { AccelNone, AccelIncreasing, AccelDecreasing };
 	boolean m_bLoaderAccel;
 	boolean m_bDiskAccel;
+	TTKULA m_nTKULA;
+	boolean m_bTKMicro;		// TK con ULA de Microdigital (tiempos propios)
 	TAccelMode m_AccelMode;
 	u16 m_nAccelPC;
 	unsigned m_nAccelEdges;		// flancos acelerados en este cuadro

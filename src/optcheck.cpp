@@ -58,6 +58,7 @@ static const TOptionDef Options[] =
 	{"tlsverify",	"0|1"},
 	{"hdd",		0},
 	{"p3elang",	"es|en"},
+	{"tkula",	"50|60|ferranti"},
 	{"tkrom",	"v3|v1|v2"},
 	{"tklang",	"auto|es|en|pt|ca|cs|de|eo|eu|gl|it|nl|no|pl|ro|ru|sv|vl"},
 	{"divmmc",	"0|esxdos"},
