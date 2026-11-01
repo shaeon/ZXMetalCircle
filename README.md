@@ -377,7 +377,8 @@ The function keys are in a single table (`KeyBindings` in `src/kernel.cpp`). The
 | F5 | NMI: Multiface, esxDOS browser or Spectranet menu |
 | Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI |
 | F6 | Loading speed: instant / fast / real |
-| F7 | Change model (16K → 48K → 128K → +2 → +2A → +3 → +3e), with reset |
+| F7 | List of models to choose from (the current one highlighted; those without a ROM say so) |
+| Alt+F7 | Switch to the next model (16K, 48K, 128K, +2, +2A, +3, +3e) |
 | F8 | Save a snapshot to `snaps/` (.Z80, .SNA or .SZX according to `snapformat=`) |
 | F9 | AY stereo: ABC → ACB → BAC → mono |
 | F10 | Speed: x1 → x2 → x4 → x10 |

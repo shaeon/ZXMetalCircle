@@ -385,7 +385,8 @@ Las teclas de función están en una sola tabla (`KeyBindings` en `src/kernel.cp
 | F5 | NMI: Multiface, navegador de esxDOS o menú de la Spectranet |
 | Alt+F5 | Navegador de ficheros (como F1 y ENTER). Con `f5=files` se intercambian: F5 abre los ficheros y Alt+F5 hace la NMI |
 | F6 | Velocidad de carga: instantánea / rápida / real |
-| F7 | Cambiar modelo (16K → 48K → 128K → +2 → +2A → +3 → +3e), con reset |
+| F7 | Lista de modelos para elegir (con el actual marcado; los que no tienen ROM lo indican) |
+| Alt+F7 | Pasar al siguiente modelo (16K, 48K, 128K, +2, +2A, +3, +3e) |
 | F8 | Grabar snapshot en `snaps/` (.Z80, .SNA o .SZX según `snapformat=`) |
 | F9 | Reparto estéreo del AY: ABC → ACB → BAC → mono |
 | F10 | Velocidad: x1 → x2 → x4 → x10 |

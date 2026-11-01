@@ -72,7 +72,8 @@ enum TAction
 	ActionJoystick,
 	ActionNMI,
 	ActionTapeMode,
-	ActionModel,
+	ActionModel,			// F7: lista de modelos
+	ActionModelNext,		// Alt+F7: el siguiente modelo
 	ActionReset,
 	ActionPause,
 	ActionSaveSnapshot,
@@ -118,7 +119,8 @@ static const TKeyBinding KeyBindings[] =
 	{HID_KEY_F1 + 4, FALSE, ActionNMI,          "F5/Alt", N_("NMI-Multiface / ficheros")},	// ver f5=
 	{HID_KEY_F1 + 4, TRUE,  ActionFiles,        "Alt+F5", 0},
 	{HID_KEY_F1 + 5, FALSE, ActionTapeMode,     "F6",     N_("Velocidad de carga")},
-	{HID_KEY_F1 + 6, FALSE, ActionModel,        "F7",     N_("Modelo (16K, 48K ... +3, +3e)")},
+	{HID_KEY_F1 + 6, FALSE, ActionModel,        "F7/Alt", N_("Modelo: lista / siguiente")},
+	{HID_KEY_F1 + 6, TRUE,  ActionModelNext,    "Alt+F7", 0},
 	{HID_KEY_F1 + 7, FALSE, ActionSaveSnapshot, "F8",     N_("Grabar snapshot")},
 	{HID_KEY_F1 + 8, FALSE, ActionAYStereo,     "F9",     N_("Sonido AY: ABC/ACB/BAC/mono")},
 	{HID_KEY_F1 + 9, FALSE, ActionSpeed,        "F10",    N_("Velocidad x1/x2/x4/x10")},
@@ -167,6 +169,7 @@ CKernel::CKernel (void)
 	m_nSpeed = 1;
 	m_nLastKeyTime = 0;
 	m_bF5Files = FALSE;
+	m_bModelList = FALSE;
 	m_bIndicators = TRUE;
 	m_pZipData = 0;
 	m_pZipEntry = 0;
@@ -4179,6 +4182,24 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 				ShowMessage (T ("No hay teclas que pulsar"));
 			}
 		}
+		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bModelList)
+		{
+			m_bModelList = FALSE;
+			if (Result == MenuResultChoice && m_Menu.GetChoice () < ModelCount)
+			{
+				TModel Model = ModelCycle[m_Menu.GetChoice ()];
+				m_Menu.Close ();
+				if (!m_pSpectrum->IsModelAvailable (Model))
+				{
+					ShowMessage (T ("Falta la ROM de ese modelo (mira el README)"));
+				}
+				else if (Model != m_pSpectrum->GetModel ())
+				{
+					SetModel (Model);
+					SyncSetting ("model");
+				}
+			}
+		}
 		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bZipChoice)
 		{
 			m_bZipChoice = FALSE;
@@ -4403,6 +4424,32 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		break;
 
 	case ActionModel:
+		// F7: lista de modelos, con el actual marcado; los que no tienen ROM
+		// salen con un aviso y no se pueden elegir
+		if (!m_Menu.IsOpen ())
+		{
+			memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+			OpenMenu ();
+			m_Keyboard.SetCaptured (TRUE);
+		}
+		m_bModelList = TRUE;
+		m_Menu.OpenChoice (T ("Elige el modelo"));
+		for (unsigned i = 0; i < ModelCount; i++)
+		{
+			CString Item (MachineTiming[ModelCycle[i]].pName);
+			if (!m_pSpectrum->IsModelAvailable (ModelCycle[i]))
+			{
+				Item.Append (T (" (falta la ROM)"));
+			}
+			m_Menu.SetChoiceItem (i, Item);
+			if (ModelCycle[i] == m_pSpectrum->GetModel ())
+			{
+				m_Menu.SetChoiceSelected (i);
+			}
+		}
+		break;
+
+	case ActionModelNext:
 	{
 		unsigned nIndex = 0;
 		while (nIndex < ModelCount && ModelCycle[nIndex] != m_pSpectrum->GetModel ())

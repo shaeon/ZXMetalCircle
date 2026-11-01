@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Cambiado**: F7 abre una lista con todos los modelos, con el actual marcado, y se elige con los cursores o con 1-9; los que no tienen su ROM salen con "(falta la ROM)" y no se pueden elegir. Alt+F7 pasa al siguiente modelo, como hacía antes F7. Es el primer paso para añadir más máquinas (TK90X, TK95, Timex) sin que el recorrido con F7 se haga largo.
 - **Cambiado**: los valores se distinguen de las etiquetas por el color (verde claro, `COLOR_UI_VALUE`). En la configuración, las etiquetas van en blanco y los valores en verde (en gris si la opción no se usa con lo elegido), y en la fila seleccionada el valor va entre `<` y `>`, que es lo que se cambia con las flechas. En la pantalla de unidades, lo montado va en verde y "(vacío)" en gris. En las líneas de estado de la ayuda (F1), los rótulos siguen en cian y los valores van en verde; en los textos se marcan entre `|`, que FAT no admite en nombres de fichero.
 - **Nuevo**: opción "Indicadores de unidad" (`indicators=`, página "Imagen y sonido" de la configuración; sí por defecto). Con "no" no se dibujan la D de la disquetera del +3, la H del disco duro, M1-M8 de los Microdrive ni el punto rojo de grabación. El icono del modo extendido del teclado por GPIO sale siempre, porque indica un estado del teclado.
 - **Corregido**: en la configuración, "Negro puro (paleta 48K)" no cabía y se juntaba con su valor; ahora es "Negro puro (48K)".

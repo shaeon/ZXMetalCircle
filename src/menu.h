@@ -82,6 +82,7 @@ public:
 	void OpenChoice (const char *pTitle);
 	void SetChoiceItem (unsigned nItem, const char *pText);
 	unsigned GetChoice (void) const		{ return m_nChoiceSelected; }
+	void SetChoiceSelected (unsigned nItem)	{ if (nItem < m_nChoices) m_nChoiceSelected = nItem; }
 
 	// Línea de texto (letras, números y espacio): título y dos líneas de
 	// explicación; ENTER da MenuResultInput y ESC MenuResultInputCancel

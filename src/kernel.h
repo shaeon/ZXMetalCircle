@@ -298,6 +298,7 @@ private:
 	char			m_ZipEntryPath[ZIP_NAME_LEN + 8];
 	unsigned		m_ZipChoice[MENU_CHOICE_ITEMS];	// entradas que se pueden cargar
 	unsigned		m_nZipChoices;
+	boolean			m_bModelList;		// pregunta: F7, lista de modelos
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZipOverwriteChoice;	// pregunta: usar el de tmp o sobrescribir
 	unsigned		m_nZipPending;
