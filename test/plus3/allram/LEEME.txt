@@ -1,0 +1,22 @@
+Prueba del modo "all RAM" del +2A/+3 (bit 0 del puerto 0x1FFD)
+==============================================================
+
+allram.dsk es un disquete de +3 que arranca con "Loader". Escribe una marca
+en cada uno de los 8 bancos de RAM, activa una a una las cuatro
+configuraciones especiales y muestra qué banco hay en cada tramo de 16 KB:
+
+  Conf 0000 4000 8000 C000
+   0    0    1    2    3     (lo correcto, según el manual del +3)
+   1    4    5    6    7
+   2    4    5    6    3
+   3    4    7    6    3
+
+En cada configuración comprueba además que se puede escribir en 0000-3FFF
+(donde normalmente está la ROM) y que, al volver al modo normal, la ROM
+está otra vez. Si todo va bien, termina con "Todo correcto". Funciona
+igual en un +3 real.
+
+Ficheros:
+  allram.asm  la rutina (pasmo allram.asm allram.bin)
+  mkdisk.py   crea allram.dsk con el BASIC y la rutina (python3 mkdisk.py)
+  allram.dsk  el disquete ya hecho
