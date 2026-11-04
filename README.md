@@ -201,6 +201,9 @@ All the options go on a single line:
 | `tkula=` | TK90X and TK95 ULA: `50` (Microdigital at 50 Hz: Uruguay), `60` (Microdigital at 60 Hz: Brazil) or `ferranti` (the first export units; 48K timings) | `50` |
 | `tkrom=` | TK90X ROM: `v3` (Rodolfo Guerra's, the most compatible), `v1` (original, the most widespread) or `v2` (original; the TK95 always has it). Applied at once: with a TK, it restarts with the new ROM | `v3` |
 | `tklang=` | Language of the TK90X and TK95 ROM: `auto` (the menu's), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. The originals only have Spanish and Portuguese (other languages use Spanish): v1 chooses with the diode of the Brazilian TK90X (bit 7 of port 254 at 0 gives Portuguese), v2 and the TK95 with their Spanish or Brazilian ROM. v3 has all 17. Applied at once | `auto` |
+| `updboot=` | `1`: check for a new version the first time there is network. Also on page 9 of the settings | `0` |
+| `updkeep=` | Packages kept in `update/`: `2` (the installed one and the previous one) or `all` | `2` |
+| `updconfig=` | On update, the configuration files: `keep` (kept; the new one is left as `.nuevo`) or `new` (the new one is used; yours is kept as `.bak`) | `keep` |
 | `tape=` | `flash` (instant), `fast`, `normal` (real) | `flash` |
 | `tapeaccel=` | `1` (accelerate known loaders), `0` | `1` |
 | `diskaccel=` | `1` (+3/+3e: accelerated emulation while the disk drive is in use; copy protections are not affected), `0` | `0` |
@@ -341,6 +344,36 @@ Microdigital's TK90X and TK95 (Brazil) were ZX Spectrum 48K clones. Choose them 
 
 **Rodolfo Guerra's v3 ROM** (2021, unofficial) is the result of three years of work starting from v1, the most consistent one, adding what v2 brought. It is the most compatible TK ROM to date and includes, among many other improvements: native turbo loading at 4000 baud (without losing normal loading: the ROM detects which one is on the tape), an improved BASIC editor and faster keyboard reading. To gain space each ROM has a single language, hence one for each of the 17. All its features are described in the manuals (in Spanish, English and Portuguese) on his page: https://sites.google.com/view/rodolfoguerra . In the emulator, turbo loading should work with real tape loading, which plays the tape at its own speed; instant and fast loading only speed up normal loading for now.
 
+## Updating the emulator
+
+From version 1.07, the emulator can update itself from the releases published on GitHub. It is on **page 9 of the settings** (Alt+F1 and then PgUp/PgDn):
+
+| Row | What it does |
+| --- | --- |
+| Installed version | the one you have |
+| Check for update | with ENTER, asks GitHub; if there is a new version, the row then says "ENTER: install 1.07" |
+| Saved package | with ENTER, lists the packages in the `update` folder to install one again (also an older version) |
+| Check at boot | `updboot=`: with `1`, the first time there is network it checks by itself and tells you if there is a new version. Off by default |
+| Saved packages | `updkeep=`: `2` keeps in `update` the installed version's package and the previous one (to go back); `all`, all of them |
+| Settings on update | `updconfig=`: `keep` keeps your configuration files; `new` uses the new ones |
+
+When there is a new version, the help (F1) says so on its last line: "New version: 1.07 (Alt+F1, page 9)".
+
+**How it installs:**
+- Before starting, anything pending is saved (+3 disks, Microdrives...) and, if you changed the settings without saving them, it asks.
+- The package (the release's own zip) is downloaded to `update/` and checked in full before anything is touched.
+- Only the files that changed are copied. Each one is written under another name and then renamed, and the kernels are copied last.
+- **Your configuration files are not overwritten**: `cmdline.txt`, `config.txt`, `excluir.txt`, `tnfs.txt` and the esxDOS configuration. If the package has a different one, it is left next to yours as `.nuevo` (for example `cmdline.txt.nuevo`) so you can compare them. With "use the new", the package's one is used and yours is kept as `.bak`.
+- The `esxdos_i` folder is compared with the previous version's package, so esxDOS is not imported again if it has not changed.
+- When it finishes, a screen shows how many files changed and which configuration files were left as `.nuevo` or `.bak`, and **the Pi restarts by itself** after 5 seconds: what is on the SD card is no longer what is running. If nothing changed, it does not restart.
+
+**If something fails:**
+- If the download fails or the package is damaged, nothing is touched.
+- If it fails halfway through copying (SD card full, write error), it does not restart: it offers to try again. Until it finishes, `update/EN_CURSO` exists and you are told at boot: "Update not finished: Alt+F1, page 9". It can be installed again from "Saved package".
+- As a last resort, the package in `update/` is the release's own zip: it can be unzipped onto the SD card by hand from a PC.
+
+GitHub limits anonymous queries to 60 per hour; if the limit is reached, the emulator finds out the version from the release page.
+
 ## ZIP files
 
 `.zip` files load straight from the file browser (F1) or the web page, without unzipping them first:
@@ -348,7 +381,8 @@ Microdigital's TK90X and TK95 (Brazil) were ZX Spectrum 48K clones. Choose them 
 - **If the ZIP holds a single loadable file**, it loads when you choose the ZIP. If it holds several (for example, both sides of a game), a list lets you choose; other files (texts, instructions) are not shown.
 - **Tapes, snapshots and cartridges** (`.tap`, `.tzx`, `.pzx`, `.csw`, `.z80`, `.sna`, `.szx`, `.rom`) load on the fly, from memory, without writing anything to the card.
 - **Disks and Microdrive cartridges** (`.dsk`, `.mdr`, `.mdv`), which the program may write to, are extracted to the `tmp` folder on the card (created if missing) and loaded from there, so whatever is saved stays in that file. If it is already in `tmp`, you are asked whether to use the existing one (with its changes) or overwrite it with the one in the ZIP.
-- Normal ZIP files are supported (stored or deflate, which is almost all of them), up to 8 MB. Not encrypted ones.
+- Normal ZIP files are supported (stored or deflate, which is almost all of them), up to 32 MB and 512 files. Not encrypted ones.
+- With many files to choose from, the list scrolls: cursor keys, PgUp/PgDn, Home and End; the top right shows where you are ("23/100").
 
 ## Drives (F1 and then U, or Alt+U)
 

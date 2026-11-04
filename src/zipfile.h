@@ -15,13 +15,16 @@
 
 #include <circle/types.h>
 
-#define ZIP_MAX_ENTRIES		64
+#define ZIP_MAX_ENTRIES		512
 #define ZIP_NAME_LEN		96
 
 class CZipFile
 {
 public:
-	CZipFile (void);
+	// nMaxEntries: cuántas entradas se leen como mucho (el paquete de la SD
+	// de una actualización tiene unas 200)
+	CZipFile (unsigned nMaxEntries = ZIP_MAX_ENTRIES);
+	~CZipFile (void);
 
 	// Lee el directorio central; pData debe seguir existiendo mientras se usa
 	boolean Open (const u8 *pData, unsigned nSize);
@@ -30,6 +33,7 @@ public:
 	const char *GetName (unsigned nEntry) const;	// con la ruta dentro del ZIP
 	const char *GetBaseName (unsigned nEntry) const; // sin la ruta
 	unsigned GetSize (unsigned nEntry) const;	// tamaño descomprimido
+	u32 GetCRC (unsigned nEntry) const;		// CRC-32 del contenido
 	boolean IsDirectory (unsigned nEntry) const;
 
 	// Extrae una entrada; devuelve los bytes o -1 (error, CRC, no cabe...)
@@ -51,7 +55,8 @@ private:
 
 	const u8 *m_pData;
 	unsigned m_nSize;
-	TEntry m_Entry[ZIP_MAX_ENTRIES];
+	TEntry *m_Entry;
+	unsigned m_nMaxEntries;
 	unsigned m_nEntries;
 };
 

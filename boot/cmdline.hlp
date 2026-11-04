@@ -43,6 +43,12 @@ defecto.
                   cs, de, eo, eu, gl, it, nl, no, pl, ro, ru, sv, vl. Las
                   originales solo tienen es y pt (la v1, con el diodo)
 
+ updboot=0        Buscar una version nueva al arrancar (1), la primera vez
+                  que hay red. Ver la pagina 9 de la configuracion
+ updkeep=2        Paquetes de actualizacion que se dejan en update: 2 o all
+ updconfig=keep   Al actualizar, los ficheros de configuracion: keep (se
+                  conservan; el nuevo queda como .nuevo) o new (.bak)
+
  hdd=             Imagen de disco duro del +3e que se monta al arrancar
                   (pasa al +3e). Ruta dentro de la SD, por ejemplo:
                     hdd=hdd/marocana.vhd

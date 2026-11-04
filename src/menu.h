@@ -22,7 +22,8 @@
 #define MENU_STATUS_LINES	9
 #define MENU_HELP_LINES		23
 #define MENU_OPTION_LINES	6
-#define MENU_CHOICE_ITEMS	14
+#define MENU_CHOICE_ITEMS	512		// las de un ZIP grande
+#define MENU_CHOICE_ROWS	14		// las que caben en pantalla
 
 // Unidades de la pantalla de unidades
 #define UNIT_TAPE		0
@@ -41,6 +42,7 @@ enum TMenuResult
 	MenuResultOpenSettings,		// C en la ayuda: el kernel actualiza y abre la configuración
 	MenuResultOpenUnits,		// U en la ayuda: el kernel pone al día las unidades y las abre
 	MenuResultSetting,		// se ha cambiado una opción (GetChangedSetting ())
+	MenuResultSettingAction,	// ENTER en una fila de acción (GetChangedSetting ())
 	MenuResultSaveSettings,		// G en la configuración: guardar en cmdline.txt
 	MenuResultReboot,		// R en la configuración: reiniciar la Pi (se pide confirmación)
 	MenuResultChoice,		// lista de elección: ENTER (GetChoice ())
@@ -84,7 +86,10 @@ public:
 	void OpenChoice (const char *pTitle);
 	void SetChoiceItem (unsigned nItem, const char *pText);
 	unsigned GetChoice (void) const		{ return m_nChoiceSelected; }
-	void SetChoiceSelected (unsigned nItem)	{ if (nItem < m_nChoices) m_nChoiceSelected = nItem; }
+	void SetChoiceSelected (unsigned nItem);
+	// Lista solo informativa (el resultado de una actualización): sin la línea
+	// de "ENTER: elegir" de abajo
+	void SetChoiceInfo (boolean bInfo)	{ m_bChoiceInfo = bInfo; }
 
 	// Línea de texto (letras, números y espacio): título y dos líneas de
 	// explicación; ENTER da MenuResultInput y ESC MenuResultInputCancel
@@ -166,6 +171,8 @@ private:
 	char m_Choice[MENU_CHOICE_ITEMS][100];	// nombres de ZIP de hasta 96
 	unsigned m_nChoices;
 	unsigned m_nChoiceSelected;
+	unsigned m_nChoiceTop;			// la primera que se ve (listas largas)
+	boolean m_bChoiceInfo;
 	unsigned m_nAboutTop;		// primera línea visible de los créditos
 	char m_UnitName[UNIT_COUNT][MENU_PATH_LEN];
 	unsigned m_nUnitSelected;

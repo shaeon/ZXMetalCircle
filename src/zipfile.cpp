@@ -17,11 +17,18 @@
 static u16 Get16 (const u8 *p)	{ return p[0] | (p[1] << 8); }
 static u32 Get32 (const u8 *p)	{ return p[0] | (p[1] << 8) | (p[2] << 16) | ((u32) p[3] << 24); }
 
-CZipFile::CZipFile (void)
+CZipFile::CZipFile (unsigned nMaxEntries)
 :	m_pData (0),
 	m_nSize (0),
 	m_nEntries (0)
 {
+	m_nMaxEntries = nMaxEntries;
+	m_Entry = new TEntry[nMaxEntries];
+}
+
+CZipFile::~CZipFile (void)
+{
+	delete [] m_Entry;
 }
 
 boolean CZipFile::Open (const u8 *pData, unsigned nSize)
@@ -64,7 +71,7 @@ boolean CZipFile::Open (const u8 *pData, unsigned nSize)
 	}
 
 	unsigned nPos = nDirOffset;
-	for (unsigned n = 0; n < nCount && m_nEntries < ZIP_MAX_ENTRIES; n++)
+	for (unsigned n = 0; n < nCount && m_nEntries < m_nMaxEntries; n++)
 	{
 		if (nPos + 46 > nSize || Get32 (pData + nPos) != SIG_CENTRAL)
 		{
@@ -120,6 +127,11 @@ const char *CZipFile::GetBaseName (unsigned nEntry) const
 unsigned CZipFile::GetSize (unsigned nEntry) const
 {
 	return nEntry < m_nEntries ? m_Entry[nEntry].nSize : 0;
+}
+
+u32 CZipFile::GetCRC (unsigned nEntry) const
+{
+	return nEntry < m_nEntries ? m_Entry[nEntry].nCRC : 0;
 }
 
 boolean CZipFile::IsDirectory (unsigned nEntry) const

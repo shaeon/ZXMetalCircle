@@ -42,12 +42,21 @@ public:
 
 	const char *GetError (void) const	{ return m_Error; }
 
+	// Tras Get: la dirección final, después de las redirecciones
+	const char *GetFinalURL (void) const;
+
+	// Progreso de la descarga: bytes recibidos y total (0 si no se sabe)
+	typedef void TProgress (void *pParam, size_t nReceived, size_t nTotal);
+	void SetProgress (TProgress *pProgress, void *pParam)	{ m_pProgress = pProgress; m_pProgressParam = pParam; }
+
 private:
 	int GetOnce (const char *pURL, unsigned char *pBuffer, size_t nBufferSize, size_t *pLength,
 		     char *pLocation, size_t nLocationSize);
 
 	ITransport *m_pTransport;
 	char m_Error[96];
+	TProgress *m_pProgress;
+	void *m_pProgressParam;
 };
 
 #endif

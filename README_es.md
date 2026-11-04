@@ -209,6 +209,9 @@ Todas las opciones van en una sola línea:
 | `tkula=` | ULA del TK90X y el TK95: `50` (Microdigital a 50 Hz: Uruguay), `60` (Microdigital a 60 Hz: Brasil) o `ferranti` (los primeros de exportación; los tiempos del 48K) | `50` |
 | `tkrom=` | ROM del TK90X: `v3` (la de Rodolfo Guerra, la más compatible), `v1` (original, la más difundida) o `v2` (original; el TK95 siempre la lleva). Se aplica al momento: con un TK, se reinicia con la ROM nueva | `v3` |
 | `tklang=` | Idioma de la ROM del TK90X y del TK95: `auto` (el del menú), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. Las originales solo tienen español y portugués (los demás idiomas usan el español): la v1 elige con el diodo de los TK90X brasileños (el bit 7 del puerto 254 a 0 da el portugués) y la v2 y el TK95 con su ROM española o brasileña. La v3 tiene los 17. Se aplica al momento | `auto` |
+| `updboot=` | `1`: buscar una versión nueva la primera vez que hay red. Se cambia también en la página 9 de la configuración | `0` |
+| `updkeep=` | Paquetes que se dejan en `update/`: `2` (el instalado y el anterior) o `all` | `2` |
+| `updconfig=` | Al actualizar, los ficheros de configuración: `keep` (se conservan; el nuevo queda como `.nuevo`) o `new` (se pone el nuevo; el tuyo queda como `.bak`) | `keep` |
 | `tape=` | `flash` (instantánea), `fast` (rápida), `normal` (real) | `flash` |
 | `tapeaccel=` | `1` (acelerar cargadores conocidos), `0` | `1` |
 | `diskaccel=` | `1` (+3/+3e: emulación acelerada mientras se usa la disquetera; las protecciones no cambian), `0` | `0` |
@@ -349,6 +352,36 @@ Los TK90X y TK95 de Microdigital (Brasil) eran clones del ZX Spectrum 48K. Se el
 
 **La ROM v3 de Rodolfo Guerra** (2021, no oficial) es el resultado de tres años de trabajo a partir de la v1, la más consistente, incorporando lo que aportaba la v2. Es la ROM más compatible para los TK hasta la fecha, e incluye, entre otras muchas mejoras: carga turbo nativa a 4000 baudios (sin perder la carga normal: la ROM detecta cuál viene en la cinta), un editor BASIC mejorado y una lectura del teclado más rápida. Para ganar espacio cada ROM tiene un solo idioma, y por eso hay una para cada uno de los 17. Todas sus novedades están en los manuales (en español, inglés y portugués) de su página: https://sites.google.com/view/rodolfoguerra . En el emulador, la carga turbo debería funcionar con la carga real de cintas, que reproduce la cinta a su velocidad; con la instantánea o la rápida, de momento solo se acelera la carga normal.
 
+## Actualizar el emulador
+
+Desde la versión 1.07, el emulador se puede actualizar solo, desde las versiones publicadas en GitHub. Está en la **página 9 de la configuración** (Alt+F1 y luego RePág/AvPág):
+
+| Fila | Qué hace |
+| --- | --- |
+| Versión instalada | la que tienes |
+| Buscar actualización | con ENTER, consulta GitHub; si hay una versión nueva, la fila pasa a decir «ENTER: instalar 1.07» |
+| Paquete guardado | con ENTER, lista los paquetes de la carpeta `update` para volver a instalar uno (también una versión anterior) |
+| Buscar al arrancar | `updboot=`: con `1`, la primera vez que hay red busca sola y avisa si hay una versión nueva. Desactivado por defecto |
+| Paquetes guardados | `updkeep=`: `2` deja en `update` el de la versión instalada y el de la anterior (para poder volver); `all`, todos |
+| Config. al actualizar | `updconfig=`: `keep` conserva tus ficheros de configuración; `new` pone los nuevos |
+
+Cuando hay una versión nueva, la ayuda (F1) lo dice en la última línea: «Nueva versión: 1.07 (Alt+F1, pág. 9)».
+
+**Cómo se instala:**
+- Antes de empezar se graba lo pendiente (discos del +3, Microdrives…) y, si has cambiado la configuración sin guardarla, se pregunta.
+- El paquete (el mismo zip de la release) se descarga a `update/` y se comprueba entero antes de tocar nada.
+- Solo se copian los ficheros que han cambiado. Cada uno se escribe con otro nombre y luego se renombra, y los kernels se copian los últimos.
+- **Tus ficheros de configuración no se sobrescriben**: `cmdline.txt`, `config.txt`, `excluir.txt`, `tnfs.txt` y la configuración de esxDOS. Si el paquete trae uno distinto, se deja al lado como `.nuevo` (por ejemplo `cmdline.txt.nuevo`) para que lo compares. Con «poner la nueva», se pone el del paquete y el tuyo queda como `.bak`.
+- La carpeta `esxdos_i` se compara con el paquete de la versión anterior, para no volver a importar esxDOS si no ha cambiado.
+- Al terminar, una pantalla dice cuántos ficheros han cambiado y qué ficheros de configuración se han dejado como `.nuevo` o `.bak`, y **la Pi se reinicia sola** a los 5 segundos: lo que hay en la SD ya no es lo que está en marcha. Si no ha cambiado nada, no se reinicia.
+
+**Si algo falla:**
+- Si la descarga falla o el paquete está dañado, no se toca nada.
+- Si falla a mitad de la copia (la SD llena, un error de escritura), no se reinicia: se ofrece reintentar. Mientras no termine, existe `update/EN_CURSO` y al arrancar se avisa: «Actualización a medias: Alt+F1, pág. 9». Desde «Paquete guardado» se puede volver a instalar.
+- Como último recurso, el paquete de `update/` es el mismo zip de la release: se puede descomprimir a mano en la SD desde un PC.
+
+GitHub limita las consultas sin cuenta a 60 por hora; si se llega al límite, el emulador averigua la versión por la página de la release.
+
 ## Ficheros ZIP
 
 Los `.zip` se cargan directamente desde el selector (F1) o la web, sin descomprimirlos antes:
@@ -356,7 +389,8 @@ Los `.zip` se cargan directamente desde el selector (F1) o la web, sin descompri
 - **Si el ZIP tiene un solo fichero que se pueda cargar**, se carga al elegir el ZIP. Si tiene varios (por ejemplo, las dos caras de un juego), sale una lista para elegir; los demás ficheros (textos, instrucciones) no aparecen.
 - **Cintas, snapshots y cartuchos** (`.tap`, `.tzx`, `.pzx`, `.csw`, `.z80`, `.sna`, `.szx`, `.rom`) se cargan al vuelo, desde memoria, sin escribir nada en la tarjeta.
 - **Discos y cartuchos de Microdrive** (`.dsk`, `.mdr`, `.mdv`), que el programa puede escribir, se sacan a la carpeta `tmp` de la tarjeta (se crea si no existe) y se cargan desde ahí, así que lo que se grabe queda en ese fichero. Si ya está en `tmp`, se pregunta si usar el que hay (con sus cambios) o sobrescribirlo con el del ZIP.
-- Se admiten los ZIP normales (sin comprimir o con deflate, que son casi todos), hasta 8 MB. No los cifrados.
+- Se admiten los ZIP normales (sin comprimir o con deflate, que son casi todos), de hasta 32 MB y 512 ficheros. No los cifrados.
+- Si hay muchos ficheros para elegir, la lista se desplaza: cursores, RePág/AvPág, Inicio y Fin; arriba a la derecha se ve en cuál estás («23/100»).
 
 ## Unidades (F1 y luego U, o Alt+U)
 
