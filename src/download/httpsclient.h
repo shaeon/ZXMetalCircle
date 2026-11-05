@@ -45,6 +45,10 @@ public:
 	// Tras Get: la dirección final, después de las redirecciones
 	const char *GetFinalURL (void) const;
 
+	// Una sola petición, sin seguir la redirección: devuelve el código (302...)
+	// y en pLocation adónde apunta. Rápido: no descarga la página de destino.
+	int GetRedirect (const char *pURL, char *pLocation, size_t nLocationSize);
+
 	// Progreso de la descarga: bytes recibidos y total (0 si no se sabe)
 	typedef void TProgress (void *pParam, size_t nReceived, size_t nTotal);
 	void SetProgress (TProgress *pProgress, void *pParam)	{ m_pProgress = pProgress; m_pProgressParam = pParam; }

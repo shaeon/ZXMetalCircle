@@ -275,6 +275,15 @@ const char *CHTTPSClient::GetFinalURL (void) const
 	return URL;
 }
 
+int CHTTPSClient::GetRedirect (const char *pURL, char *pLocation, size_t nLocationSize)
+{
+	static unsigned char Body[16 * 1024];	// la respuesta de una redirección es corta
+	size_t nLength = 0;
+	pLocation[0] = '\0';
+	CopyString (URL, pURL, sizeof URL);
+	return GetOnce (URL, Body, sizeof Body, &nLength, pLocation, nLocationSize);
+}
+
 int CHTTPSClient::Get (const char *pURL, unsigned char *pBuffer, size_t nBufferSize, size_t *pLength)
 {
 	static char Location[URL_MAX];

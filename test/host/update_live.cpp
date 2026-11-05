@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
 
 // --- Lo que en la Pi pone Circle ---------------------------------------------
 
@@ -102,11 +103,16 @@ int main (int argc, char **argv)
 	bool bAPI = nStatus == 200 && CUpdater::ParseRelease ((const char *) Small, nLen, Version, sizeof Version, URL, sizeof URL);
 	printf ("API: código %d, %s\n", nStatus, bAPI ? Version : (nStatus < 0 ? Client.GetError () : "sin versión (¿límite de consultas?)"));
 
-	// 2. El plan B, siempre (para probarlo)
+	// 2. La redirección de la web (lo que se usa primero), siempre
 	char V2[16] = "", U2[512] = "";
-	nStatus = Client.Get ("https://github.com/shaeon/ZXMetalCircle/releases/latest", Small, sizeof Small, &nLen);
-	bool bB = CUpdater::ParseTagURL (Client.GetFinalURL (), V2, sizeof V2, U2, sizeof U2);
-	printf ("plan B: código %d, dirección final %s -> %s\n", nStatus, Client.GetFinalURL (), bB ? V2 : "sin versión");
+	static char Loc[1024];
+	time_t t0 = time (0);
+	nStatus = Client.GetRedirect ("https://github.com/shaeon/ZXMetalCircle/releases/latest", Loc, sizeof Loc);
+	bool bB = CUpdater::ParseTagURL (Loc, V2, sizeof V2, U2, sizeof U2);
+	printf ("redirección: código %d en %ld s, apunta a %s -> %s\n", nStatus, (long) (time (0) - t0), Loc, bB ? V2 : "sin versión");
+	t0 = time (0);
+	Client.Get ("https://github.com/shaeon/ZXMetalCircle/releases/latest", Small, sizeof Small, &nLen);
+	printf ("(antes: seguir la redirección y bajar la página: %zu bytes en %ld s)\n", nLen, (long) (time (0) - t0));
 	if (!bAPI)
 	{
 		if (!bB) { printf ("FALLO: no hay forma de saber la versión\n"); return 1; }

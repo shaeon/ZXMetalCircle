@@ -33,6 +33,63 @@
 #define UPDATE_DOWNLOAD_MAX	(32 * 1024 * 1024)	// el paquete de la 1.06: 11,8 MB
 #define UPDATE_PAGE_MAX		(1024 * 1024)		// respuesta de la API o página web
 
+// El transporte de red con aviso: mientras se conecta y negocia con GitHub
+// (lo lento en una Pi), el mensaje dice qué pasa y cuántos segundos lleva,
+// para que no parezca colgado. En la descarga calla en cuanto llegan datos
+// (ahí ya se ven los KB).
+class CBusyTransport : public ITransport
+{
+public:
+	typedef void TShow (void *pParam, const char *pText);
+
+	CBusyTransport (TShow *pShow, void *pParam, const char *pConnecting, const char *pWaiting,
+			const unsigned *pnQuietWhenNonZero = 0)
+	:	m_pShow (pShow), m_pParam (pParam), m_pConnecting (pConnecting), m_pWaiting (pWaiting),
+		m_pnQuiet (pnQuietWhenNonZero), m_nStart (CTimer::Get ()->GetTicks ()), m_nLast (0)
+	{
+	}
+
+	bool Connect (const char *pHost, unsigned nPort)
+	{
+		if (!Quiet ())
+		{
+			CString Text;
+			Text.Format (m_pConnecting, pHost);
+			(*m_pShow) (m_pParam, Text);
+		}
+		return m_Inner.Connect (pHost, nPort);
+	}
+	int Send (const unsigned char *pData, size_t nLength)	{ Tick (); return m_Inner.Send (pData, nLength); }
+	int Receive (unsigned char *pBuffer, size_t nSize)	{ Tick (); return m_Inner.Receive (pBuffer, nSize); }
+	void Close (void)					{ m_Inner.Close (); }
+
+private:
+	boolean Quiet (void) const	{ return m_pnQuiet != 0 && *m_pnQuiet != 0; }
+
+	void Tick (void)
+	{
+		unsigned nNow = CTimer::Get ()->GetTicks ();
+		if (Quiet () || nNow - m_nLast < HZ / 2)
+		{
+			return;
+		}
+		m_nLast = nNow;
+		CString Text;
+		Text.Format (m_pWaiting, (nNow - m_nStart) / HZ);
+		(*m_pShow) (m_pParam, Text);
+	}
+
+	CCircleTransport m_Inner;
+	TShow *m_pShow;
+	void *m_pParam;
+	const char *m_pConnecting;
+	const char *m_pWaiting;
+	const unsigned *m_pnQuiet;
+	unsigned m_nStart;
+	unsigned m_nLast;
+};
+
+
 static const char *Setting (CSettings &Settings, const char *pKey)
 {
 	int n = Settings.Find (pKey);
@@ -42,6 +99,18 @@ static const char *Setting (CSettings &Settings, const char *pKey)
 void CKernel::UpdateBusy (const char *pText)
 {
 	BusyHandler (pText, this);
+}
+
+void CKernel::UpdateShowBusy (void *pParam, const char *pText)
+{
+	BusyHandler (pText, pParam);
+}
+
+// Los resultados se dejan más tiempo en pantalla (unos 6 s)
+void CKernel::UpdateMessage (const char *pText)
+{
+	ShowMessage (pText);
+	m_nMessageFrames = 300;
 }
 
 // Los paquetes de update/ (sus versiones), de la más nueva a la más antigua
@@ -109,7 +178,10 @@ boolean CKernel::UpdateInit (void)
 	char Version[sizeof m_UpdateTarget] = "";
 	FS.Read (UPDATE_MARKER, (u8 *) Version, nSize);
 	Version[nSize] = '\0';
-	ShowMessage (T ("Actualización a medias: Alt+F1, pág. 9"));
+	// como el aviso de cmdline.txt: si otro mensaje lo tapa, vuelve a salir
+	strncpy (m_OptionWarning, T ("Actualización a medias: Alt+F1, pág. 9"), sizeof m_OptionWarning - 1);
+	m_OptionWarning[sizeof m_OptionWarning - 1] = '\0';
+	ShowMessage (m_OptionWarning);
 	m_nWarningFrames = 500;			// unos 10 s
 	m_nMessageFrames = m_nWarningFrames;
 	return TRUE;
@@ -132,7 +204,7 @@ void CKernel::UpdateCheck (boolean bQuiet)
 	{
 		if (!bQuiet)
 		{
-			ShowMessage (T ("Sin red: no se puede buscar"));
+			UpdateMessage (T ("Sin red: no se puede buscar"));
 		}
 		return;
 	}
@@ -141,24 +213,27 @@ void CKernel::UpdateCheck (boolean bQuiet)
 		UpdateBusy (T ("Buscando actualización..."));
 	}
 
-	CCircleTransport Transport;
+	// Primero la redirección de github.com/.../releases/latest a .../tag/vX.YY:
+	// una sola petición pequeña y sin límite de consultas. Si falla, la API.
+	CBusyTransport Transport (UpdateShowBusy, this, T ("Buscando: conectando con %s..."),
+				  T ("Buscando: esperando a GitHub (%u s)..."));
 	CHTTPSClient Client (&Transport);
-	u8 *pPage = new u8[UPDATE_PAGE_MAX];
 	char Version[sizeof m_UpdateVersion], URL[sizeof m_UpdateURL];
 	boolean bFound = FALSE;
-	if (pPage != 0)
+	static char Location[1024];
+	int nStatus = Client.GetRedirect (UPDATE_WEB_URL, Location, sizeof Location);
+	if (nStatus >= 300 && nStatus < 400)
 	{
+		bFound = CUpdater::ParseTagURL (Location, Version, sizeof Version, URL, sizeof URL);
+	}
+	if (!bFound)
+	{
+		u8 *pPage = new u8[UPDATE_PAGE_MAX];
 		size_t nLength = 0;
-		if (Client.Get (UPDATE_API_URL, pPage, UPDATE_PAGE_MAX, &nLength) == 200)
+		if (pPage != 0 && Client.Get (UPDATE_API_URL, pPage, UPDATE_PAGE_MAX, &nLength) == 200)
 		{
 			bFound = CUpdater::ParseRelease ((const char *) pPage, nLength,
 							 Version, sizeof Version, URL, sizeof URL);
-		}
-		if (!bFound)			// plan B: la redirección de la web
-		{
-			Client.Get (UPDATE_WEB_URL, pPage, UPDATE_PAGE_MAX, &nLength);
-			bFound = CUpdater::ParseTagURL (Client.GetFinalURL (), Version, sizeof Version,
-							URL, sizeof URL);
 		}
 		delete [] pPage;
 	}
@@ -168,7 +243,7 @@ void CKernel::UpdateCheck (boolean bQuiet)
 	{
 		if (!bQuiet)
 		{
-			ShowMessage (T ("No se pudo consultar GitHub"));
+			UpdateMessage (T ("No se pudo consultar GitHub"));
 		}
 	}
 	else if (CUpdater::CompareVersions (Version, ZXCIRCLE_VERSION) > 0)
@@ -176,7 +251,7 @@ void CKernel::UpdateCheck (boolean bQuiet)
 		strcpy (m_UpdateVersion, Version);
 		strcpy (m_UpdateURL, URL);
 		Message.Format (T ("Hay una versión nueva: %s"), Version);
-		ShowMessage (Message);
+		UpdateMessage (Message);
 	}
 	else
 	{
@@ -184,7 +259,7 @@ void CKernel::UpdateCheck (boolean bQuiet)
 		if (!bQuiet)
 		{
 			Message.Format (T ("Ya tienes la última (%s)"), ZXCIRCLE_VERSION);
-			ShowMessage (Message);
+			UpdateMessage (Message);
 		}
 	}
 	UpdateRows ();
@@ -431,9 +506,12 @@ void CKernel::UpdateRun (void)
 			ShowMessage (T ("No hay memoria para la actualización"));
 			return;
 		}
-		CCircleTransport Transport;
-		CHTTPSClient Client (&Transport);
 		m_nUpdateShown = 0;
+		CString Connecting, Waiting;
+		Connecting.Format (T ("Descargando la %s: conectando..."), m_UpdateTarget);
+		Waiting.Format (T ("Descargando la %s: esperando (%%u s)..."), m_UpdateTarget);
+		CBusyTransport Transport (UpdateShowBusy, this, Connecting, Waiting, &m_nUpdateShown);
+		CHTTPSClient Client (&Transport);
 		Client.SetProgress (UpdateDownloadProgress, this);
 		size_t nLength = 0;
 		int nStatus = Client.Get (m_UpdateURL, pZip, UPDATE_DOWNLOAD_MAX, &nLength);
@@ -489,7 +567,8 @@ void CKernel::UpdateRun (void)
 		if (Result.nChanged == 0)
 		{
 			m_Menu.OpenSettings ();
-			ShowMessage (T ("Ya estaba todo al día"));
+			Message.Format (T ("Nada que cambiar: la SD ya tenía la %s"), m_UpdateTarget);
+			UpdateMessage (Message);
 			UpdateRows ();
 			return;
 		}

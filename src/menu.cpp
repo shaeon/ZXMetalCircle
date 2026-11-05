@@ -1182,9 +1182,11 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 			m_nChangedSetting = Index[m_nSettingsRow];	// fila de acción: la hace el kernel
 			Result = MenuResultSettingAction;
 		}
-		else if (CSettings::IsAction (Index[m_nSettingsRow]))
+		else if (   (nKey == HID_KEY_LEFT || nKey == HID_KEY_RIGHT)
+			 && CSettings::IsAction (Index[m_nSettingsRow]))
 		{
-			// las flechas no hacen nada en una fila de acción
+			// las flechas no hacen nada en una fila de acción (el resto de
+			// teclas, RePág, AvPág, G, R, ESC..., siguen más abajo)
 		}
 		else if (   (nKey == HID_KEY_RIGHT || nKey == HID_KEY_ENTER || nKey == 0x58)
 			 && bApplies && CSettings::IsEditable (Index[m_nSettingsRow]))

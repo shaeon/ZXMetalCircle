@@ -5294,7 +5294,11 @@ TShutdownMode CKernel::Run (void)
 				UpdateStatusLines ();
 				memcpy (Overlay, m_pFrozen, nOverlayBytes);
 				m_Menu.Draw (Overlay);
-				DrawIndicators (Overlay);
+				DrawMessage (Overlay);		// los avisos también con el menú abierto
+				if (m_nMessageFrames > 0)	// (y su tiempo corre)
+				{
+					m_nMessageFrames--;
+				}
 			}
 			else
 			{

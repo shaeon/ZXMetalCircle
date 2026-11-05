@@ -150,6 +150,8 @@ private:
 	void UpdatePrune (void);
 	unsigned UpdateScanPackages (void);
 	void UpdateBusy (const char *pText);
+	void UpdateMessage (const char *pText);
+	static void UpdateShowBusy (void *pParam, const char *pText);
 	static void UpdateDownloadProgress (void *pParam, size_t nReceived, size_t nTotal);
 	static void UpdateInstallProgress (void *pParam, unsigned nDone, unsigned nTotal);
 	boolean IsEsxImageMounted (void) const;
