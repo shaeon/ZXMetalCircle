@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Cambiado**: `config.txt` arranca sin la pantalla de colores del firmware (`disable_splash=1`) y sin su espera antes de cargar el emulador (`boot_delay=0`). Trae preparados y comentados los modos HDMI a 50 Hz y 60 Hz (1080p y 720p), `hdmi_safe=1` para cuando no hay imagen, y la lista de filtros de escalado (sigue el 8, píxeles nítidos). Al actualizar desde el emulador, el `config.txt` de cada uno no se toca: el nuevo queda como `config.txt.nuevo`.
 - **Nuevo**: joysticks y mandos, en la nueva página 5 de la configuración, "Joysticks y mandos" (las siguientes se renumeran: la de actualización pasa a ser la 10).
   - **Dos jugadores**, cada uno con su joystick (`joystick=` y el nuevo `joystick2=`). Solo se pueden elegir combinaciones que el Spectrum lea a la vez (no el mismo dos veces, ni Cursor con Sinclair 1). Cada puerto o juego de teclas lee al jugador que lo tiene, y la ayuda muestra los dos.
   - **Qué mando es de cada jugador** (`pad1=`, `pad2=`): automático o un mando concreto, guardado por fabricante y modelo. Los mandos de más (`padextra=`) se suman al jugador 1 o al 2, o solo sirven en los menús. La luz de jugador de los mandos que la tienen dice de quién es; Select cambia el joystick de su jugador.

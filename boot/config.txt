@@ -13,14 +13,43 @@ arm_64bit=0
 initial_turbo=0
 disable_overscan=1
 
+# Arranque: sin la pantalla de colores del firmware y sin su espera antes de
+# cargar el emulador
+disable_splash=1
+boot_delay=0
+
 # Sonido por HDMI (con pantallas DVI, forzar el modo HDMI)
 #hdmi_drive=2
 
 # Si la pantalla no se detecta
 #hdmi_force_hotplug=1
 
+# Si no hay imagen: el modo HDMI más compatible
+#hdmi_safe=1
+
+# Forzar un modo HDMI (quita el # de hdmi_group y de un hdmi_mode). El
+# Spectrum va a 50 Hz: con la pantalla a 50 Hz el movimiento es más suave que
+# a 60. Si la pantalla no admite el modo elegido, se queda sin imagen.
+#hdmi_group=1
+# 1080p 50 Hz 16:9
+#hdmi_mode=31
+# 720p 50 Hz 16:9
+#hdmi_mode=19
+# 1080p 60 Hz 16:9
+#hdmi_mode=16
+# 720p 60 Hz 16:9
+#hdmi_mode=4
+
 # Filtro de escalado de la GPU: 8 = vecino más próximo, píxeles nítidos. Sin
 # esta línea la GPU suaviza la imagen al ampliarla y las letras se ven borrosas.
+#  1 sinc
+#  2 sinc Blackman
+#  3 sinc sin lóbulos laterales
+#  4 sinc con medio primer lóbulo lateral
+#  5 sinc Hamming
+#  6 sinc Hamming 3pi (el de la GPU si no se pone nada)
+#  7 sinc Hamming 2,5pi
+#  8 vecino más próximo
 scaling_kernel=8
 
 enable_uart=1

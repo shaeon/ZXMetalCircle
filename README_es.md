@@ -158,7 +158,7 @@ El mismo código se compila en 32 bits (AArch32) y en 64 bits (AArch64). `config
 
 **Imagen sin cortes**: en las Pi 1 a 4 la imagen se dibuja con triple búfer (tres páginas que se turnan), así que nunca se dibuja en la página que se está viendo ni en la que está a punto de verse, y no se ven cortes a velocidad normal. A velocidad x2 o más puede verse alguno. En la Pi 5 hay una sola página (ver arriba).
 
-**Scroll suave (opcional)**: el Spectrum da 50 imágenes por segundo y muchas pantallas van a 60 Hz, así que unas imágenes duran más que otras y el scroll da tirones. Si tu pantalla admite 50 Hz, se puede forzar en `config.txt`, por ejemplo `hdmi_group=1` y `hdmi_mode=31` (1080p a 50 Hz) o `hdmi_mode=19` (720p a 50 Hz).
+**Scroll suave (opcional)**: el Spectrum da 50 imágenes por segundo y muchas pantallas van a 60 Hz, así que unas imágenes duran más que otras y el scroll da tirones. Si tu pantalla admite 50 Hz, se puede forzar en `config.txt`, por ejemplo `hdmi_group=1` y `hdmi_mode=31` (1080p a 50 Hz) o `hdmi_mode=19` (720p a 50 Hz). Esas líneas ya vienen en el `config.txt`, comentadas: basta con quitar el `#` de `hdmi_group` y de un `hdmi_mode`.
 
 Para el Spectrum no hay diferencia de funciones entre las dos versiones. En 64 bits el código ocupa algo más y el compilador tiene más registros con los que optimizar el Z80; la diferencia de velocidad real está por medir en una Pi con Alt+D.
 

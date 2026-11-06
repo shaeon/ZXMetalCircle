@@ -152,7 +152,7 @@ The same code is built for 32 bits (AArch32) and 64 bits (AArch64). `config.txt`
 
 **No tearing**: on the Pi 1 to 4 the image is drawn with triple buffering (three pages that take turns), so it is never drawn into the page being shown or the one about to be shown, and no tearing is seen at normal speed. At x2 speed or more some may be seen. The Pi 5 has a single page (see above).
 
-**Smooth scrolling (optional)**: the Spectrum produces 50 frames per second and many screens run at 60 Hz, so some frames last longer than others and scrolling judders. If your screen accepts 50 Hz, it can be forced in `config.txt`, for example `hdmi_group=1` and `hdmi_mode=31` (1080p at 50 Hz) or `hdmi_mode=19` (720p at 50 Hz).
+**Smooth scrolling (optional)**: the Spectrum produces 50 frames per second and many screens run at 60 Hz, so some frames last longer than others and scrolling judders. If your screen accepts 50 Hz, it can be forced in `config.txt`, for example `hdmi_group=1` and `hdmi_mode=31` (1080p at 50 Hz) or `hdmi_mode=19` (720p at 50 Hz). Those lines are already in `config.txt`, commented out: just remove the `#` from `hdmi_group` and from one `hdmi_mode`.
 
 Both versions have the same Spectrum features. In 64 bits the code is somewhat larger and the compiler has more registers to optimise the Z80 with; the real speed difference is still to be measured on a Pi with Alt+D.
 
