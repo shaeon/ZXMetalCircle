@@ -159,7 +159,7 @@ void CKernel::UpdateRows (void)
 	CString Text;
 	if (m_UpdateVersion[0] != '\0')
 	{
-		Text.Format (T ("ENTER: instalar %s"), m_UpdateVersion);
+		Text.Format (T ("instalar la %s"), m_UpdateVersion);
 	}
 	m_Settings.SetActionText ("_updcheck", Text);
 	m_Settings.SetActionText ("_updlocal", UpdateScanPackages () == 0 ? T ("ninguno") : "");

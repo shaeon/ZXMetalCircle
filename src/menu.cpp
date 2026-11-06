@@ -47,7 +47,8 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nTop (0),
 	m_nScrollTick (0),
 	m_nScrollSelected (0),
-	m_nScrollChoice (0)
+	m_nScrollChoice (0),
+	m_nScrollSetting (0)
 {
 	m_pSettings = 0;
 	m_nSettingsPage = 0;
@@ -1351,6 +1352,11 @@ void CMenu::Draw (TPixel *pScreen)
 		m_nScrollSelected = m_nSelected;
 		m_nScrollTick = 0;
 	}
+	if (m_Mode == ModeSettings && m_nSettingsRow != m_nScrollSetting)
+	{
+		m_nScrollSetting = m_nSettingsRow;	// configuración: otra fila, desde el principio
+		m_nScrollTick = 0;
+	}
 	if (m_Mode == ModeChoice && m_nChoiceSelected != m_nScrollChoice)
 	{
 		m_nScrollChoice = m_nChoiceSelected;	// lista: otra opción, otra vez desde el principio
@@ -1675,7 +1681,24 @@ void CMenu::Draw (TPixel *pScreen)
 			u8 nBack = bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL;
 			m_pVideo->DrawText (pScreen, tx, ROW_Y (3 + 2 * i), Line,
 					    bSel ? COLOR_UI_PANEL : (bApplies ? COLOR_UI_TEXT : COLOR_UI_DIM), nBack, 22);
-			m_pVideo->DrawText (pScreen, tx + 23 * 8, ROW_Y (3 + 2 * i), Value,
+			// si el valor de la fila elegida no cabe, se desplaza poco a poco
+			// (como los nombres largos del selector y de las listas)
+			const char *pValue = Value;
+			unsigned nValueLen = UTF8Length (Value);
+			if (bSel && !m_bEditing && nValueLen > TEXT_COLS - 23)
+			{
+				unsigned nSkip = ScrollOffset (nValueLen - (TEXT_COLS - 23));
+				while (nSkip > 0 && *pValue != '\0')
+				{
+					pValue++;
+					while ((*pValue & 0xC0) == 0x80)	// sin partir un carácter UTF-8
+					{
+						pValue++;
+					}
+					nSkip--;
+				}
+			}
+			m_pVideo->DrawText (pScreen, tx + 23 * 8, ROW_Y (3 + 2 * i), pValue,
 					    bSel ? COLOR_UI_PANEL : (bApplies ? COLOR_UI_VALUE : COLOR_UI_DIM), nBack, TEXT_COLS - 23);
 			if (bSel && !m_bEditing && !CSettings::IsAction (Index[i]))	// las acciones no se cambian con las flechas
 			{

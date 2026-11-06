@@ -245,7 +245,7 @@
 	"F1 ayuda": "F1 ayuda",
 	"%s | Cinta: %s | %u.%02u c/s": "%s | Cinta: %s | %u.%02u c/s",
 	"(ninguna)": "(ninguna)",
-	"ENTER: instalar %s": "ENTER: instalar %s",
+	"instalar la %s": "instalar la %s",
 	"Actualización a medias: Alt+F1, pág. 9": "Actualización a medias: Alt+F1, pág. 9",
 	"Sin red: no se puede buscar": "Sin red: no se puede buscar",
 	"Buscando actualización...": "Buscando actualización...",

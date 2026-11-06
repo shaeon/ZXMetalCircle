@@ -245,7 +245,7 @@
 	"F1 ayuda": "F1 ajuda",
 	"%s | Cinta: %s | %u.%02u c/s": "%s | Fita: %s | %u.%02u q/s",
 	"(ninguna)": "(nenhuma)",
-	"ENTER: instalar %s": "ENTER: instalar %s",
+	"instalar la %s": "instalar a %s",
 	"Actualización a medias: Alt+F1, pág. 9": "Atualização incompleta: Alt+F1, pág. 9",
 	"Sin red: no se puede buscar": "Sem rede: não é possível buscar",
 	"Buscando actualización...": "Buscando atualização...",
@@ -604,6 +604,7 @@
 	"Red: descargando de ZXDB...": "Rede: baixando do ZXDB...",
 	"No se pudo descargar: %s": "Não foi possível baixar: %s",
 	"Descargado y cargando en el Spectrum: %s (%u KB)": "Baixado e carregando no Spectrum: %s (%u KB)",
+	"_huerfano|ENTER: instalar %s": "ENTER: instalar %s",
 	"_huerfano|Ya estaba todo al día": "Já estava tudo atualizado",
 	"_huerfano|Ayuda, cintas y snapshots": "Ajuda, fitas e snapshots",
 	"_huerfano|original v1|original v2|Rodolfo Guerra v3": "original v1|original v2|Rodolfo Guerra v3"

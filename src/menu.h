@@ -151,6 +151,7 @@ private:
 	unsigned m_nScrollTick;		// desplazamiento de nombres largos
 	unsigned m_nScrollSelected;
 	unsigned m_nScrollChoice;	// opción elegida en la lista (para su desplazamiento)
+	unsigned m_nScrollSetting;	// fila elegida en la configuración (ídem)
 
 	char m_CurrentDir[MENU_PATH_LEN];
 	char m_SelectedPath[MENU_PATH_LEN];
