@@ -4,7 +4,7 @@
 
 ## Updating the emulator
 
-From version 1.07, the emulator can update itself from the releases published on GitHub. It is on **page 9 of the settings** (Alt+F1 and then PgUp/PgDn):
+From version 1.07, the emulator can update itself from the releases published on GitHub. It is on **page 10 of the settings** (Alt+F1 and then PgUp/PgDn):
 
 | Row | What it does |
 | --- | --- |
@@ -15,7 +15,7 @@ From version 1.07, the emulator can update itself from the releases published on
 | Saved packages | `updkeep=`: `2` keeps in `update` the installed version's package and the previous one (to go back); `all`, all of them |
 | Settings on update | `updconfig=`: `keep` keeps your configuration files; `new` uses the new ones |
 
-When there is a new version, the help (F1) says so on its last line: "New version: 1.07 (Alt+F1, page 9)".
+When there is a new version, the help (F1) says so on its last line: "New version: 1.07 (Alt+F1, page 10)".
 
 **How it installs:**
 - Before starting, anything pending is saved (+3 disks, Microdrives...) and, if you changed the settings without saving them, it asks.
@@ -27,7 +27,7 @@ When there is a new version, the help (F1) says so on its last line: "New versio
 
 **If something fails:**
 - If the download fails or the package is damaged, nothing is touched.
-- If it fails halfway through copying (SD card full, write error), it does not restart: it offers to try again. Until it finishes, `update/EN_CURSO` exists and you are told at boot: "Update not finished: Alt+F1, page 9". It can be installed again from "Saved package".
+- If it fails halfway through copying (SD card full, write error), it does not restart: it offers to try again. Until it finishes, `update/EN_CURSO` exists and you are told at boot: "Update not finished: Alt+F1, page 10". It can be installed again from "Saved package".
 - As a last resort, the package in `update/` is the release's own zip: it can be unzipped onto the SD card by hand from a PC.
 
 GitHub limits anonymous queries to 60 per hour; if the limit is reached, the emulator finds out the version from the release page.

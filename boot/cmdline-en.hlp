@@ -129,7 +129,7 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
 ------------------------------------------------------------------------------
  KEYBOARD, JOYSTICK AND MOUSE
 ------------------------------------------------------------------------------
- joystick=kempston  Emulated joystick (F4 changes it on the fly):
+ joystick=kempston  Player 1 emulated joystick (F4 changes it on the fly):
                     none       none
                     kempston   Kempston                        (default)
                     fuller     Fuller
@@ -137,6 +137,17 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                     sinclair2  Sinclair 2 (Interface 2, keys 1-5)
                     cursor     Cursor / AGF / Protek (keys 5-8 and 0)
                     qaop       Q A O P and space
+ joystick2=none     Player 2 joystick, same values. It cannot be player 1's,
+                    nor Cursor with Sinclair 1
+ pad1=auto          Player 1 gamepad: auto (connection order) or a specific
+                    gamepad (vendor:product, e.g. 045e:028e)
+ pad2=auto          Player 2 gamepad, likewise
+ padextra=p1        The other gamepads: p1 or p2 (they join that player) or
+                    menu (menus only)
+ kbdfire=win        Keyboard fire key: win (both Windows keys), rctrl (right
+                    Ctrl) or none
+                    Button profiles for each gamepad: joysticks/ (see
+                    docs/04_usb_gamepads.md)
 
  cursors=both     What the PC keyboard's cursor keys do:
                     both      Spectrum cursor keys (CAPS SHIFT+5-8)

@@ -62,24 +62,51 @@ int main ()
 	n = kb.HoldKeys ("?!", 5);
 	chk ("Alt+V sin teclas válidas: nada", n == 0 && NoKey (kb));
 
-	// Ctrl derecho: disparo solo si los cursores manejan el joystick
+	// Tecla de disparo del teclado (kbdfire=): solo dispara si los cursores
+	// manejan el joystick; el bit 4 del puerto Kempston es el disparo
 	const u8 NoKeys[6] = {0, 0, 0, 0, 0, 0};
+	const u8 LCTRL = 0x01, RCTRL = 0x10, LWIN = 0x08, RWIN = 0x80;
 	kb.SetJoystickMode (JoystickKempston);
 	kb.SetCursorMode (CursorBoth);
-	kb.UpdateFromReport (0x10, NoKeys);		// Ctrl derecho
-	chk ("Kempston y cursors=both: Ctrl derecho no es SYMBOL SHIFT (es el disparo)", !Pressed (kb, 7, 1));
+
+	// por defecto: las teclas Windows; los dos Ctrl, SYMBOL SHIFT
+	kb.UpdateFromReport (LWIN, NoKeys);
+	chk ("por defecto: Windows izquierda es el disparo", (kb.ReadKempston () & 0x10) && !Pressed (kb, 7, 1));
+	kb.UpdateFromReport (RWIN, NoKeys);
+	chk ("por defecto: Windows derecha es el disparo", (kb.ReadKempston () & 0x10) != 0);
+	kb.UpdateFromReport (RCTRL, NoKeys);
+	chk ("por defecto: Ctrl derecho es SYMBOL SHIFT y no dispara", Pressed (kb, 7, 1) && !(kb.ReadKempston () & 0x10));
+	kb.UpdateFromReport (LCTRL, NoKeys);
+	chk ("por defecto: Ctrl izquierdo es SYMBOL SHIFT", Pressed (kb, 7, 1));
+	kb.UpdateFromReport (0, NoKeys);
+
+	// kbdfire=rctrl: como antes
+	kb.SetKbdFire (KbdFireRightCtrl);
+	kb.UpdateFromReport (RCTRL, NoKeys);
+	chk ("rctrl: Ctrl derecho es el disparo y no SYMBOL SHIFT", (kb.ReadKempston () & 0x10) && !Pressed (kb, 7, 1));
+	kb.UpdateFromReport (LWIN, NoKeys);
+	chk ("rctrl: Windows no dispara", !(kb.ReadKempston () & 0x10));
 	kb.UpdateFromReport (0, NoKeys);
 	kb.SetCursorMode (CursorKeysOnly);
-	kb.UpdateFromReport (0x10, NoKeys);
-	chk ("Kempston y cursors=keys: Ctrl derecho es SYMBOL SHIFT", Pressed (kb, 7, 1));
+	kb.UpdateFromReport (RCTRL, NoKeys);
+	chk ("rctrl y cursors=keys: Ctrl derecho es SYMBOL SHIFT", Pressed (kb, 7, 1) && !(kb.ReadKempston () & 0x10));
 	kb.UpdateFromReport (0, NoKeys);
-	kb.SetJoystickMode (JoystickNone);
 	kb.SetCursorMode (CursorBoth);
-	kb.UpdateFromReport (0x10, NoKeys);
-	chk ("sin joystick: Ctrl derecho es SYMBOL SHIFT", Pressed (kb, 7, 1));
+
+	// kbdfire=none: ninguna tecla dispara
+	kb.SetKbdFire (KbdFireNone);
+	kb.UpdateFromReport (LWIN | RCTRL, NoKeys);
+	chk ("none: ni Windows ni Ctrl derecho disparan; Ctrl es SYMBOL SHIFT",
+	     !(kb.ReadKempston () & 0x10) && Pressed (kb, 7, 1));
 	kb.UpdateFromReport (0, NoKeys);
-	kb.UpdateFromReport (0x01, NoKeys);		// Ctrl izquierdo
-	chk ("Ctrl izquierdo: siempre SYMBOL SHIFT", Pressed (kb, 7, 1));
+
+	// sin joystick: nada dispara y los Ctrl son SYMBOL SHIFT
+	kb.SetKbdFire (KbdFireWindows);
+	kb.SetJoystickMode (JoystickNone);
+	kb.UpdateFromReport (LWIN, NoKeys);
+	chk ("sin joystick: Windows no dispara", !(kb.ReadKempston () & 0x10));
+	kb.UpdateFromReport (RCTRL, NoKeys);
+	chk ("sin joystick: Ctrl derecho es SYMBOL SHIFT", Pressed (kb, 7, 1));
 	kb.UpdateFromReport (0, NoKeys);
 
 	printf (fails ? "%d fallos\n" : "todo OK\n", fails);

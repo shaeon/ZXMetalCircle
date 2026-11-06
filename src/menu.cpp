@@ -57,6 +57,13 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nChoices = 0;
 	m_nChoiceTop = 0;
 	m_bChoiceInfo = FALSE;
+	m_nListCount = 0;
+	m_nListSelected = 0;
+	m_nListTop = 0;
+	m_nListKey = 0;
+	m_InputFooter[0] = '\0';
+	m_ListTitle[0] = m_ListNote[0] = '\0';
+	m_ListHelp[0][0] = m_ListHelp[1][0] = '\0';
 	m_nChoiceSelected = 0;
 	m_ChoiceTitle[0] = '\0';
 	m_InputTitle[0] = m_InputHelp[0][0] = m_InputHelp[1][0] = m_InputBuf[0] = '\0';
@@ -280,8 +287,10 @@ void CMenu::OpenChoice (const char *pTitle)
 	m_Mode = ModeChoice;
 }
 
-void CMenu::OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp2)
+void CMenu::OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter)
 {
+	strncpy (m_InputFooter, pFooter != 0 ? pFooter : "", sizeof m_InputFooter - 1);
+	m_InputFooter[sizeof m_InputFooter - 1] = '\0';
 	strncpy (m_InputTitle, pTitle, sizeof m_InputTitle - 1);
 	m_InputTitle[sizeof m_InputTitle - 1] = '\0';
 	strncpy (m_InputHelp[0], pHelp1 != 0 ? pHelp1 : "", sizeof m_InputHelp[0] - 1);
@@ -290,6 +299,63 @@ void CMenu::OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp
 	m_InputHelp[1][sizeof m_InputHelp[1] - 1] = '\0';
 	m_InputBuf[0] = '\0';
 	m_Mode = ModeInput;
+}
+
+static void Copy (char *pDest, const char *pSrc, unsigned nSize)
+{
+	strncpy (pDest, pSrc != 0 ? pSrc : "", nSize - 1);
+	pDest[nSize - 1] = '\0';
+}
+
+void CMenu::OpenList (const char *pTitle, const char *pHelp1, const char *pHelp2)
+{
+	Copy (m_ListTitle, pTitle, sizeof m_ListTitle);
+	Copy (m_ListHelp[0], pHelp1, sizeof m_ListHelp[0]);
+	Copy (m_ListHelp[1], pHelp2, sizeof m_ListHelp[1]);
+	m_ListNote[0] = '\0';
+	m_nListCount = 0;
+	m_nListSelected = 0;
+	m_nListTop = 0;
+	m_nListKey = 0;
+	m_Mode = ModeList;
+}
+
+void CMenu::SetListTitle (const char *pTitle)	{ Copy (m_ListTitle, pTitle, sizeof m_ListTitle); }
+void CMenu::SetListNote (const char *pNote)	{ Copy (m_ListNote, pNote, sizeof m_ListNote); }
+
+void CMenu::SetListRow (unsigned nRow, const char *pLabel, const char *pValue)
+{
+	if (nRow < MENU_LIST_MAX)
+	{
+		Copy (m_ListLabel[nRow], pLabel, sizeof m_ListLabel[nRow]);
+		Copy (m_ListValue[nRow], pValue, sizeof m_ListValue[nRow]);
+	}
+}
+
+void CMenu::SetListCount (unsigned nCount)
+{
+	m_nListCount = nCount < MENU_LIST_MAX ? nCount : MENU_LIST_MAX;
+	if (m_nListSelected >= m_nListCount && m_nListCount > 0)
+	{
+		SetListSelected (m_nListCount - 1);
+	}
+}
+
+void CMenu::SetListSelected (unsigned nRow)
+{
+	if (nRow >= m_nListCount)
+	{
+		return;
+	}
+	m_nListSelected = nRow;
+	if (nRow < m_nListTop)
+	{
+		m_nListTop = nRow;
+	}
+	else if (nRow >= m_nListTop + MENU_LIST_ROWS)
+	{
+		m_nListTop = nRow - MENU_LIST_ROWS + 1;
+	}
 }
 
 // Elige una opción y mueve la ventana para que se vea (listas largas)
@@ -1048,6 +1114,43 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		return Result;
 	}
 
+	if (m_Mode == ModeList)
+	{
+		if (nKey == HID_KEY_UP && m_nListSelected > 0)
+		{
+			SetListSelected (m_nListSelected - 1);
+		}
+		else if (nKey == HID_KEY_DOWN && m_nListSelected + 1 < m_nListCount)
+		{
+			SetListSelected (m_nListSelected + 1);
+		}
+		else if (nKey == 0x4B && m_nListCount > 0)	// RePág
+		{
+			SetListSelected (m_nListSelected > MENU_LIST_ROWS ? m_nListSelected - MENU_LIST_ROWS : 0);
+		}
+		else if (nKey == 0x4E && m_nListCount > 0)	// AvPág
+		{
+			unsigned n = m_nListSelected + MENU_LIST_ROWS;
+			SetListSelected (n < m_nListCount ? n : m_nListCount - 1);
+		}
+		else if (nKey == 0x4A && m_nListCount > 0)	// Inicio
+		{
+			SetListSelected (0);
+		}
+		else if (nKey == 0x4D && m_nListCount > 0)	// Fin
+		{
+			SetListSelected (m_nListCount - 1);
+		}
+		else if (   nKey == HID_KEY_LEFT || nKey == HID_KEY_RIGHT || nKey == HID_KEY_ENTER || nKey == 0x58
+			 || nKey == HID_KEY_ESC || nKey == HID_KEY_BACKSPACE || nKey == 0x4C
+			 || (nKey >= 0x04 && nKey <= 0x1D))		// letras
+		{
+			m_nListKey = nKey == 0x58 ? HID_KEY_ENTER : (nKey == HID_KEY_BACKSPACE ? HID_KEY_ESC : nKey);
+			return MenuResultListKey;
+		}
+		return MenuResultNone;
+	}
+
 	if (m_Mode == ModeChoice)
 	{
 		if (nKey == HID_KEY_UP && m_nChoiceSelected > 0)
@@ -1352,6 +1455,11 @@ void CMenu::Draw (TPixel *pScreen)
 		m_nScrollSelected = m_nSelected;
 		m_nScrollTick = 0;
 	}
+	if (m_Mode == ModeList && m_nListSelected != m_nScrollSetting)
+	{
+		m_nScrollSetting = m_nListSelected;
+		m_nScrollTick = 0;
+	}
 	if (m_Mode == ModeSettings && m_nSettingsRow != m_nScrollSetting)
 	{
 		m_nScrollSetting = m_nSettingsRow;	// configuración: otra fila, desde el principio
@@ -1557,8 +1665,53 @@ void CMenu::Draw (TPixel *pScreen)
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (4), Line, COLOR_UI_PANEL, COLOR_UI_HILITE, TEXT_COLS);
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (7), m_InputHelp[0], COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS);
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (8), m_InputHelp[1], COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS);
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ENTER pulsar  BORRAR corregir  ESC salir"),
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), m_InputFooter[0] != '\0' ? m_InputFooter : T ("ENTER pulsar  BORRAR corregir  ESC salir"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		return;
+	}
+
+	if (m_Mode == ModeList)
+	{
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), m_ListTitle, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		for (unsigned i = m_nListTop; i < m_nListCount && i < m_nListTop + MENU_LIST_ROWS; i++)
+		{
+			boolean bSel = i == m_nListSelected;
+			int y = ROW_Y (3 + 2 * (i - m_nListTop));
+			if (bSel)
+			{
+				m_pVideo->FillRect (pScreen, tx - 2, y - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
+			}
+			u8 nBack = bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL;
+			m_pVideo->DrawText (pScreen, tx, y, m_ListLabel[i], bSel ? COLOR_UI_PANEL : COLOR_UI_TEXT, nBack, 18);
+			// el valor de la fila elegida, si no cabe, se desplaza
+			const char *pValue = m_ListValue[i];
+			unsigned nLen = UTF8Length (pValue);
+			const unsigned nCols = TEXT_COLS - 19;
+			if (bSel && nLen > nCols)
+			{
+				unsigned nSkip = ScrollOffset (nLen - nCols);
+				while (nSkip > 0 && *pValue != '\0')
+				{
+					pValue++;
+					while ((*pValue & 0xC0) == 0x80)
+					{
+						pValue++;
+					}
+					nSkip--;
+				}
+			}
+			m_pVideo->DrawText (pScreen, tx + 19 * 8, y, pValue, bSel ? COLOR_UI_PANEL : COLOR_UI_VALUE, nBack, nCols);
+		}
+		if (m_nListCount > MENU_LIST_ROWS)		// dónde se está
+		{
+			CString Pos;
+			Pos.Format ("%u/%u", m_nListSelected + 1, m_nListCount);
+			m_pVideo->DrawText (pScreen, tx + (TEXT_COLS - Pos.GetLength ()) * 8, ROW_Y (PANEL_ROWS - 6), Pos,
+					    COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+		}
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 6), m_ListNote, COLOR_UI_VALUE, COLOR_UI_PANEL, TEXT_COLS - 7);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 4), m_ListHelp[0], COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), m_ListHelp[1], COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		return;
 	}
 
@@ -1765,7 +1918,7 @@ void CMenu::Draw (TPixel *pScreen)
 			"",
 			N_("Con joystick activo, los cursores"),
 			N_("son a la vez CS+5-8 y joystick"),
-			N_("Ctrl der. / 0 num. disparo"),
+			N_("Windows / 0 num. disparo (página 5)"),
 			"",
 			N_("Teclado real (GPIO) o Recreated ZX:"),
 			N_("botón o CS+SS+ENTER = modo extendido"),

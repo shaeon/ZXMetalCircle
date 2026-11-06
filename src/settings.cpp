@@ -15,7 +15,8 @@ static const char *PageTitles[] =
 	N_("Máquina"),
 	N_("Imagen y sonido"),
 	N_("Cintas y grabación"),
-	N_("Teclado y mandos"),
+	N_("Teclado"),
+	N_("Joysticks y mandos"),
 	N_("Periféricos"),
 	N_("Red, hora y casete"),
 	N_("ROMs y carpetas"),
@@ -63,58 +64,65 @@ static TSettingDef Settings[] =
 	{"snapformat",	N_("Formato de F8"),	2, "z80|sna|szx", "Z80|SNA|SZX",			"z80",	TRUE},
 
 	// 3 Teclado y mandos
-	{"joystick",	N_("Joystick"),		3, "none|kempston|fuller|sinclair1|sinclair2|cursor|qaop",
+	{"joystick",	N_("Joystick jugador 1"),	4, "none|kempston|fuller|sinclair1|sinclair2|cursor|qaop",
 				   N_("ninguno|Kempston|Fuller|Sinclair 1|Sinclair 2|cursor|QAOP"), "kempston", TRUE},
-	{"cursors",	N_("Cursores del PC"),	3, "both|keys|joystick", N_("teclas y joystick|teclas|joystick"), "both", TRUE},
+	{"joystick2",	N_("Joystick jugador 2"),	4, "none|kempston|fuller|sinclair1|sinclair2|cursor|qaop",
+				   N_("ninguno|Kempston|Fuller|Sinclair 1|Sinclair 2|cursor|QAOP"), "none", TRUE},
+	{"pad1",	N_("Mando del jugador 1"),	4, "*pad", N_("automático"),			"auto",	TRUE},
+	{"pad2",	N_("Mando del jugador 2"),	4, "*pad", N_("automático"),			"auto",	TRUE},
+	{"padextra",	N_("Mandos de más"),		4, "menu|p1|p2", N_("solo menús|jugador 1|jugador 2"), "p1", TRUE},
+	{"cursors",	N_("Cursores del PC"),	4, "both|keys|joystick", N_("teclas y joystick|teclas|joystick"), "both", TRUE},
+	{"kbdfire",	N_("Disparo con teclado"),	4, "win|rctrl|none", N_("teclas Windows|Ctrl derecho|ninguna"), "win", TRUE},
+	{"_padbuttons",	N_("Botones del mando"),	4, "*accion", N_("ENTER: configurar"),	"",	TRUE},
 	{"f5",		N_("F5 / Alt+F5"),	3, "nmi|files", N_("NMI / ficheros|ficheros / NMI"),	"nmi",	TRUE},
 	{"recreated",	N_("Recreated ZX"),	3, "0|auto|1", N_("no|automático|sí"),			"auto",	TRUE},
 	{"gpiokbd",	N_("Teclado por GPIO"),	3, "48|plus3|0", N_("48K/128|+2A/+3|ninguno"),		"48",	FALSE},
 
 	// 4 Periféricos
-	{"spectranet",	N_("Spectranet"),	4, "0|1", N_("no|sí"),					"0",	TRUE},
-	{"divmmc",	N_("divMMC con esxDOS"), 4, "0|esxdos", N_("no|sí"),				"0",	TRUE},
-	{"lec",		N_("Memoria LEC"),	4, "0|1", N_("no|sí"),					"0",	TRUE},
-	{"if1",		N_("Interface 1"),	4, "auto|0|1", N_("al usarlo|nunca|siempre"),		"auto",	TRUE},
-	{"multiface",	N_("Multiface"),	4, "1|0", N_("sí|no"),					"1",	TRUE},
-	{"rs232",	N_("RS232 (TCP 2323)"),	4, "1|0", N_("sí|no"),					"1",	FALSE},
-	{"zxnet",	N_("Red ZX Net (UDP 5050)"), 4, "1|0", N_("sí|no"),				"1",	FALSE},
+	{"spectranet",	N_("Spectranet"),	5, "0|1", N_("no|sí"),					"0",	TRUE},
+	{"divmmc",	N_("divMMC con esxDOS"), 5, "0|esxdos", N_("no|sí"),				"0",	TRUE},
+	{"lec",		N_("Memoria LEC"),	5, "0|1", N_("no|sí"),					"0",	TRUE},
+	{"if1",		N_("Interface 1"),	5, "auto|0|1", N_("al usarlo|nunca|siempre"),		"auto",	TRUE},
+	{"multiface",	N_("Multiface"),	5, "1|0", N_("sí|no"),					"1",	TRUE},
+	{"rs232",	N_("RS232 (TCP 2323)"),	5, "1|0", N_("sí|no"),					"1",	FALSE},
+	{"zxnet",	N_("Red ZX Net (UDP 5050)"), 5, "1|0", N_("sí|no"),				"1",	FALSE},
 
 	// 5 Red, hora y casete
-	{"net",		N_("Red"),		5, "auto|wifi|eth|0", N_("automática|WiFi|cable|no"),	"auto",	FALSE},
-	{"tz",		N_("Zona horaria"),	5, "-480|-300|-240|-180|0|60|120|180|240|330|480|540|600",
+	{"net",		N_("Red"),		6, "auto|wifi|eth|0", N_("automática|WiFi|cable|no"),	"auto",	FALSE},
+	{"tz",		N_("Zona horaria"),	6, "-480|-300|-240|-180|0|60|120|180|240|330|480|540|600",
 				   "UTC-8|UTC-5|UTC-4|UTC-3|UTC|UTC+1|UTC+2|UTC+3|UTC+4|UTC+5:30|UTC+8|UTC+9|UTC+10", "60", FALSE},
-	{"dst",		N_("Horario de verano"), 5, "1|0", N_("sí|no"),				"1",	FALSE},
-	{"ip",		N_("IP fija"),		5, "*ip", N_("no (DHCP)"),				"",	FALSE},
-	{"mask",	N_("Máscara de red"),	5, "*ip", "255.255.255.0",				"",	FALSE},
-	{"gw",		N_("Puerta de enlace"),	5, "*ip", N_("automática"),			"",	FALSE},
-	{"dns",		N_("Servidor DNS"),	5, "*ip", N_("automático"),			"",	FALSE},
-	{"tlsverify",	N_("Comprobar HTTPS"),	5, "1|0", N_("sí|no"),					"1",	FALSE},
-	{"ear",		N_("Casete real"),	5, "0|gpio|usb", N_("no|GPIO|USB"),			"0",	FALSE},
-	{"earinvert",	N_("Invertir casete"),	5, "0|1", N_("no|sí"),					"0",	FALSE},
-	{"earpin",	N_("GPIO del casete"),	5, "auto|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27",
+	{"dst",		N_("Horario de verano"), 6, "1|0", N_("sí|no"),				"1",	FALSE},
+	{"ip",		N_("IP fija"),		6, "*ip", N_("no (DHCP)"),				"",	FALSE},
+	{"mask",	N_("Máscara de red"),	6, "*ip", "255.255.255.0",				"",	FALSE},
+	{"gw",		N_("Puerta de enlace"),	6, "*ip", N_("automática"),			"",	FALSE},
+	{"dns",		N_("Servidor DNS"),	6, "*ip", N_("automático"),			"",	FALSE},
+	{"tlsverify",	N_("Comprobar HTTPS"),	6, "1|0", N_("sí|no"),					"1",	FALSE},
+	{"ear",		N_("Casete real"),	6, "0|gpio|usb", N_("no|GPIO|USB"),			"0",	FALSE},
+	{"earinvert",	N_("Invertir casete"),	6, "0|1", N_("no|sí"),					"0",	FALSE},
+	{"earpin",	N_("GPIO del casete"),	6, "auto|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27",
 				   N_("automático|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27"), "auto", FALSE},
 
 	// 6 ROMs y carpetas (las listas se rellenan al arrancar con lo que hay
 	// en roms/ con el tamaño de cada una, y con las carpetas de la SD)
-	{"rom48",	N_("ROM 16K/48K"),	6, "default", N_("la incluida"),			"default", FALSE},
-	{"rom128",	N_("ROM 128K"),		6, "default", N_("la incluida"),			"default", FALSE},
-	{"romplus2",	N_("ROM +2"),		6, "default", "plus2.rom",				"default", FALSE},
-	{"romplus2a",	N_("ROM +2A"),		6, "default", "plus2a.rom",				"default", FALSE},
-	{"romplus3",	N_("ROM +3"),		6, "default", "plus3.rom",				"default", FALSE},
-	{"romplus3e",	N_("ROM +3e"),		6, "default", N_("según el idioma"),			"default", FALSE},
-	{"romif1",	N_("ROM Interface 1"),	6, "default", "if1.rom",				"default", FALSE},
-	{"romesx",	N_("ROM de esxDOS"),	6, "default", "esxmmc.bin",				"default", FALSE},
-	{"romsnet",	N_("Flash Spectranet"),	6, "default", "spectranet.rom",				"default", FALSE},
-	{"esxdir",	N_("Importar a esxDOS desde"), 6, "esxdos_i|0", N_("esxdos_i|no"),		"esxdos_i", FALSE},
-	{"web",		N_("Página web"),	7, "1|ro|0", N_("sí|solo lectura|no"),			"1",	FALSE},
-	{"webpass",	N_("Contraseña de la web"),	7, "*pass", N_("sin contraseña"),			"",	FALSE},
-	// Actualización (página 9): filas de acción y opciones
-	{"_updversion",	N_("Versión instalada"),	8, "*accion", "",				"",	TRUE},
-	{"_updcheck",	N_("Buscar actualización"),	8, "*accion", N_("ENTER: buscar"),		"",	TRUE},
-	{"_updlocal",	N_("Paquete guardado"),		8, "*accion", N_("ENTER: elegir"),		"",	TRUE},
-	{"updboot",	N_("Buscar al arrancar"),	8, "0|1", N_("no|sí"),				"0",	TRUE},
-	{"updkeep",	N_("Paquetes guardados"),	8, "2|all", N_("actual y anterior|todos"),	"2",	TRUE},
-	{"updconfig",	N_("Config. al actualizar"),	8, "keep|new", N_("conservar la mía|poner la nueva"), "keep", TRUE}
+	{"rom48",	N_("ROM 16K/48K"),	7, "default", N_("la incluida"),			"default", FALSE},
+	{"rom128",	N_("ROM 128K"),		7, "default", N_("la incluida"),			"default", FALSE},
+	{"romplus2",	N_("ROM +2"),		7, "default", "plus2.rom",				"default", FALSE},
+	{"romplus2a",	N_("ROM +2A"),		7, "default", "plus2a.rom",				"default", FALSE},
+	{"romplus3",	N_("ROM +3"),		7, "default", "plus3.rom",				"default", FALSE},
+	{"romplus3e",	N_("ROM +3e"),		7, "default", N_("según el idioma"),			"default", FALSE},
+	{"romif1",	N_("ROM Interface 1"),	7, "default", "if1.rom",				"default", FALSE},
+	{"romesx",	N_("ROM de esxDOS"),	7, "default", "esxmmc.bin",				"default", FALSE},
+	{"romsnet",	N_("Flash Spectranet"),	7, "default", "spectranet.rom",				"default", FALSE},
+	{"esxdir",	N_("Importar a esxDOS desde"), 7, "esxdos_i|0", N_("esxdos_i|no"),		"esxdos_i", FALSE},
+	{"web",		N_("Página web"),	8, "1|ro|0", N_("sí|solo lectura|no"),			"1",	FALSE},
+	{"webpass",	N_("Contraseña de la web"),	8, "*pass", N_("sin contraseña"),			"",	FALSE},
+	// Actualización (página 10): filas de acción y opciones
+	{"_updversion",	N_("Versión instalada"),	9, "*accion", "",				"",	TRUE},
+	{"_updcheck",	N_("Buscar actualización"),	9, "*accion", N_("ENTER: buscar"),		"",	TRUE},
+	{"_updlocal",	N_("Paquete guardado"),		9, "*accion", N_("ENTER: elegir"),		"",	TRUE},
+	{"updboot",	N_("Buscar al arrancar"),	9, "0|1", N_("no|sí"),				"0",	TRUE},
+	{"updkeep",	N_("Paquetes guardados"),	9, "2|all", N_("actual y anterior|todos"),	"2",	TRUE},
+	{"updconfig",	N_("Config. al actualizar"),	9, "keep|new", N_("conservar la mía|poner la nueva"), "keep", TRUE}
 };
 
 #define NUM_SETTINGS	(sizeof Settings / sizeof Settings[0])
@@ -160,6 +168,7 @@ static int IndexOf (const char *pList, const char *pValue)
 CSettings::CSettings (void)
 :	m_bDirty (FALSE)
 {
+	m_nPads = 0;
 	for (unsigned i = 0; i < NUM_SETTINGS; i++)
 	{
 		strcpy (m_Value[i], Settings[i].pDefault);
@@ -275,6 +284,24 @@ const char *CSettings::GetValueName (unsigned nIndex) const
 	{
 		return "********";		// la contraseña no se ve en pantalla
 	}
+	if (IsPad (nIndex))
+	{
+		if (strcmp (m_Value[nIndex], "auto") == 0 || m_Value[nIndex][0] == '\0')
+		{
+			return T (Settings[nIndex].pNames);		// automático
+		}
+		for (unsigned i = 0; i < m_nPads; i++)
+		{
+			if (strcmp (m_Value[nIndex], m_PadId[i]) == 0)
+			{
+				return m_PadName[i];
+			}
+		}
+		static char Missing[SETTING_VALUE_LEN + 24];	// guardado, pero no conectado
+		strcpy (Missing, m_Value[nIndex]);
+		strcat (Missing, T (" (no conectado)"));
+		return Missing;
+	}
 	if (IsEditable (nIndex) || IsAction (nIndex))
 	{
 		return m_Value[nIndex][0] != '\0' ? m_Value[nIndex] : T (Settings[nIndex].pNames);
@@ -340,8 +367,59 @@ void CSettings::SetValue (const char *pKey, const char *pValue)
 	}
 }
 
+// Los joysticks de los dos jugadores que no pueden ir juntos (como
+// CZXKeyboard::CanCombine): el mismo dos veces, o Cursor con Sinclair 1
+static boolean JoyConflict (const char *a, const char *b)
+{
+	if (strcmp (a, "none") == 0 || strcmp (b, "none") == 0)
+	{
+		return FALSE;
+	}
+	return    strcmp (a, b) == 0
+	       || (strcmp (a, "cursor") == 0 && strcmp (b, "sinclair1") == 0)
+	       || (strcmp (a, "sinclair1") == 0 && strcmp (b, "cursor") == 0);
+}
+
+// Mandos conectados, para las filas "Mando del jugador": su id (vid:pid)
+// y lo que se ve
+void CSettings::SetPads (unsigned nCount, const char Ids[][SETTING_PAD_ID], const char Names[][SETTING_NAME_LEN])
+{
+	m_nPads = nCount < SETTING_MAX_PADS ? nCount : SETTING_MAX_PADS;
+	for (unsigned i = 0; i < m_nPads; i++)
+	{
+		strcpy (m_PadId[i], Ids[i]);
+		strcpy (m_PadName[i], Names[i]);
+	}
+}
+
+boolean CSettings::IsPad (unsigned nIndex)
+{
+	return nIndex < NUM_SETTINGS && strcmp (Settings[nIndex].pValues, "*pad") == 0;
+}
+
 void CSettings::Step (unsigned nIndex, int nDirection)
 {
+	if (IsPad (nIndex))
+	{
+		// "auto" y los mandos conectados (sin repetir el mismo modelo)
+		int nCur = -1;			// -1 = auto
+		for (unsigned i = 0; i < m_nPads; i++)
+		{
+			if (strcmp (m_Value[nIndex], m_PadId[i]) == 0)
+			{
+				nCur = i;
+			}
+		}
+		if (strcmp (m_Value[nIndex], "auto") != 0 && nCur < 0)
+		{
+			nCur = -1;		// uno que no está: se vuelve a auto
+		}
+		int nCount = m_nPads + 1;
+		int n = (nCur + 1 + nCount + (nDirection < 0 ? -1 : 1)) % nCount - 1;
+		strcpy (m_Value[nIndex], n < 0 ? "auto" : m_PadId[n]);
+		m_bDirty = TRUE;
+		return;
+	}
 	if (IsEditable (nIndex) || IsAction (nIndex))
 	{
 		return;				// se escriben (ver CMenu)
@@ -367,6 +445,18 @@ void CSettings::Step (unsigned nIndex, int nDirection)
 	}
 
 	GetItem (pList, n, m_Value[nIndex], SETTING_VALUE_LEN);
+
+	// Joysticks de los jugadores: se saltan las combinaciones que no valen
+	const char *pKey = Settings[nIndex].pKey;
+	if (strcmp (pKey, "joystick") == 0 || strcmp (pKey, "joystick2") == 0)
+	{
+		int nOther = Find (strcmp (pKey, "joystick") == 0 ? "joystick2" : "joystick");
+		for (unsigned i = 0; i < nCount && nOther >= 0 && JoyConflict (m_Value[nIndex], m_Value[nOther]); i++)
+		{
+			n = (n + nCount + (nDirection < 0 ? -1 : 1)) % nCount;
+			GetItem (pList, n, m_Value[nIndex], SETTING_VALUE_LEN);
+		}
+	}
 	m_bDirty = TRUE;
 }
 
@@ -551,6 +641,18 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	if (strcmp (pKey, "tkula") == 0)
 	{
 		return Is ("model", "tk90x") || Is ("model", "tk95");
+	}
+
+	// Disparo con el teclado: solo si el teclado maneja un joystick
+	if (strcmp (pKey, "kbdfire") == 0)
+	{
+		return !Is ("joystick", "none") && !Is ("cursors", "keys");
+	}
+
+	// El mando del jugador 2, solo si hay jugador 2
+	if (strcmp (pKey, "pad2") == 0)
+	{
+		return !Is ("joystick2", "none");
 	}
 
 	// ROM del TK90X: solo con ese modelo; el idioma, solo con la v3

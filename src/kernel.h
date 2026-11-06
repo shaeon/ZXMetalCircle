@@ -28,6 +28,7 @@
 
 #include "video.h"
 #include "zxkeyboard.h"
+#include "padprofile.h"
 #include "tape.h"
 #include "spectrum.h"
 #include "menu.h"
@@ -57,6 +58,8 @@ enum TShutdownMode
 	ShutdownHalt,
 	ShutdownReboot
 };
+
+extern const char *JoystickNames[JoystickModeCount];	// sus nombres (N_), en kernel.cpp
 
 class CKernel : public CTapeSaveHandler
 {
@@ -136,9 +139,24 @@ private:
 	void OpenTapeSelect (void);
 	void UpdateRTC (void);
 	void RebootPi (boolean bSaveSettings);
+	void PadEditStart (void);
+	void PadEditOpen (unsigned nPad);
+	void PadEditScanProfiles (void);
+	void PadEditLoad (const char *pName);
+	void PadEditRefresh (void);
+	boolean PadEditSave (void);
+	void PadEditClose (void);
+	void PadEditKey (u8 nKey, unsigned nRow);
+	void PadEditBackToList (unsigned nRow);
+	boolean PadEditMenuResult (TMenuResult Result);
+	void PadEditPoll (void);
+	void UpdatePadPlayers (void);
+	void LoadPadProfile (unsigned nPad, TJoystickMode Mode);	// joysticks/VVVV-PPPP/<tipo>.txt		// a qué jugador va cada mando (pad1, pad2, padextra)
+	void NextJoystick (unsigned nPlayer);
+	void CheckJoystickPair (void);		// los dos jugadores, nunca el mismo joystick	// F4 / Select: el siguiente joystick de ese jugador
 	void FlushToSD (void);			// lo pendiente (discos, Microdrives...) a la SD
 
-	// Actualización desde GitHub (kernelupdate.cpp, página 9 de la configuración)
+	// Actualización desde GitHub (kernelupdate.cpp, página 10 de la configuración)
 	boolean UpdateInit (void);		// TRUE: avisa de una instalación a medias
 	void UpdateRows (void);
 	void UpdateBootCheck (void);
@@ -227,6 +245,31 @@ private:
 	// Mandos USB
 	CUSBGamePadDevice * volatile m_pGamePads[MAX_GAMEPADS];
 	unsigned		m_GamePadProps[MAX_GAMEPADS];
+	u16			m_PadVID[MAX_GAMEPADS];		// fabricante y modelo de cada mando
+	u16			m_PadPID[MAX_GAMEPADS];
+	u8			m_PadLED[MAX_GAMEPADS];		// luz de jugador puesta (0xFF = ninguna aún)
+	CPadProfile		m_PadProfile[MAX_GAMEPADS];	// qué hace cada botón (joysticks/VVVV-PPPP/)
+	unsigned		m_PadButtonCount[MAX_GAMEPADS];	// botones de cada mando (genéricos)
+
+	// Pantalla "Botones del mando" (kernelpad.cpp)
+	#define PAD_EDIT_PROFILES	16
+	int			m_nPadEdit;			// el mando que se edita (-1 = ninguno)
+	unsigned		m_nPadEditStage;
+	TJoystickMode		m_PadEditMode;
+	CPadProfile		m_PadEditProfile;
+	char			m_PadEditName[PAD_PROFILE_NAME];	// "" = el de por defecto
+	char			m_PadEditProfiles[PAD_EDIT_PROFILES][PAD_PROFILE_NAME];
+	unsigned		m_nPadEditProfiles;
+	u8			m_PadEditRows[PAD_BUTTONS];
+	unsigned		m_nPadEditRows;
+	boolean			m_bPadEditDirty;
+	boolean			m_bPadEditRename;
+	unsigned		m_nPadEditKind;
+	unsigned		m_nPadEditButton;
+	unsigned		m_PadEditChoice[MAX_GAMEPADS];
+	volatile unsigned	m_nPadEditPressed;		// botón pulsado + 1 (desde el USB)
+	u8			m_PadProfileMode[MAX_GAMEPADS];	// tipo de joystick del perfil cargado (0xFF = ninguno)
+	volatile boolean	m_bPadsChanged;		// mandos conectados o quitados: repartir
 	unsigned		m_PrevPadButtons[MAX_GAMEPADS];	// para detectar pulsaciones nuevas
 	u8			m_PrevPadJoy[MAX_GAMEPADS];
 

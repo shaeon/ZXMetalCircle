@@ -6,7 +6,7 @@
 
 La **Spectranet** de Dylan Smith (https://spectrum.alioth.net) da red de verdad al Spectrum: monta servidores **TNFS** desde el BASIC, abre conexiones TCP y UDP, y la usan programas como clientes de IRC, navegadores o demos que dicen "Spectranet not found" si no la encuentran.
 
-**Activarla**: añade `spectranet=1` a `cmdline.txt`, o conéctala en cualquier momento con **Alt+T** o en la configuración (F1, C, página 5). Hace falta que la Pi tenga red (WiFi o cable).
+**Activarla**: añade `spectranet=1` a `cmdline.txt`, o conéctala en cualquier momento con **Alt+T** o en la configuración (F1, C, página 6). Hace falta que la Pi tenga red (WiFi o cable).
 - Al arrancar sale "Alioth Spectranet", "Link.>OK", y en la pantalla de inicio la IP. La Spectranet usa la red de la Pi: su DHCP lo contesta el propio emulador con la IP de la Pi, así que no hay que configurar nada. Si la WiFi tarda en conectar, la Spectranet espera.
 - **F5** (NMI) abre su menú: configuración de red, módulos de ROM, cargar datos y gestor de snapshots.
 - Desde el BASIC, por ejemplo:
@@ -29,7 +29,7 @@ La **Spectranet** de Dylan Smith (https://spectrum.alioth.net) da red de verdad 
 
 ## Periféricos que se paginan sobre la ROM
 
-La Spectranet (Alt+T), la divMMC con esxDOS (Alt+X), la memoria LEC (Alt+L) y el Interface 1 se conectan con su tecla o en la página 5 de la configuración (F1, C). No pueden estar a la vez: al conectar uno se desconectan los demás. Cada cambio reinicia el Spectrum. La divMMC no se usa en el +3e (allí la tarjeta va por la ZXMMC), y la memoria LEC en los 128K se usa desde 48 BASIC.
+La Spectranet (Alt+T), la divMMC con esxDOS (Alt+X), la memoria LEC (Alt+L) y el Interface 1 se conectan con su tecla o en la página 6 de la configuración (F1, C). No pueden estar a la vez: al conectar uno se desconectan los demás. Cada cambio reinicia el Spectrum. La divMMC no se usa en el +3e (allí la tarjeta va por la ZXMMC), y la memoria LEC en los 128K se usa desde 48 BASIC.
 
 ## ULAplus
 
@@ -62,7 +62,7 @@ El Interface 1 de Sinclair añadía al Spectrum hasta 8 microdrives (pequeñas c
 
 La ampliación LEC (Jiří Lamač, 1987) sustituía las memorias del 48K por chips más grandes. Con un puerto (0xFD; en realidad, cualquier puerto con A1 = 0) se puede poner una página de 32 KB de RAM en 0x0000–0x7FFF en lugar de la ROM y la pantalla. Hay 16 páginas: la 15 es la RAM alta del propio Spectrum, que siempre está en 0x8000–0xFFFF. Su gran uso fue el **CP/M 2.2 de LEC**, que funciona con microdrives.
 
-- Se conecta con `lec=1`, Alt+L o en la configuración (F1, C, página 5).
+- Se conecta con `lec=1`, Alt+L o en la configuración (F1, C, página 6).
 - **En los 128K** (128, +2, +2A, +3, +3e) funciona en modo 48K: tras conectarla, elige **48 BASIC** en el menú (o entra con USR 0) y carga el CP/M como en el 48K. La LEC original era para el 48K, y en un 128K real su puerto chocaría con el de la paginación (0x7FFD) y con el del chip AY (0xBFFD/0xFFFD), que también acaban en FD. El emulador solo toma para la LEC las escrituras con la forma que usa el CP/M (`OUT (0xFD),A`, en las que el byte alto del puerto es el propio valor), así que el AY y lo demás siguen funcionando. Probado: el CP/M arranca y lista el disco en el 48K, el 128K, el +2A y el +3. En el +2A y el +3 no hay Interface 1, así que no hay unidad B: de microdrive. Mientras la LEC está paginada no hay ROM, así que no actúan las trampas de cinta ni el Interface 1, el Multiface o el AY, igual que en JSpeccy y en el hardware real.
 - La pantalla sigue siendo la RAM original del 48K, que la ULA lee siempre.
 - Con la LEC paginada no se pueden grabar snapshots, porque los formatos no incluyen esa memoria.

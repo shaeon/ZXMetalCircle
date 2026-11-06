@@ -9,7 +9,7 @@ Guías de uso de ZXMetalCircle. Cada una está en inglés y en español (`_es`).
 | 01 | [Building on Linux and Windows](01_building.md) | [Compilar en Linux y Windows](01_building_es.md) |
 | 02 | [Writing programs and saving them to tape](02_basic_and_tape.md) | [Escribir programas y grabarlos en cinta](02_basic_and_tape_es.md) |
 | 03 | [GPIO pins, real keyboard and cassette](03_gpio.md) | [Pines GPIO, teclado real y casete](03_gpio_es.md) |
-| 04 | [USB gamepads](04_usb_gamepads.md) | [Mandos USB](04_usb_gamepads_es.md) |
+| 04 | [Joysticks and USB gamepads](04_usb_gamepads.md) | [Joysticks y mandos USB](04_usb_gamepads_es.md) |
 | 05 | [Settings](05_settings.md) | [Configuración](05_settings_es.md) |
 | 06 | [Keyboard and mouse](06_keyboard_and_mouse.md) | [Teclado y ratón](06_keyboard_and_mouse_es.md) |
 | 07 | [Files and tapes](07_files_and_tapes.md) | [Ficheros y cintas](07_files_and_tapes_es.md) |

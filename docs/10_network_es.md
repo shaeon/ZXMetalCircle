@@ -24,7 +24,7 @@ Al arrancar, la conexión se hace en segundo plano. Cuando está lista, aparece 
 
 Además, se anuncia en la red local (mDNS) como servicio web "ZXMetalCircle".
 
-**Proteger la página** (F1, C, página 8, o en `cmdline.txt`):
+**Proteger la página** (F1, C, página 9, o en `cmdline.txt`):
 - `web=0` la apaga del todo (ni siquiera se arranca el servidor); en F1 la línea de la red dice "(web apagada)".
 - `web=ro` la deja en **solo lectura**: se puede ver la SD, bajar ficheros, buscar en ZXDB y mandar cargar un juego, pero no subir, borrar, crear carpetas ni descargar de ZXDB a la SD (esas opciones ni aparecen).
 - `webpass=` pone una **contraseña** (en la configuración se escribe con letras minúsculas y números, y se ve como `********`). La página la pide una vez y entonces crea una clave de sesión al azar que va en los enlaces y formularios (el servidor web de Circle no da acceso a cookies ni a la contraseña del navegador). Las claves se pierden al apagar la Pi; tras 5 intentos fallidos hay que esperar 30 s. Va sin cifrar (HTTP): protege de curiosos de tu red, no de alguien que la espíe.

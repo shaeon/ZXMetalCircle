@@ -51,7 +51,8 @@ enum TMenuResult
 	MenuResultTapeSeek,		// ENTER en el navegador de la cinta (GetSelectedTapeBlock ())
 	MenuResultTapeInvert,		// P en el navegador de la cinta: invertir la polaridad
 	MenuResultInput,		// línea de texto: ENTER (GetInput ())
-	MenuResultInputCancel		// línea de texto: ESC
+	MenuResultInputCancel,		// línea de texto: ESC
+	MenuResultListKey		// lista de dos columnas: una tecla (GetListKey (), GetListSelected ())
 };
 
 class CMenu : public CTNFSListener
@@ -94,8 +95,23 @@ public:
 
 	// Línea de texto (letras, números y espacio): título y dos líneas de
 	// explicación; ENTER da MenuResultInput y ESC MenuResultInputCancel
-	void OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp2);
+	// pFooter: la línea de abajo (0 = la de Alt+V: "ENTER pulsar...")
+	void OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter = 0);
 	const char *GetInput (void) const	{ return m_InputBuf; }
+
+	// Lista de dos columnas (nombre y valor), como la configuración: la lleva
+	// quien la abre. El menú mueve la selección (cursores, RePág, AvPág,
+	// Inicio, Fin) y devuelve MenuResultListKey con ← → ENTER ESC SUPR y las
+	// letras; la tecla, en GetListKey (HID).
+	void OpenList (const char *pTitle, const char *pHelp1, const char *pHelp2);
+	void SetListRow (unsigned nRow, const char *pLabel, const char *pValue);
+	void SetListCount (unsigned nCount);
+	void SetListTitle (const char *pTitle);
+	void SetListNote (const char *pNote);		// una línea encima de la ayuda
+	unsigned GetListSelected (void) const		{ return m_nListSelected; }
+	void SetListSelected (unsigned nRow);
+	u8 GetListKey (void) const			{ return m_nListKey; }
+	boolean IsListOpen (void) const			{ return m_Mode == ModeList; }
 	void Close (void)		{ m_Mode = ModeClosed; }
 	boolean IsOpen (void) const	{ return m_Mode != ModeClosed; }
 
@@ -131,7 +147,7 @@ private:
 	CVideo *m_pVideo;
 
 	enum TMode { ModeClosed, ModeBrowser, ModeHelp, ModeKeyHelp, ModeSettings, ModeChoice, ModeUnits,
-		     ModeAbout, ModeTape, ModeInput };
+		     ModeAbout, ModeTape, ModeInput, ModeList };
 	unsigned SettingsOnPage (unsigned *pIndex, unsigned nMax) const;
 	void FixSettingsRow (void);
 	TMode m_Mode;
@@ -165,10 +181,22 @@ private:
 	unsigned m_nSettingsRow;
 	unsigned m_nChangedSetting;
 	char m_ChoiceTitle[48];
+	#define MENU_LIST_MAX	40
+	#define MENU_LIST_ROWS	13		// las que caben
+	char m_ListTitle[64];
+	char m_ListHelp[2][48];
+	char m_ListNote[48];
+	char m_ListLabel[MENU_LIST_MAX][24];
+	char m_ListValue[MENU_LIST_MAX][48];
+	unsigned m_nListCount;
+	unsigned m_nListSelected;
+	unsigned m_nListTop;
+	u8 m_nListKey;
 	char m_InputTitle[48];
 	boolean m_bUnitsFromShortcut;	// unidades abiertas con Alt+U
 	boolean m_bSettingsFromShortcut;	// configuración abierta con Alt+F1
 	char m_InputHelp[2][48];
+	char m_InputFooter[48];
 	char m_InputBuf[20];		// lo escrito en la línea de texto
 	char m_Choice[MENU_CHOICE_ITEMS][100];	// nombres de ZIP de hasta 96
 	unsigned m_nChoices;

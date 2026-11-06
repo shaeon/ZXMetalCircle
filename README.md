@@ -178,7 +178,7 @@ Everything about how to use the emulator is in the [`docs`](docs/README.md) fold
 | 01 | [Building](docs/01_building.md) | building on Linux and Windows (WSL), testing in QEMU |
 | 02 | [Writing programs and saving to tape](docs/02_basic_and_tape.md) | BASIC programs, `SAVE` to the SD card, loading them |
 | 03 | [GPIO pins](docs/03_gpio.md) | pins, real keyboard and joysticks through GPIO, real cassette |
-| 04 | [USB gamepads](docs/04_usb_gamepads.md) | supported gamepads and their mapping |
+| 04 | [Joysticks and USB gamepads](docs/04_usb_gamepads.md) | two players, which gamepad belongs to whom, button profiles |
 | 05 | [Settings](docs/05_settings.md) | `cmdline.txt` options, the settings (Alt+F1), languages, `excluir.txt` |
 | 06 | [Keyboard and mouse](docs/06_keyboard_and_mouse.md) | keys, several keys at once, diagnostics, Recreated ZX, Kempston mouse |
 | 07 | [Files and tapes](docs/07_files_and_tapes.md) | drives, ZIP files, snapshots, Interface 2 cartridges |
@@ -187,7 +187,7 @@ Everything about how to use the emulator is in the [`docs`](docs/README.md) fold
 | 10 | [Network](docs/10_network.md) | WiFi, web server and time, searching and downloading programs, TNFS |
 | 11 | [Picture and sound](docs/11_picture_and_sound.md) | border and scanlines, sound, Issue 2/3 and speed, several cores |
 | 12 | [Models and ROMs](docs/12_models_and_roms.md) | TK90X and TK95, the ROMs |
-| 13 | [Updating the emulator](docs/13_updating.md) | updating from GitHub (page 9 of the settings) |
+| 13 | [Updating the emulator](docs/13_updating.md) | updating from GitHub (page 10 of the settings) |
 
 ## Structure
 

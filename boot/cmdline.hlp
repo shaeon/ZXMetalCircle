@@ -131,7 +131,7 @@ defecto.
 ------------------------------------------------------------------------------
  TECLADO, JOYSTICK Y RATON
 ------------------------------------------------------------------------------
- joystick=kempston  Joystick emulado (F4 lo cambia en marcha):
+ joystick=kempston  Joystick emulado del jugador 1 (F4 lo cambia en marcha):
                     none       ninguno
                     kempston   Kempston                        (por defecto)
                     fuller     Fuller
@@ -139,6 +139,17 @@ defecto.
                     sinclair2  Sinclair 2 (Interface 2, teclas 1-5)
                     cursor     Cursor / AGF / Protek (teclas 5-8 y 0)
                     qaop       Q A O P y espacio
+ joystick2=none     Joystick del jugador 2, con los mismos valores. No puede
+                    ser el del jugador 1, ni Cursor con Sinclair 1
+ pad1=auto          Mando del jugador 1: auto (por orden de conexion) o un
+                    mando concreto (fabricante:modelo, p. ej. 045e:028e)
+ pad2=auto          Mando del jugador 2, igual
+ padextra=p1        Los demas mandos: p1 o p2 (se suman a ese jugador) o
+                    menu (solo sirven en los menus)
+ kbdfire=win        Tecla del disparo con el teclado: win (las dos teclas
+                    Windows), rctrl (Ctrl derecho) o none
+                    Perfiles de los botones de cada mando: joysticks/ (ver
+                    docs/04_usb_gamepads_es.md)
 
  cursors=both     Que hacen los cursores del teclado del PC:
                     both      teclas de cursor del Spectrum (CAPS SHIFT+5-8)

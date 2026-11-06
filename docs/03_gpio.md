@@ -8,14 +8,14 @@ Numbers are always **GPIO (BCM)**; in brackets, the **physical pin** on the head
 
 | Function | Option in `cmdline.txt` | In the settings (Alt+F1) |
 | --- | --- | --- |
-| Real 48K/128 keyboard (8 × 5 matrix), with joysticks wired to the matrix | `gpiokbd=48` (default) | 4 Keyboard and controllers: "Keyboard via GPIO" = 48K/128 |
+| Real 48K/128 keyboard (8 × 5 matrix), with joysticks wired to the matrix | `gpiokbd=48` (default) | 4 Keyboard: "Keyboard via GPIO" = 48K/128 |
 | Real +2A/+3 keyboard (13 × 11 matrix) | `gpiokbd=plus3` | "Keyboard via GPIO" = +2A/+3 |
 | No GPIO keyboard | `gpiokbd=0` | "Keyboard via GPIO" = none |
 | Extended mode button (48K/128 keyboard only) | comes with `gpiokbd=48` | — |
 | NMI button (48K/128 keyboard only) | comes with `gpiokbd=48` | — |
 | Copy of the PWM sound on GPIO12 (Pi 1, 2, 3 and Zero) | `sounddev=sndpwm gpioaudio=1` | 2 Picture and sound: "Sound via GPIO12" |
 | PWM sound on the Pi 5 (it has no jack) | `sounddev=sndpwm` | "Sound output" = jack (PWM) |
-| Input from a real cassette player (with a comparator, e.g. LM393) | `ear=gpio earpin=...` | 6 Network, time and cassette: "Real cassette" = GPIO, "Cassette GPIO" |
+| Input from a real cassette player (with a comparator, e.g. LM393) | `ear=gpio earpin=...` | 7 Network, time and cassette: "Real cassette" = GPIO, "Cassette GPIO" |
 | Logging through the serial port | `logdev=ttyS1` | — |
 
 The keyboard wiring is pastbytes' design for ZXBaremulator (https://pastbytes.com/zxb/), with a diode on each row (cathode towards the Raspberry Pi). The +2A/+3 one follows spark2k06's zxunops2 project.

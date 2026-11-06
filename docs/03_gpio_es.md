@@ -11,14 +11,14 @@ interna a 3,3 V (pull-up): **nunca les metas 5 V**.
 
 | Función | Opción en `cmdline.txt` | En la configuración (F1, C) |
 | --- | --- | --- |
-| Teclado real del 48K/128 (matriz 8 × 5), con los joysticks cableados a la matriz | `gpiokbd=48` (por defecto) | 4 Teclado y mandos: "Teclado por GPIO" = 48K/128 |
+| Teclado real del 48K/128 (matriz 8 × 5), con los joysticks cableados a la matriz | `gpiokbd=48` (por defecto) | 4 Teclado: "Teclado por GPIO" = 48K/128 |
 | Teclado real del +2A/+3 (matriz 13 × 11) | `gpiokbd=plus3` | "Teclado por GPIO" = +2A/+3 |
 | Sin teclado por GPIO | `gpiokbd=0` | "Teclado por GPIO" = ninguno |
 | Pulsador de modo extendido (solo con el teclado 48K/128) | va con `gpiokbd=48` | — |
 | Pulsador de NMI (solo con el teclado 48K/128) | va con `gpiokbd=48` | — |
 | Copia del sonido PWM por el GPIO12 (Pi 1, 2, 3 y Zero) | `sounddev=sndpwm gpioaudio=1` | 2 Imagen y sonido: "Sonido por GPIO12" |
 | Sonido PWM en la Pi 5 (no tiene jack) | `sounddev=sndpwm` | "Salida de sonido" = jack (PWM) |
-| Entrada de un casete real (con un comparador, p. ej. LM393) | `ear=gpio earpin=...` | 6 Red, hora y casete: "Casete real" = GPIO, "GPIO del casete" |
+| Entrada de un casete real (con un comparador, p. ej. LM393) | `ear=gpio earpin=...` | 7 Red, hora y casete: "Casete real" = GPIO, "GPIO del casete" |
 | Registro por el puerto serie | `logdev=ttyS1` | — |
 
 El montaje del teclado es el de pastbytes para ZXBaremulator

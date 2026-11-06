@@ -1,7 +1,7 @@
 //
 // kernelupdate.cpp
 //
-// La actualización desde las releases de GitHub (página 9 de la
+// La actualización desde las releases de GitHub (página 10 de la
 // configuración): buscar, descargar, instalar con CUpdater y reiniciar.
 //
 // - Buscar: la API de GitHub; si falla (límite de 60 consultas por hora y
@@ -179,7 +179,7 @@ boolean CKernel::UpdateInit (void)
 	FS.Read (UPDATE_MARKER, (u8 *) Version, nSize);
 	Version[nSize] = '\0';
 	// como el aviso de cmdline.txt: si otro mensaje lo tapa, vuelve a salir
-	strncpy (m_OptionWarning, T ("Actualización a medias: Alt+F1, pág. 9"), sizeof m_OptionWarning - 1);
+	strncpy (m_OptionWarning, T ("Actualización a medias: Alt+F1, pág. 10"), sizeof m_OptionWarning - 1);
 	m_OptionWarning[sizeof m_OptionWarning - 1] = '\0';
 	ShowMessage (m_OptionWarning);
 	m_nWarningFrames = 500;			// unos 10 s
@@ -284,7 +284,7 @@ void CKernel::UpdateConfirm (void)
 	}
 }
 
-// ENTER en una fila de acción de la página 9
+// ENTER en una fila de acción de la página 10
 void CKernel::UpdateAction (const char *pKey)
 {
 	if (strcmp (pKey, "_updcheck") == 0)
@@ -325,7 +325,7 @@ void CKernel::UpdateAction (const char *pKey)
 	}
 }
 
-// Las respuestas de la página 9 y de sus listas; TRUE si era suya
+// Las respuestas de la página 10 y de sus listas; TRUE si era suya
 boolean CKernel::UpdateMenuResult (TMenuResult Result)
 {
 	if (Result == MenuResultSettingAction)

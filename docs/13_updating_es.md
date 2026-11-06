@@ -4,7 +4,7 @@
 
 ## Actualizar el emulador
 
-Desde la versión 1.07, el emulador se puede actualizar solo, desde las versiones publicadas en GitHub. Está en la **página 9 de la configuración** (Alt+F1 y luego RePág/AvPág):
+Desde la versión 1.07, el emulador se puede actualizar solo, desde las versiones publicadas en GitHub. Está en la **página 10 de la configuración** (Alt+F1 y luego RePág/AvPág):
 
 | Fila | Qué hace |
 | --- | --- |
@@ -15,7 +15,7 @@ Desde la versión 1.07, el emulador se puede actualizar solo, desde las versione
 | Paquetes guardados | `updkeep=`: `2` deja en `update` el de la versión instalada y el de la anterior (para poder volver); `all`, todos |
 | Config. al actualizar | `updconfig=`: `keep` conserva tus ficheros de configuración; `new` pone los nuevos |
 
-Cuando hay una versión nueva, la ayuda (F1) lo dice en la última línea: «Nueva versión: 1.07 (Alt+F1, pág. 9)».
+Cuando hay una versión nueva, la ayuda (F1) lo dice en la última línea: «Nueva versión: 1.07 (Alt+F1, pág. 10)».
 
 **Cómo se instala:**
 - Antes de empezar se graba lo pendiente (discos del +3, Microdrives…) y, si has cambiado la configuración sin guardarla, se pregunta.
@@ -27,7 +27,7 @@ Cuando hay una versión nueva, la ayuda (F1) lo dice en la última línea: «Nue
 
 **Si algo falla:**
 - Si la descarga falla o el paquete está dañado, no se toca nada.
-- Si falla a mitad de la copia (la SD llena, un error de escritura), no se reinicia: se ofrece reintentar. Mientras no termine, existe `update/EN_CURSO` y al arrancar se avisa: «Actualización a medias: Alt+F1, pág. 9». Desde «Paquete guardado» se puede volver a instalar.
+- Si falla a mitad de la copia (la SD llena, un error de escritura), no se reinicia: se ofrece reintentar. Mientras no termine, existe `update/EN_CURSO` y al arrancar se avisa: «Actualización a medias: Alt+F1, pág. 10». Desde «Paquete guardado» se puede volver a instalar.
 - Como último recurso, el paquete de `update/` es el mismo zip de la release: se puede descomprimir a mano en la SD desde un PC.
 
 GitHub limita las consultas sin cuenta a 60 por hora; si se llega al límite, el emulador averigua la versión por la página de la release.
