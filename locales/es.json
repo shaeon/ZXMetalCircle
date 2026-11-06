@@ -235,7 +235,7 @@
 	"Sonido AY: %s%s": "Sonido AY: %s%s",
 	" (salida mono)": " (salida mono)",
 	"Teclado Recreated ZX detectado": "Teclado Recreated ZX detectado",
-	"Teclado: modo extendido (1-0 = F1-F10)": "Teclado: modo extendido (1-0 = F1-F10)",
+	"Modo extendido: 1-0, Q, W = F1-F12": "Modo extendido: 1-0, Q, W = F1-F12",
 	"Teclado: modo normal": "Teclado: modo normal",
 	"%u.%02u c/s  Alt+D cierra": "%u.%02u c/s  Alt+D cierra",
 	"Núcleo 0: %u.%u ms  Imagen: %u.%u ms": "Núcleo 0: %u.%u ms  Imagen: %u.%u ms",

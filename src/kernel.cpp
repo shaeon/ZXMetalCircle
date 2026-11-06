@@ -4844,7 +4844,7 @@ void CKernel::HandleGPIOKeyboard (void)
 	{
 		m_bExtendedMode = !m_bExtendedMode;
 		m_bWaitRelease = TRUE;		// no pasar al Spectrum las teclas de la combinación
-		ShowMessage (m_bExtendedMode ? T ("Teclado: modo extendido (1-0 = F1-F10)")
+		ShowMessage (m_bExtendedMode ? T ("Modo extendido: 1-0, Q, W = F1-F12")
 					     : T ("Teclado: modo normal"));
 	}
 	m_bPrevButton = bButton;
@@ -4922,23 +4922,15 @@ void CKernel::HandleGPIOKeyboard (void)
 
 			u8 nModifiers = 0;
 
-			if (m_bExtendedMode && nHID >= 0x1E && nHID <= 0x27)
+			// Escribiendo en un campo de la configuración (una IP): SYMBOL
+			// SHIFT + M es el punto, como en el Spectrum (no Alt+M)
+			if (bSS && nHID == 0x10 && m_Menu.IsOpen () && m_Menu.IsEditing ())
 			{
-				nHID = HID_KEY_F1 + (nHID - 0x1E);	// 1-9 -> F1-F9, 0 -> F10
+				m_Keyboard.InjectKeyEvent (0x37, 0);	// '.'
+				continue;
 			}
-			else if (bCS)
-			{
-				switch (nHID)
-				{
-				case 0x22: nHID = HID_KEY_LEFT;		break;	// CS+5
-				case 0x23: nHID = HID_KEY_DOWN;		break;	// CS+6
-				case 0x24: nHID = HID_KEY_UP;		break;	// CS+7
-				case 0x25: nHID = HID_KEY_RIGHT;	break;	// CS+8
-				case 0x27: nHID = HID_KEY_BACKSPACE;	break;	// CS+0
-				case HID_KEY_SPACE: nHID = HID_KEY_ESC;	break;	// BREAK
-				default:				break;
-				}
-			}
+
+			nHID = CZXKeyboard::TranslateGPIOKey (nHID, bCS, m_bExtendedMode);
 
 			if (m_bExtendedMode && bSS)
 			{

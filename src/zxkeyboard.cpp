@@ -589,3 +589,43 @@ void CZXKeyboard::TickHeld (void)
 		m_nHeldFrames--;
 	}
 }
+
+u8 CZXKeyboard::TranslateGPIOKey (u8 nHID, boolean bCS, boolean bExtended)
+{
+	// CAPS SHIFT + número: primero, para que en modo extendido CS+3 sea
+	// RePág y no F3
+	if (bCS)
+	{
+		switch (nHID)
+		{
+		case 0x1E: return 0x4A;			// CS+1: Inicio
+		case 0x1F: return 0x4D;			// CS+2: Fin
+		case 0x20: return 0x4B;			// CS+3: RePág
+		case 0x21: return 0x4E;			// CS+4: AvPág
+		case 0x22: return HID_KEY_LEFT;		// CS+5
+		case 0x23: return HID_KEY_DOWN;		// CS+6
+		case 0x24: return HID_KEY_UP;		// CS+7
+		case 0x25: return HID_KEY_RIGHT;	// CS+8
+		case 0x26: return 0x4C;			// CS+9: Supr
+		case 0x27: return HID_KEY_BACKSPACE;	// CS+0
+		case HID_KEY_SPACE: return HID_KEY_ESC;	// BREAK
+		default: break;
+		}
+	}
+	if (bExtended)
+	{
+		if (nHID >= 0x1E && nHID <= 0x27)
+		{
+			return HID_KEY_F1 + (nHID - 0x1E);	// 1-9 -> F1-F9, 0 -> F10
+		}
+		if (nHID == 0x14)
+		{
+			return HID_KEY_F1 + 10;			// Q -> F11 (como ESPectrum)
+		}
+		if (nHID == 0x1A)
+		{
+			return HID_KEY_F1 + 11;			// W -> F12
+		}
+	}
+	return nHID;
+}

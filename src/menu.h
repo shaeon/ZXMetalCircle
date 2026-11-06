@@ -87,6 +87,7 @@ public:
 	void SetChoiceItem (unsigned nItem, const char *pText);
 	unsigned GetChoice (void) const		{ return m_nChoiceSelected; }
 	void SetChoiceSelected (unsigned nItem);
+	boolean IsEditing (void) const		{ return m_bEditing; }	// escribiendo en un campo
 	// Lista solo informativa (el resultado de una actualización): sin la línea
 	// de "ENTER: elegir" de abajo
 	void SetChoiceInfo (boolean bInfo)	{ m_bChoiceInfo = bInfo; }

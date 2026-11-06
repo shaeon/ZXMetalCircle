@@ -73,6 +73,8 @@ jobs:
           ./joystick_test
           g++ -O2 -std=c++17 -I. -I$S -o keyboard_hold_test keyboard_hold_test.cpp $S/zxkeyboard.cpp
           ./keyboard_hold_test
+          g++ -O2 -std=c++17 -I. -I$S -o gpio_keys_test gpio_keys_test.cpp $S/zxkeyboard.cpp
+          ./gpio_keys_test
           g++ -O2 -std=c++17 -I. -I$S -o zip_test zip_test.cpp $S/zipfile.cpp $S/inflate.cpp
           ./zip_test
           g++ -O2 -std=c++17 -I. -I$S -o update_test update_test.cpp $S/updater.cpp $S/zipfile.cpp $S/inflate.cpp

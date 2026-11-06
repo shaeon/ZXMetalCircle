@@ -76,7 +76,7 @@ The Recreated ZX Spectrum (Elite Systems, 2013) is a replica of the rubber-key 4
   - meanwhile, those key presses do not reach the Spectrum;
   - a normal keyboard is recognised as such after 8 key presses, and until then each key may arrive with a delay of up to about 50 ms.
 - It can be used alone or together with a normal USB keyboard and the real GPIO keyboard. Its keys are combined with those of the GPIO keyboard.
-- **Extended mode**: CAPS SHIFT + SYMBOL SHIFT + ENTER, as with the GPIO keyboard and in ZXBaremulator. In that mode, 1–0 act as F1–F10 and SYMBOL SHIFT as Alt.
+- **Extended mode**: CAPS SHIFT + SYMBOL SHIFT + ENTER, as with the GPIO keyboard and in ZXBaremulator. The keys available in that mode and with CAPS SHIFT are the same as with the GPIO keyboard: see the table in [03_gpio.md](03_gpio.md).
 - In Layer B (QWERTY), the Recreated works as a normal keyboard.
 
 ## Kempston mouse

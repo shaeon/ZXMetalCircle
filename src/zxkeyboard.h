@@ -117,6 +117,12 @@ public:
 	void InjectKeyEvent (u8 nKey, u8 nModifiers)	{ PushEvent (nKey, nModifiers); }
 
 	// Tecla HID equivalente a una tecla de la matriz (0 si no tiene: CS, SS)
+	// Teclado real (GPIO, Recreated ZX) en los menús o en modo extendido:
+	// la tecla HID de la matriz con CAPS SHIFT pulsado o en modo extendido.
+	// CAPS SHIFT + 1-4 = Inicio, Fin, RePág, AvPág; 5-8 = flechas; 9 = Supr;
+	// 0 = Retroceso; ESPACIO = ESC. En modo extendido, 1-0 = F1-F10 y
+	// Q, W = F11, F12 (como ESPectrum). Lo demás no cambia.
+	static u8 TranslateGPIOKey (u8 nHID, boolean bCS, boolean bExtended);
 	static u8 MatrixKeyToHID (unsigned nRow, unsigned nBit);
 
 	// Cola de pulsaciones (flancos de bajada) para el emulador

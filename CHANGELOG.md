@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Nuevo**: con el teclado real (GPIO o Recreated ZX) se consiguen las teclas del PC que faltaban. En modo extendido, Q y W hacen de F11 y F12 (como en ESPectrum; antes no había forma de quitar el cartucho con F11). Con CAPS SHIFT, en los menús y en modo extendido: 1 y 2 = Inicio y Fin, 3 y 4 = RePág y AvPág (antes no había RePág), 9 = Supr (vaciar una unidad). Escribiendo una IP en la configuración, SYMBOL SHIFT + M da el punto (antes no se podía escribir). La traducción pasa a `CZXKeyboard::TranslateGPIOKey`, con su prueba en la Action (`gpio_keys_test`). Tabla en `docs/03_gpio`.
 - **Corregido**: en la página 9, "ENTER: instalar 1.07" no cabía en la columna de los valores (17 caracteres). Ahora dice "instalar la 1.07". Además, en toda la configuración, si el valor de la fila elegida no cabe, se desplaza poco a poco, como los nombres largos del selector y de las listas (probado en QEMU con un disco duro de nombre largo).
 
 ## 1.07

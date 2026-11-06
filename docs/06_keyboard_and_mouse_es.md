@@ -76,7 +76,7 @@ El Recreated ZX Spectrum (Elite Systems, 2013) es una réplica del 48K de gomas 
   - mientras tanto, esas pulsaciones no llegan al Spectrum;
   - un teclado normal se reconoce como tal tras 8 pulsaciones, y hasta entonces cada tecla puede llegar con un retraso de hasta unos 50 ms.
 - Puede usarse solo o junto a un teclado USB normal y al teclado real por GPIO. Sus teclas se combinan con las del teclado GPIO.
-- **Modo extendido**: CAPS SHIFT + SYMBOL SHIFT + ENTER, igual que con el teclado GPIO y que en ZXBaremulator. En ese modo, 1–0 hacen de F1–F10 y SYMBOL SHIFT de Alt.
+- **Modo extendido**: CAPS SHIFT + SYMBOL SHIFT + ENTER, igual que con el teclado GPIO y que en ZXBaremulator. Las teclas que se consiguen en ese modo y con CAPS SHIFT son las mismas que con el teclado GPIO: ver la tabla en [03_gpio_es.md](03_gpio_es.md).
 - En Layer B (QWERTY), el Recreated funciona como un teclado normal.
 
 ## Ratón Kempston
