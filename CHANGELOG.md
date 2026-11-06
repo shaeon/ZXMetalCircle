@@ -6,7 +6,7 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
-## Sin publicar
+## 1.07
 
 - **Nuevo**: carpeta `docs` con las guías de uso, cada una en inglés y en español (`_es`) y numeradas para enlazarlas fácilmente: `01_building` (compilar en Linux y Windows, también con WSL), `02_basic_and_tape` (escribir programas y grabarlos en cinta, con un "Hola, mundo" probado), `03_gpio` (los pines GPIO, antes `GPIO.md` en la raíz y solo en español) y `04_usb_gamepads` (mandos USB). Índice en `docs/README.md`, enlazado desde los dos README. La carpeta va también a la SD, para que funcionen los enlaces del README que lleva.
 - **Cambiado**: el README explica qué es el emulador y las guías de uso pasan a `docs`: del README salen las secciones de uso a nueve guías nuevas (`05_settings`, `06_keyboard_and_mouse`, `07_files_and_tapes`, `08_disks`, `09_peripherals`, `10_network`, `11_picture_and_sound`, `12_models_and_roms`, `13_updating`); "Grabar con SAVE" se une a la 02, el teclado y los joysticks por GPIO y el casete real a la 03, y lo que el README decía de compilar y de los mandos USB, al final de la 01 y la 04. El README pasa de unas 1100 líneas a unas 235, con una tabla de las guías. Movido sin perder ninguna línea (comprobado) y con los enlaces corregidos (ninguno roto, también los que van a una sección).
