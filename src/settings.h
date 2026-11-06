@@ -28,7 +28,7 @@ struct TSettingDef
 	boolean bLive;			// se aplica al momento (si no, al reiniciar)
 };
 
-#define SETTINGS_MAX		64
+#define SETTINGS_MAX		80
 #define SETTING_NAME_LEN	32
 #define SETTING_VALUE_LEN	96	// (rutas de hdd=)
 
@@ -57,6 +57,11 @@ public:
 	// cuando están vacías
 	static boolean IsEditable (unsigned nIndex);
 	static boolean IsPassword (unsigned nIndex);
+	// Filas de acción (pValues = "*accion", clave con "_"): no tienen valores,
+	// se ejecutan con ENTER y nunca se escriben en cmdline.txt. Lo que se ve
+	// a la derecha lo pone el kernel con SetActionText.
+	static boolean IsAction (unsigned nIndex);
+	void SetActionText (const char *pKey, const char *pText);
 	static boolean IsValidIP (const char *p);
 
 	// Cambia la lista de valores de una opción (los idiomas, al arrancar)

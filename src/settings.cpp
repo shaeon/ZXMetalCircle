@@ -19,7 +19,8 @@ static const char *PageTitles[] =
 	N_("Periféricos"),
 	N_("Red, hora y casete"),
 	N_("ROMs y carpetas"),
-	N_("Servidor web")
+	N_("Servidor web"),
+	N_("Actualización")
 };
 
 // Etiquetas y nombres en español con N_ (): se traducen al dibujarlos. Las
@@ -107,6 +108,13 @@ static TSettingDef Settings[] =
 	{"esxdir",	N_("Importar a esxDOS desde"), 6, "esxdos_i|0", N_("esxdos_i|no"),		"esxdos_i", FALSE},
 	{"web",		N_("Página web"),	7, "1|ro|0", N_("sí|solo lectura|no"),			"1",	FALSE},
 	{"webpass",	N_("Contraseña de la web"),	7, "*pass", N_("sin contraseña"),			"",	FALSE},
+	// Actualización (página 9): filas de acción y opciones
+	{"_updversion",	N_("Versión instalada"),	8, "*accion", "",				"",	TRUE},
+	{"_updcheck",	N_("Buscar actualización"),	8, "*accion", N_("ENTER: buscar"),		"",	TRUE},
+	{"_updlocal",	N_("Paquete guardado"),		8, "*accion", N_("ENTER: elegir"),		"",	TRUE},
+	{"updboot",	N_("Buscar al arrancar"),	8, "0|1", N_("no|sí"),				"0",	TRUE},
+	{"updkeep",	N_("Paquetes guardados"),	8, "2|all", N_("actual y anterior|todos"),	"2",	TRUE},
+	{"updconfig",	N_("Config. al actualizar"),	8, "keep|new", N_("conservar la mía|poner la nueva"), "keep", TRUE}
 };
 
 #define NUM_SETTINGS	(sizeof Settings / sizeof Settings[0])
@@ -210,6 +218,21 @@ boolean CSettings::IsEditable (unsigned nIndex)
 }
 
 // Opción de texto libre (contraseña): letras minúsculas y números
+boolean CSettings::IsAction (unsigned nIndex)
+{
+	return nIndex < NUM_SETTINGS && strcmp (Settings[nIndex].pValues, "*accion") == 0;
+}
+
+void CSettings::SetActionText (const char *pKey, const char *pText)
+{
+	int n = Find (pKey);
+	if (n >= 0 && IsAction (n))
+	{
+		strncpy (m_Value[n], pText, SETTING_VALUE_LEN - 1);	// sin marcar cambios
+		m_Value[n][SETTING_VALUE_LEN - 1] = '\0';
+	}
+}
+
 boolean CSettings::IsPassword (unsigned nIndex)
 {
 	return nIndex < NUM_SETTINGS && strcmp (Settings[nIndex].pValues, "*pass") == 0;
@@ -252,7 +275,7 @@ const char *CSettings::GetValueName (unsigned nIndex) const
 	{
 		return "********";		// la contraseña no se ve en pantalla
 	}
-	if (IsEditable (nIndex))
+	if (IsEditable (nIndex) || IsAction (nIndex))
 	{
 		return m_Value[nIndex][0] != '\0' ? m_Value[nIndex] : T (Settings[nIndex].pNames);
 	}
@@ -319,7 +342,7 @@ void CSettings::SetValue (const char *pKey, const char *pValue)
 
 void CSettings::Step (unsigned nIndex, int nDirection)
 {
-	if (IsEditable (nIndex))
+	if (IsEditable (nIndex) || IsAction (nIndex))
 	{
 		return;				// se escriben (ver CMenu)
 	}
@@ -422,7 +445,7 @@ void CSettings::Merge (const char *pOld, char *pOut, unsigned nOutSize) const
 	// Opciones de la tabla que no estaban y no tienen el valor por defecto
 	for (unsigned i = 0; i < NUM_SETTINGS; i++)
 	{
-		if (Done[i] || strcasecmp (m_Value[i], Settings[i].pDefault) == 0)
+		if (Done[i] || IsAction (i) || strcasecmp (m_Value[i], Settings[i].pDefault) == 0)
 		{
 			continue;
 		}

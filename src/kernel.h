@@ -136,6 +136,24 @@ private:
 	void OpenTapeSelect (void);
 	void UpdateRTC (void);
 	void RebootPi (boolean bSaveSettings);
+	void FlushToSD (void);			// lo pendiente (discos, Microdrives...) a la SD
+
+	// Actualización desde GitHub (kernelupdate.cpp, página 9 de la configuración)
+	boolean UpdateInit (void);		// TRUE: avisa de una instalación a medias
+	void UpdateRows (void);
+	void UpdateBootCheck (void);
+	void UpdateCheck (boolean bQuiet);
+	void UpdateConfirm (void);
+	void UpdateAction (const char *pKey);
+	boolean UpdateMenuResult (TMenuResult Result);
+	void UpdateRun (void);
+	void UpdatePrune (void);
+	unsigned UpdateScanPackages (void);
+	void UpdateBusy (const char *pText);
+	void UpdateMessage (const char *pText);
+	static void UpdateShowBusy (void *pParam, const char *pText);
+	static void UpdateDownloadProgress (void *pParam, size_t nReceived, size_t nTotal);
+	static void UpdateInstallProgress (void *pParam, unsigned nDone, unsigned nTotal);
 	boolean IsEsxImageMounted (void) const;
 	void EsxFolderToImage (boolean bRemount);
 	static void EsxProgressHandler (unsigned nDone, unsigned nTotal, unsigned nMBDone, unsigned nMBTotal,
@@ -302,6 +320,17 @@ private:
 	const u8		*m_pTKROM;		// ROMs del TK cargadas (LoadTKROMs)
 	const u8		*m_pTK95ROM;
 	boolean			m_bModelList;		// pregunta: F7, lista de modelos
+	char			m_UpdateVersion[16];	// versión nueva que hay en GitHub ("" = no se sabe)
+	char			m_UpdateURL[600];	// y la dirección de su paquete
+	char			m_UpdateTarget[16];	// la que se va a instalar
+	char			m_UpdateLocal[64];	// su paquete en update/ ("" = descargarlo)
+	char			m_UpdatePackages[MENU_CHOICE_ROWS][16];	// los de update/
+	unsigned		m_nUpdatePackages;
+	unsigned		m_nUpdateShown;		// progreso ya mostrado
+	boolean			m_bUpdateChoice;	// pregunta: instalar
+	boolean			m_bUpdateListChoice;	// pregunta: qué paquete
+	boolean			m_bUpdateErrorChoice;	// pregunta: falló a medias
+	boolean			m_bUpdateBootChecked;
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZipOverwriteChoice;	// pregunta: usar el de tmp o sobrescribir
 	unsigned		m_nZipPending;

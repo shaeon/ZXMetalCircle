@@ -21,7 +21,10 @@
 #endif
 
 #define MAX_REDIRECTS	5
-#define HEADER_MAX	4096
+// Direcciones: las de los ficheros de las releases de GitHub redirigen a una
+// dirección firmada de unos 950 caracteres
+#define URL_MAX		4096
+#define HEADER_MAX	16384	// github.com manda más de 5 KB de cabeceras
 
 //------------------------------------------------------------------------------
 // Utilidades de texto (sin depender de la libc)
@@ -257,15 +260,33 @@ private:
 // HTTP
 
 CHTTPSClient::CHTTPSClient (ITransport *pTransport)
-:	m_pTransport (pTransport)
+:	m_pTransport (pTransport),
+	m_pProgress (0),
+	m_pProgressParam (0)
 {
 	m_Error[0] = '\0';
 }
 
+// La última dirección pedida (tras las redirecciones): GetFinalURL ()
+static char URL[URL_MAX];
+
+const char *CHTTPSClient::GetFinalURL (void) const
+{
+	return URL;
+}
+
+int CHTTPSClient::GetRedirect (const char *pURL, char *pLocation, size_t nLocationSize)
+{
+	static unsigned char Body[16 * 1024];	// la respuesta de una redirección es corta
+	size_t nLength = 0;
+	pLocation[0] = '\0';
+	CopyString (URL, pURL, sizeof URL);
+	return GetOnce (URL, Body, sizeof Body, &nLength, pLocation, nLocationSize);
+}
+
 int CHTTPSClient::Get (const char *pURL, unsigned char *pBuffer, size_t nBufferSize, size_t *pLength)
 {
-	static char URL[1024];
-	static char Location[1024];
+	static char Location[URL_MAX];
 	CopyString (URL, pURL, sizeof URL);
 
 	for (unsigned i = 0; i <= MAX_REDIRECTS; i++)
@@ -291,7 +312,7 @@ int CHTTPSClient::Get (const char *pURL, unsigned char *pBuffer, size_t nBufferS
 				pHostEnd++;
 			}
 			size_t nPrefix = pHostEnd - URL;
-			char Tmp[1024];
+			static char Tmp[URL_MAX];
 			CopyString (Tmp, URL, sizeof Tmp, nPrefix);
 			size_t nLen = strlen (Tmp);
 			CopyString (Tmp + nLen, Location, sizeof Tmp - nLen);
@@ -341,7 +362,7 @@ int CHTTPSClient::GetOnce (const char *pURL, unsigned char *pBuffer, size_t nBuf
 		return -1;
 	}
 
-	static char Request[1400];
+	static char Request[URL_MAX + 400];
 	size_t n = 0;
 	const char *Parts[] = {"GET ", pPath, " HTTP/1.1\r\nHost: ", Host,
 			       "\r\nUser-Agent: ZXMetalCircle\r\nAccept: */*\r\nConnection: close\r\n\r\n"};
@@ -463,6 +484,10 @@ int CHTTPSClient::GetOnce (const char *pURL, unsigned char *pBuffer, size_t nBuf
 			return -1;
 		}
 		nBody += r;
+		if (m_pProgress != 0)
+		{
+			(*m_pProgress) (m_pProgressParam, nBody, nContentLength > 0 ? nContentLength : 0);
+		}
 	}
 
 	// "chunked": se quitan las cabeceras de cada trozo

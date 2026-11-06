@@ -172,6 +172,16 @@ CKernel::CKernel (void)
 	m_nLastKeyTime = 0;
 	m_bF5Files = FALSE;
 	m_bModelList = FALSE;
+	m_UpdateVersion[0] = '\0';
+	m_UpdateURL[0] = '\0';
+	m_UpdateTarget[0] = '\0';
+	m_UpdateLocal[0] = '\0';
+	m_nUpdatePackages = 0;
+	m_nUpdateShown = 0;
+	m_bUpdateChoice = FALSE;
+	m_bUpdateListChoice = FALSE;
+	m_bUpdateErrorChoice = FALSE;
+	m_bUpdateBootChecked = FALSE;
 	m_pTKROM = 0;
 	m_pTK95ROM = 0;
 	m_bIndicators = TRUE;
@@ -1161,7 +1171,14 @@ void CKernel::UpdateStatusLines (void)
 		     m_bScanlines ? T ("sí") : T ("no"));
 	m_Menu.SetStatusLine (7, Line);
 
-	Line.Format (T ("Red: |%s|"), m_Network.GetStateText ());
+	if (m_UpdateVersion[0] != '\0')
+	{
+		Line.Format (T ("Nueva versión: |%s| (Alt+F1, pág. 9)"), m_UpdateVersion);	// en lugar de la red
+	}
+	else
+	{
+		Line.Format (T ("Red: |%s|"), m_Network.GetStateText ());
+	}
 	m_Menu.SetStatusLine (8, Line);
 }
 
@@ -1576,7 +1593,7 @@ void CKernel::LoadAnyFile (const char *pPath)
 // (se crea si no existe) y se cargan desde ahí. Si en el ZIP hay varios
 // ficheros que se pueden cargar, se elige uno en una lista.
 
-#define ZIP_MAX_SIZE		(8 * 1024 * 1024)
+#define ZIP_MAX_SIZE		(32 * 1024 * 1024)
 #define ZIP_TMP_DIR		"SD:/tmp"
 #define ZIP_PREFIX		"ZIP:"
 
@@ -2039,6 +2056,7 @@ void CKernel::LoadSettings (void)
 	}
 	m_Settings.ClearDirty ();
 	m_Menu.SetSettings (&m_Settings);
+	UpdateRows ();				// lo que dicen las filas de la página 9
 }
 
 // Valor de una opción en la primera línea de cmdline.txt (la última si se repite)
@@ -2374,16 +2392,10 @@ void CKernel::SaveSettings (void)
 // Reinicia la Raspberry Pi desde la configuración (tras confirmarlo): antes
 // se guarda todo lo que el emulador deja para más tarde (discos, cartuchos,
 // flash de la Spectranet, carpeta de esxDOS, salida del RS232)
-void CKernel::RebootPi (boolean bSaveSettings)
+// Lo que está pendiente de escribir en la SD (antes de reiniciar o de
+// instalar una actualización)
+void CKernel::FlushToSD (void)
 {
-	if (bSaveSettings)
-	{
-		SaveSettings ();
-	}
-
-	ShowMessage (T ("Reiniciando..."));
-	m_Logger.Write (FromKernel, LogNotice, "Reinicio pedido desde la configuracion");
-
 	SaveDisks (TRUE);
 	SaveMicrodrives (TRUE);
 	if (m_pSpectrum->IsSpectranetEnabled () && m_nSnetSaveFrames > 0)
@@ -2395,6 +2407,19 @@ void CKernel::RebootPi (boolean bSaveSettings)
 		m_HardDisk.Flush ();
 	}
 	m_IF1Link.Flush ();
+}
+
+void CKernel::RebootPi (boolean bSaveSettings)
+{
+	if (bSaveSettings)
+	{
+		SaveSettings ();
+	}
+
+	ShowMessage (T ("Reiniciando..."));
+	m_Logger.Write (FromKernel, LogNotice, "Reinicio pedido desde la configuracion");
+
+	FlushToSD ();
 
 	m_HardDisk.Close ();
 	f_mount (0, "SD:", 1);			// cierra la SD con todo escrito
@@ -4347,6 +4372,10 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 				SetModel (m_SuggestedModel);
 			}
 		}
+		else if (UpdateMenuResult (Result))
+		{
+			// página 9 (actualización) y sus preguntas
+		}
 		else if (Result == MenuResultChoice && m_bRebootChoice)
 		{
 			m_bRebootChoice = FALSE;
@@ -5209,7 +5238,11 @@ TShutdownMode CKernel::Run (void)
 
 	StartEarInput ();
 
-	if (m_OptionWarning[0] != '\0')
+	if (UpdateInit ())
+	{
+		// una actualización no terminó: es lo primero que hay que decir
+	}
+	else if (m_OptionWarning[0] != '\0')
 	{
 		ShowMessage (m_OptionWarning);		// opción mal escrita en cmdline.txt
 		m_nWarningFrames = 500;			// unos 10 s
@@ -5261,7 +5294,11 @@ TShutdownMode CKernel::Run (void)
 				UpdateStatusLines ();
 				memcpy (Overlay, m_pFrozen, nOverlayBytes);
 				m_Menu.Draw (Overlay);
-				DrawIndicators (Overlay);
+				DrawMessage (Overlay);		// los avisos también con el menú abierto
+				if (m_nMessageFrames > 0)	// (y su tiempo corre)
+				{
+					m_nMessageFrames--;
+				}
 			}
 			else
 			{
@@ -5388,6 +5425,7 @@ TShutdownMode CKernel::Run (void)
 			ShowMessage (Message);
 		}
 		{
+			UpdateBootCheck ();		// "Buscar al arrancar", la primera vez que hay red
 			CString LoadPath;
 			if (m_Network.TakeLoadRequest (&LoadPath))
 			{

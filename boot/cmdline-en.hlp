@@ -46,6 +46,12 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                   eo, eu, gl, it, nl, no, pl, ro, ru, sv, vl. The originals
                   only have es and pt (v1, with the diode)
 
+ updboot=0        Check for a new version at boot (1), the first time there
+                  is network. See page 9 of the settings
+ updkeep=2        Update packages kept in update: 2 or all
+ updconfig=keep   On update, the configuration files: keep (kept; the new
+                  one is left as .nuevo) or new (.bak)
+
  hdd=             +3e hard disk image mounted at boot (switches to the
                   +3e). Path inside the SD card, for example:
                     hdd=hdd/marocana.vhd

@@ -54,6 +54,8 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nSettingsRow = 0;
 	m_nChangedSetting = 0;
 	m_nChoices = 0;
+	m_nChoiceTop = 0;
+	m_bChoiceInfo = FALSE;
 	m_nChoiceSelected = 0;
 	m_ChoiceTitle[0] = '\0';
 	m_InputTitle[0] = m_InputHelp[0][0] = m_InputHelp[1][0] = m_InputBuf[0] = '\0';
@@ -272,6 +274,8 @@ void CMenu::OpenChoice (const char *pTitle)
 	m_ChoiceTitle[sizeof m_ChoiceTitle - 1] = '\0';
 	m_nChoices = 0;
 	m_nChoiceSelected = 0;
+	m_nChoiceTop = 0;
+	m_bChoiceInfo = FALSE;
 	m_Mode = ModeChoice;
 }
 
@@ -285,6 +289,24 @@ void CMenu::OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp
 	m_InputHelp[1][sizeof m_InputHelp[1] - 1] = '\0';
 	m_InputBuf[0] = '\0';
 	m_Mode = ModeInput;
+}
+
+// Elige una opción y mueve la ventana para que se vea (listas largas)
+void CMenu::SetChoiceSelected (unsigned nItem)
+{
+	if (nItem >= m_nChoices)
+	{
+		return;
+	}
+	m_nChoiceSelected = nItem;
+	if (nItem < m_nChoiceTop)
+	{
+		m_nChoiceTop = nItem;
+	}
+	else if (nItem >= m_nChoiceTop + MENU_CHOICE_ROWS)
+	{
+		m_nChoiceTop = nItem - MENU_CHOICE_ROWS + 1;
+	}
 }
 
 void CMenu::SetChoiceItem (unsigned nItem, const char *pText)
@@ -1029,13 +1051,31 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 	{
 		if (nKey == HID_KEY_UP && m_nChoiceSelected > 0)
 		{
-			m_nChoiceSelected--;
+			SetChoiceSelected (m_nChoiceSelected - 1);
 		}
 		else if (nKey == HID_KEY_DOWN && m_nChoiceSelected + 1 < m_nChoices)
 		{
-			m_nChoiceSelected++;
+			SetChoiceSelected (m_nChoiceSelected + 1);
 		}
-		else if (nKey >= 0x1E && nKey <= 0x26 && (unsigned) (nKey - 0x1E) < m_nChoices)
+		else if (nKey == 0x4B && m_nChoices > 0)		// RePág
+		{
+			SetChoiceSelected (m_nChoiceSelected > MENU_CHOICE_ROWS ? m_nChoiceSelected - MENU_CHOICE_ROWS : 0);
+		}
+		else if (nKey == 0x4E && m_nChoices > 0)		// AvPág
+		{
+			unsigned n = m_nChoiceSelected + MENU_CHOICE_ROWS;
+			SetChoiceSelected (n < m_nChoices ? n : m_nChoices - 1);
+		}
+		else if (nKey == 0x4A && m_nChoices > 0)		// Inicio
+		{
+			SetChoiceSelected (0);
+		}
+		else if (nKey == 0x4D && m_nChoices > 0)		// Fin
+		{
+			SetChoiceSelected (m_nChoices - 1);
+		}
+		else if (   nKey >= 0x1E && nKey <= 0x26 && (unsigned) (nKey - 0x1E) < m_nChoices
+			 && m_nChoices <= MENU_CHOICE_ROWS)		// 1-9: solo en las listas cortas
 		{
 			m_nChoiceSelected = nKey - 0x1E;		// 1-9: elegir directamente
 			m_Mode = ModeClosed;
@@ -1135,6 +1175,18 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 					break;
 				}
 			}
+		}
+		else if (   (nKey == HID_KEY_ENTER || nKey == 0x58)
+			 && CSettings::IsAction (Index[m_nSettingsRow]))
+		{
+			m_nChangedSetting = Index[m_nSettingsRow];	// fila de acción: la hace el kernel
+			Result = MenuResultSettingAction;
+		}
+		else if (   (nKey == HID_KEY_LEFT || nKey == HID_KEY_RIGHT)
+			 && CSettings::IsAction (Index[m_nSettingsRow]))
+		{
+			// las flechas no hacen nada en una fila de acción (el resto de
+			// teclas, RePág, AvPág, G, R, ESC..., siguen más abajo)
 		}
 		else if (   (nKey == HID_KEY_RIGHT || nKey == HID_KEY_ENTER || nKey == 0x58)
 			 && bApplies && CSettings::IsEditable (Index[m_nSettingsRow]))
@@ -1506,24 +1558,37 @@ void CMenu::Draw (TPixel *pScreen)
 
 	if (m_Mode == ModeChoice)
 	{
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), m_ChoiceTitle, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		boolean bLong = m_nChoices > MENU_CHOICE_ROWS;
+		CString Pos;
+		if (bLong)
+		{
+			Pos.Format ("%u/%u", m_nChoiceSelected + 1, m_nChoices);	// dónde se está
+		}
+		unsigned nPosCols = bLong ? Pos.GetLength () + 1 : 0;
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), m_ChoiceTitle, COLOR_UI_TITLE, COLOR_UI_PANEL,
+				    TEXT_COLS - nPosCols);
+		if (bLong)
+		{
+			m_pVideo->DrawText (pScreen, tx + (TEXT_COLS - nPosCols + 1) * 8, ROW_Y (1), Pos,
+					    COLOR_UI_VALUE, COLOR_UI_PANEL, nPosCols);
+		}
 		const unsigned nNameCols = TEXT_COLS - 2;	// tras el número y el espacio
-		for (unsigned i = 0; i < m_nChoices; i++)
+		for (unsigned i = m_nChoiceTop; i < m_nChoices && i < m_nChoiceTop + MENU_CHOICE_ROWS; i++)
 		{
 			boolean bSel = i == m_nChoiceSelected;
 			u8 nInk = bSel ? COLOR_UI_PANEL : COLOR_UI_TEXT;
 			u8 nPaper = bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL;
-			int y = ROW_Y (3 + 2 * i);
+			int y = ROW_Y (3 + 2 * (i - m_nChoiceTop));
 			if (bSel)
 			{
 				m_pVideo->FillRect (pScreen, tx - 2, y - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
 			}
 
 			char Number[4] = {(char) ('1' + i), ' ', '\0', '\0'};
-			if (i >= 9)
+			if (i >= 9 || bLong)
 			{
-				Number[0] = ' ';			// 10-14: solo con los cursores
-			}
+				Number[0] = ' ';			// del 10 en adelante y en las
+			}					// listas largas: con los cursores
 			m_pVideo->DrawText (pScreen, tx, y, Number, nInk, nPaper, 2);
 
 			// Si el nombre no cabe, el de la opción elegida se desplaza poco a
@@ -1553,8 +1618,11 @@ void CMenu::Draw (TPixel *pScreen)
 			m_pVideo->DrawText (pScreen, tx + 2 * 8, y, pName, nInk, nPaper,
 					    bSel || nLen <= nNameCols ? nNameCols : nNameCols - 1);
 		}
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ENTER o 1-9: elegir   ESC: seguir"),
-				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		if (!m_bChoiceInfo)
+		{
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), m_nChoices > MENU_CHOICE_ROWS ? T ("ENTER: elegir  RePág/AvPág  ESC: seguir") : T ("ENTER o 1-9: elegir   ESC: seguir"),
+					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		}
 		return;
 	}
 
@@ -1609,7 +1677,7 @@ void CMenu::Draw (TPixel *pScreen)
 					    bSel ? COLOR_UI_PANEL : (bApplies ? COLOR_UI_TEXT : COLOR_UI_DIM), nBack, 22);
 			m_pVideo->DrawText (pScreen, tx + 23 * 8, ROW_Y (3 + 2 * i), Value,
 					    bSel ? COLOR_UI_PANEL : (bApplies ? COLOR_UI_VALUE : COLOR_UI_DIM), nBack, TEXT_COLS - 23);
-			if (bSel && !m_bEditing)
+			if (bSel && !m_bEditing && !CSettings::IsAction (Index[i]))	// las acciones no se cambian con las flechas
 			{
 				unsigned nEnd = 23 + UTF8Length (Value);
 				m_pVideo->DrawText (pScreen, tx + 22 * 8, ROW_Y (3 + 2 * i), "<", COLOR_UI_PANEL, nBack, 1);
