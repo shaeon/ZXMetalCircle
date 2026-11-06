@@ -253,6 +253,9 @@ if [ ! -f "$ROOT/sdcard/firmware/LICENCE.txt" ]; then
 fi
 # Licencia y documentación del emulador (en la raíz de la SD; el selector no las muestra)
 cp "$ROOT/LICENSE" "$ROOT/README.md" "$ROOT/README_es.md" "$ROOT/CHANGELOG.md" "$ROOT/sdcard/"
+# las guías (docs/), para que funcionen los enlaces del README de la SD
+rm -rf "$ROOT/sdcard/docs"
+cp -r "$ROOT/docs" "$ROOT/sdcard/docs"
 cp "$ROOT/boot/wpa_supplicant.conf.ejemplo" "$ROOT/boot/cmdline.hlp" "$ROOT/boot/cmdline-en.hlp" "$ROOT/boot/tnfs.txt" "$ROOT/boot/excluir.txt" "$ROOT/sdcard/"
 # ROMs que se cargan de la SD (solo las del 48K y el 128K van en el kernel)
 mkdir -p "$ROOT/sdcard/roms"
