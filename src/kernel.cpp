@@ -5603,6 +5603,8 @@ TShutdownMode CKernel::Run (void)
 
 			if (m_Menu.IsOpen ())
 			{
+				PadEditPoll ();		// "Botones del mando": el botón pulsado (aquí,
+							// porque con el menú abierto el bucle no sigue)
 				UpdateStatusLines ();
 				memcpy (Overlay, m_pFrozen, nOverlayBytes);
 				m_Menu.Draw (Overlay);
@@ -5737,7 +5739,6 @@ TShutdownMode CKernel::Run (void)
 			ShowMessage (Message);
 		}
 		{
-			PadEditPoll ();			// botones del mando: la fila del botón pulsado
 			UpdateBootCheck ();		// "Buscar al arrancar", la primera vez que hay red
 			CString LoadPath;
 			if (m_Network.TakeLoadRequest (&LoadPath))
