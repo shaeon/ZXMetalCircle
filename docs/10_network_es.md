@@ -17,7 +17,7 @@ Al arrancar, la conexión se hace en segundo plano. Cuando está lista, aparece 
 
 **Servidor web**: abre esa dirección en el navegador del PC o del móvil. Desde ahí puedes:
 - recorrer las carpetas de la SD;
-- **subir** varios ficheros a la vez a la carpeta en la que estés (hasta 8 MB en total);
+- **subir** varios ficheros a la vez a la carpeta en la que estés (hasta 32 MB en total, como los ZIP que abre el emulador);
 - **descargar** cualquier fichero (hasta 4 MB), por ejemplo tus partidas, snapshots o cartuchos de microdrive;
 - **cargar** una cinta, snapshot, cartucho o microdrive directamente en el Spectrum;
 - **borrar** ficheros (pide confirmación) y **crear carpetas**.

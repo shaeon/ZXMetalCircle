@@ -17,7 +17,7 @@ At boot, the connection is made in the background. When it is ready, a message w
 
 **Web server**: open that address in the PC's or phone's browser. From there you can:
 - browse the folders of the SD card;
-- **upload** several files at once to the current folder (up to 8 MB in total);
+- **upload** several files at once to the current folder (up to 32 MB in total, like the ZIP files the emulator opens);
 - **download** any file (up to 4 MB), for example your saved games, snapshots or microdrive cartridges;
 - **load** a tape, snapshot, cartridge or microdrive straight into the Spectrum;
 - **delete** files (it asks for confirmation) and **create folders**.
