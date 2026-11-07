@@ -37,7 +37,7 @@ The Spectrum can only read two joysticks at once if they do not overlap, so **th
 - **A specific gamepad** is stored by vendor and product (`045e:028e` is an Xbox 360 controller). The arrows go through the connected gamepads; if the chosen one is not there, its code is shown with "(not connected)".
 - **With two gamepads of the same model**, the first one connected is player 1's.
 - **On gamepads with player lights** (PS3, PS4...), the light shows which player it belongs to: 1 or 2, and off if it is for the menus only.
-- **The Select button** changes the joystick of the player the gamepad belongs to.
+- **F4** changes player 1's joystick. A button with the `joystick` action (see the profiles) changes the joystick of the player its gamepad belongs to.
 - **Without changing anything**, everything works as always: a single player, and all gamepads are theirs.
 
 ## The keyboard
@@ -55,9 +55,16 @@ The Spectrum can only read two joysticks at once if they do not overlap, so **th
 | **A / Cross, Y / Triangle, L1, R1** | fire | fire | fire (0) | fire (5) | fire (0) | SPACE |
 | **B / Circle, X / Square, L2, R2** | fire 2 | fire | X | Z | 9 | M |
 
-- **Select** changes the joystick and **Start** opens the help.
-- **In the menus**, the D-pad moves, fire acts as ENTER and fire 2 as ESC.
-- **On generic gamepads**, where it is not known which button is which: buttons 1, 4, 5 and 6 are fire; 2, 3, 7 and 8, fire 2; 9, Select, and 10, Start.
+- **Start** opens the settings (like Alt+F1) and **Select** (Back on Xbox controllers) the file browser.
+- **In the menus**, the D-pad moves, fire acts as ENTER, fire 2 as ESC, and **L and R** (LB and RB on Xbox controllers) change page, like PgUp and PgDn.
+- **On generic gamepads**, where it is not known which button is which: buttons 1, 4, 5 and 6 are fire; 2, 3, 7 and 8, fire 2; 9, Select (files), and 10, Start (settings). In the menus, 5 and 6 change page.
+
+### Which button is which
+
+On generic gamepads the buttons only have numbers, and you cannot tell which is which. To find out:
+
+- **Alt+D** (diagnostics) shows one line per gamepad: its code, which player it belongs to (`J1`, `J2` or `menu`), **the buttons being pressed**, with the same name or number as in the profiles, and where the stick points. For example: `1 045E:028E J1: LB A stick ↑<`.
+- **On the "Gamepad buttons" screen**, pressing a button highlights its row, and the bottom line says **"You pressed: Button 5"**.
 
 **With a profile**, each button does whatever you want. Each gamepad model has its own profiles, **one per joystick type**, and can have **several named ones** for the same type (for example, one per game).
 
@@ -66,8 +73,8 @@ The Spectrum can only read two joysticks at once if they do not overlap, so **th
 It opens with **ENTER on the last row of page 5**. If several gamepads are connected, it first asks which one. It edits the profile for the joystick type of that gamepad's player.
 
 - **The first row is the profile**: "default" or a named one. ← → go through the saved ones. **N** creates a new one (copying the one shown), **R** renames it and **DEL** deletes it.
-- **The other rows, one button each.** Pressing a button on the gamepad highlights its row. While the screen is open, that gamepad's buttons do nothing else.
-  - **← →**: none, fire, fire 2, up, down, left, right, change joystick or menu.
+- **The other rows, one button each.** Pressing a button on the gamepad highlights its row and the bottom line says which one it is ("You pressed: Button 5"). While the screen is open, that gamepad's buttons do nothing else.
+  - **← →**: none, fire, fire 2, up, down, left, right, joystick, help, settings or files.
   - **ENTER**: a Spectrum key, CAPS SHIFT + key, SYMBOL SHIFT + key, or an emulator key (F1 to F12, Alt+F1 to Alt+F12, Enter, Esc, Tab, Pause, PgUp, PgDn, Home, End, Delete and the cursor keys).
   - **DEL**: the button does nothing.
 - **G** saves the profile, makes it the active one and applies it straight away.
@@ -102,8 +109,8 @@ LB = pc F5
 RB = pc Alt+F1
 L3 = pc Enter
 R3 = key CS+SPACE
-Select = joystick
-Start = menu
+Select = files
+Start = settings
 ```
 
 | Buttons | Names |
@@ -116,8 +123,10 @@ Start = menu
 | `none` (`ninguno`) | nothing |
 | `fire`, `fire 2` (`disparo`, `disparo 2`) | the joystick's fire buttons |
 | `up`, `down`, `left`, `right` | the joystick's directions |
-| `joystick` | change joystick (what Select does) |
-| `menu` | the help (what Start does) |
+| `joystick` | change joystick (like F4) |
+| `help` (`ayuda`) | the help (F1); `menu` also works |
+| `settings` (`configuracion`) | the settings (Alt+F1; what Start does) |
+| `files` (`ficheros`) | the file browser (what Select does) |
 | `key <K>` (`tecla <K>`) | a Spectrum key: A-Z, 0-9, ENTER, SPACE (ESPACIO), CS or SS; with `CS+` or `SS+` in front, together with CAPS SHIFT or SYMBOL SHIFT (`key CS+SPACE` is BREAK) |
 | `pc <K>` | an emulator key: F1-F12, Enter, Esc, Tab, Backspace, Space, Pause, PgUp, PgDn, Home, End, Delete, the cursor keys, letters and digits; with `Alt+`, `Ctrl+` or `Shift+` in front |
 

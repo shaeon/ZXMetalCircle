@@ -246,7 +246,10 @@ boolean CPadProfile::ParseAction (const char *pText, TPadAction *pAction)
 		{"abajo", PadActJoy, JOY_DOWN}, {"down", PadActJoy, JOY_DOWN},
 		{"izquierda", PadActJoy, JOY_LEFT}, {"left", PadActJoy, JOY_LEFT},
 		{"derecha", PadActJoy, JOY_RIGHT}, {"right", PadActJoy, JOY_RIGHT},
-		{"joystick", PadActNextJoy, 0}, {"menu", PadActMenu, 0}, {"menú", PadActMenu, 0}
+		{"joystick", PadActNextJoy, 0},
+		{"ayuda", PadActMenu, 0}, {"help", PadActMenu, 0}, {"menu", PadActMenu, 0}, {"menú", PadActMenu, 0},
+		{"configuracion", PadActSettings, 0}, {"configuración", PadActSettings, 0}, {"settings", PadActSettings, 0},
+		{"ficheros", PadActFiles, 0}, {"files", PadActFiles, 0}
 	};
 	for (unsigned i = 0; i < sizeof Simple / sizeof Simple[0]; i++)
 	{
@@ -323,7 +326,9 @@ void CPadProfile::FormatAction (const TPadAction &Action, char *pBuffer, unsigne
 		PCKeyName (Action.nArg, pBuffer, nSize);
 		break;
 	case PadActNextJoy:	Append (pBuffer, nSize, "joystick");	break;
-	case PadActMenu:	Append (pBuffer, nSize, "menu");	break;
+	case PadActMenu:	Append (pBuffer, nSize, "ayuda");	break;
+	case PadActSettings:	Append (pBuffer, nSize, "configuracion");	break;
+	case PadActFiles:	Append (pBuffer, nSize, "ficheros");	break;
 	default:		Append (pBuffer, nSize, "ninguno");	break;
 	}
 }
@@ -363,13 +368,13 @@ void CPadProfile::SetDefault (boolean bKnown)
 		{"A", "disparo"}, {"Y", "disparo"}, {"LB", "disparo"}, {"RB", "disparo"},
 		{"B", "disparo 2"}, {"X", "disparo 2"}, {"LT", "disparo 2"}, {"RT", "disparo 2"},
 		{"Arriba", "arriba"}, {"Abajo", "abajo"}, {"Izquierda", "izquierda"}, {"Derecha", "derecha"},
-		{"Select", "joystick"}, {"Minus", "joystick"}, {"Start", "menu"}, {"Plus", "menu"}
+		{"Select", "ficheros"}, {"Minus", "ficheros"}, {"Start", "configuracion"}, {"Plus", "configuracion"}
 	};
 	const char *Generic[][2] =
 	{
 		{"1", "disparo"}, {"4", "disparo"}, {"5", "disparo"}, {"6", "disparo"},
 		{"2", "disparo 2"}, {"3", "disparo 2"}, {"7", "disparo 2"}, {"8", "disparo 2"},
-		{"9", "joystick"}, {"10", "menu"}
+		{"9", "ficheros"}, {"10", "configuracion"}
 	};
 	unsigned nCount = bKnown ? sizeof Default / sizeof Default[0] : sizeof Generic / sizeof Generic[0];
 	for (unsigned i = 0; i < nCount; i++)
@@ -513,6 +518,12 @@ void CPadProfile::Evaluate (u32 nButtons, u32 nPrevButtons, TPadOutput *pOut) co
 			break;
 		case PadActMenu:
 			pOut->bMenu |= bNew;
+			break;
+		case PadActSettings:
+			pOut->bSettings |= bNew;
+			break;
+		case PadActFiles:
+			pOut->bFiles |= bNew;
 			break;
 		default:
 			break;

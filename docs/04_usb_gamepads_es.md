@@ -37,7 +37,7 @@ El Spectrum solo puede leer dos joysticks a la vez si no se pisan, así que **no
 - **Un mando concreto** se guarda por fabricante y modelo (`045e:028e` es un mando de Xbox 360). Con las flechas se pasa por los mandos conectados; si el elegido no está, se ve su código con «(no conectado)».
 - **Con dos mandos del mismo modelo**, el primero conectado es el del jugador 1.
 - **En los mandos con luces de jugador** (PS3, PS4…), la luz dice de qué jugador es: 1 o 2, y apagada si solo sirve en los menús.
-- **El botón Select** cambia el joystick del jugador al que pertenece el mando.
+- **F4** cambia el joystick del jugador 1. Un botón con la acción `joystick` (ver los perfiles) cambia el del jugador al que pertenece su mando.
 - **Sin tocar nada**, todo funciona como siempre: un solo jugador, y todos los mandos son suyos.
 
 ## El teclado
@@ -55,9 +55,16 @@ El Spectrum solo puede leer dos joysticks a la vez si no se pisan, así que **no
 | **A / Cruz, Y / Triángulo, L1, R1** | disparo | disparo | disparo (0) | disparo (5) | disparo (0) | ESPACIO |
 | **B / Círculo, X / Cuadrado, L2, R2** | disparo 2 | disparo | X | Z | 9 | M |
 
-- **Select** cambia el joystick y **Start** abre la ayuda.
-- **En los menús**, la cruceta navega, el disparo hace de ENTER y el disparo 2 de ESC.
-- **En los mandos genéricos**, que no se sabe qué botón es cuál: los botones 1, 4, 5 y 6 son disparo; el 2, 3, 7 y 8, disparo 2; el 9, Select, y el 10, Start.
+- **Start** abre la configuración (como Alt+F1) y **Select** (Back en los de Xbox) el navegador de ficheros.
+- **En los menús**, la cruceta navega, el disparo hace de ENTER, el disparo 2 de ESC, y **L y R** (LB y RB en los de Xbox) cambian de página, como RePág y AvPág.
+- **En los mandos genéricos**, que no se sabe qué botón es cuál: los botones 1, 4, 5 y 6 son disparo; el 2, 3, 7 y 8, disparo 2; el 9, Select (ficheros), y el 10, Start (configuración). En los menús, el 5 y el 6 cambian de página.
+
+### Qué botón es cada uno
+
+En los mandos genéricos los botones solo tienen número, y no se ve cuál es cuál. Para saberlo:
+
+- **Alt+D** (el diagnóstico) muestra una línea por mando: su código, a qué jugador va (`J1`, `J2` o `menú`), **los botones que se están pulsando**, con el mismo nombre o número que en los perfiles, y hacia dónde va el stick. Por ejemplo: `1 045E:028E J1: LB A stick ↑<`.
+- **En la pantalla «Botones del mando»**, al pulsar un botón se marca su fila, y abajo sale **«Has pulsado: Botón 5»**.
 
 **Con un perfil**, cada botón hace lo que se quiera. Cada modelo de mando tiene sus perfiles, **uno por tipo de joystick**, y puede tener **varios con nombre** para el mismo tipo (por ejemplo, uno para cada juego).
 
@@ -66,8 +73,8 @@ El Spectrum solo puede leer dos joysticks a la vez si no se pisan, así que **no
 Se abre con **ENTER en la última fila de la página 5**. Si hay varios mandos conectados, primero pregunta cuál. Edita el perfil del tipo de joystick del jugador de ese mando.
 
 - **La primera fila es el perfil**: «por defecto» o uno con nombre. Con ← → se pasa por los guardados. **N** crea uno nuevo (copiando el que se ve), **R** le cambia el nombre y **SUPR** lo borra.
-- **Las demás, un botón cada una.** Al pulsar un botón del mando, se marca su fila. Mientras la pantalla está abierta, los botones de ese mando no hacen nada más.
-  - **← →**: ninguno, disparo, disparo 2, arriba, abajo, izquierda, derecha, cambiar de joystick o menú.
+- **Las demás, un botón cada una.** Al pulsar un botón del mando, se marca su fila y abajo sale cuál es («Has pulsado: Botón 5»). Mientras la pantalla está abierta, los botones de ese mando no hacen nada más.
+  - **← →**: ninguno, disparo, disparo 2, arriba, abajo, izquierda, derecha, joystick, ayuda, configuración o ficheros.
   - **ENTER**: una tecla del Spectrum, CAPS SHIFT + tecla, SYMBOL SHIFT + tecla, o una tecla del emulador (F1 a F12, Alt+F1 a Alt+F12, Enter, Esc, Tab, Pausa, RePág, AvPág, Inicio, Fin, Supr y los cursores).
   - **SUPR**: el botón no hace nada.
 - **G** guarda el perfil, lo deja como el activo y se aplica al momento.
@@ -102,8 +109,8 @@ LB = pc F5
 RB = pc Alt+F1
 L3 = pc Enter
 R3 = tecla CS+ESPACIO
-Select = joystick
-Start = menu
+Select = ficheros
+Start = configuracion
 ```
 
 | Botones | Nombres |
@@ -116,8 +123,10 @@ Start = menu
 | `ninguno` | nada |
 | `disparo`, `disparo 2` | los disparos del joystick |
 | `arriba`, `abajo`, `izquierda`, `derecha` | las direcciones del joystick |
-| `joystick` | cambiar de joystick (lo que hace Select) |
-| `menu` | la ayuda (lo que hace Start) |
+| `joystick` | cambiar de joystick (como F4) |
+| `ayuda` | la ayuda (F1); también vale `menu` |
+| `configuracion` | la configuración (Alt+F1; lo que hace Start) |
+| `ficheros` | el navegador de ficheros (lo que hace Select) |
 | `tecla <K>` | una tecla del Spectrum: A-Z, 0-9, ENTER, ESPACIO, CS o SS; con `CS+` o `SS+` delante, junto con CAPS SHIFT o SYMBOL SHIFT (`tecla CS+ESPACIO` es BREAK) |
 | `pc <K>` | una tecla del emulador: F1-F12, Enter, Esc, Tab, Retroceso, Espacio, Pausa, RePag, AvPag, Inicio, Fin, Supr, los cursores, letras y números; con `Alt+`, `Ctrl+` o `Shift+` delante |
 

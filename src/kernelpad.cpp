@@ -9,7 +9,8 @@
 //   ve), R le cambia el nombre y SUPR lo borra.
 // - Las demás: un botón cada una, con su acción. Al pulsar un botón del mando
 //   se marca su fila. Con las flechas se pasa por las acciones sencillas
-//   (ninguno, disparo, disparo 2, direcciones, joystick, menú); ENTER abre la
+//   (ninguno, disparo, disparo 2, direcciones, joystick, ayuda, configuración,
+//   ficheros); ENTER abre la
 //   lista de teclas (del Spectrum, con CAPS SHIFT o SYMBOL SHIFT, o del
 //   emulador); SUPR deja el botón sin acción.
 // - G guarda (joysticks/VVVV-PPPP/<tipo>[-<nombre>].txt y activo.txt) y el
@@ -41,7 +42,8 @@ static const char *JoyTypes[JoystickModeCount] =		// como joystick=
 	{"none", "kempston", "fuller", "sinclair1", "sinclair2", "cursor", "qaop"};
 
 static const char *SimpleActions[] =
-	{"ninguno", "disparo", "disparo 2", "arriba", "abajo", "izquierda", "derecha", "joystick", "menu"};
+	{"ninguno", "disparo", "disparo 2", "arriba", "abajo", "izquierda", "derecha", "joystick", "ayuda",
+	 "configuracion", "ficheros"};
 #define SIMPLE_ACTIONS	(sizeof SimpleActions / sizeof SimpleActions[0])
 
 static const char *ZXKeys[] =
@@ -682,4 +684,12 @@ void CKernel::PadEditPoll (void)
 			m_Menu.SetListSelected (i + 1);
 		}
 	}
+
+	// y abajo, cuál es (también si no está en la lista)
+	boolean bKnown = (m_GamePadProps[m_nPadEdit] & GamePadPropertyIsKnown) != 0;
+	const char *pName = CPadProfile::ButtonName (nPressed - 1, bKnown);
+	CString Number, Note;
+	Number.Format ("%u", nPressed);
+	Note.Format (T ("Has pulsado: Botón %s"), pName != 0 ? pName : (const char *) Number);
+	m_Menu.SetListNote (Note);
 }

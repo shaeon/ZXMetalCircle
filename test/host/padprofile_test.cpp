@@ -48,9 +48,9 @@ int main (void)
 	P.Evaluate (B(9) | B(8) | B(15), 0, &O);
 	chk ("conocido por defecto: cada botón hace lo mismo que antes", bSame && O.nJoy == (JOY_FIRE | JOY_FIRE2 | JOY_UP));
 	P.Evaluate (B(11), 0, &O);
-	bool bSel = O.bNextJoy;
+	bool bSel = O.bFiles && !O.bNextJoy;
 	P.Evaluate (B(14), 0, &O);
-	chk ("conocido por defecto: Select cambia el joystick y Start abre el menú", bSel && O.bMenu);
+	chk ("conocido por defecto: Select abre los ficheros y Start la configuración", bSel && O.bSettings && !O.bMenu);
 
 	P.SetDefault (FALSE);
 	bSame = true;
@@ -60,9 +60,9 @@ int main (void)
 		if (O.nJoy != OldGeneric (B(i))) bSame = false;
 	}
 	P.Evaluate (B(8), 0, &O);
-	bSel = O.bNextJoy;
+	bSel = O.bFiles;
 	P.Evaluate (B(9), 0, &O);
-	chk ("genérico por defecto: igual que antes; 9 joystick y 10 menú", bSame && bSel && O.bMenu);
+	chk ("genérico por defecto: igual que antes; 9 ficheros y 10 configuración", bSame && bSel && O.bSettings);
 
 	// 2. Un perfil escrito a mano
 	const char *pFile =
@@ -125,6 +125,14 @@ int main (void)
 	     && CPadProfile::ParseAction ("pc PgDn", &A) && A.nArg == 0x4E);
 	chk ("acciones que no existen: no", !CPadProfile::ParseAction ("pc F13", &A) && !CPadProfile::ParseAction ("tecla ?", &A)
 	     && !CPadProfile::ParseAction ("volar", &A));
+
+	chk ("ayuda, menu (sinónimo), configuracion, ficheros, joystick",
+	     CPadProfile::ParseAction ("ayuda", &A) && A.Type == PadActMenu
+	     && CPadProfile::ParseAction ("menu", &A) && A.Type == PadActMenu
+	     && CPadProfile::ParseAction ("configuracion", &A) && A.Type == PadActSettings
+	     && CPadProfile::ParseAction ("settings", &A) && A.Type == PadActSettings
+	     && CPadProfile::ParseAction ("ficheros", &A) && A.Type == PadActFiles
+	     && CPadProfile::ParseAction ("joystick", &A) && A.Type == PadActNextJoy);
 
 	// 5. Líneas que no se entienden: se avisa y las demás valen
 	const char *pBad = "A = volar\nW = disparo\nB = disparo\n";

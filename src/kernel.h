@@ -250,6 +250,7 @@ private:
 	u8			m_PadLED[MAX_GAMEPADS];		// luz de jugador puesta (0xFF = ninguna aún)
 	CPadProfile		m_PadProfile[MAX_GAMEPADS];	// qué hace cada botón (joysticks/VVVV-PPPP/)
 	unsigned		m_PadButtonCount[MAX_GAMEPADS];	// botones de cada mando (genéricos)
+	volatile u8		m_PadStickJoy[MAX_GAMEPADS];	// direcciones del stick (para Alt+D)
 
 	// Pantalla "Botones del mando" (kernelpad.cpp)
 	#define PAD_EDIT_PROFILES	16

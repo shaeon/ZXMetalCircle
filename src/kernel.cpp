@@ -51,6 +51,8 @@ const char *JoystickNames[JoystickModeCount] =
 // Pseudotecla generada por el botón Select/Share/View/Capture de los mandos
 #define KEY_PAD_SELECT	0xF0
 #define KEY_PAD_SELECT2	0xF3		// Select en un mando del jugador 2
+#define KEY_PAD_FILES	0xF4		// acción "ficheros" de un mando (Select por defecto)
+#define KEY_PAD_SETTINGS	0xF5		// acción "configuracion" de un mando (Start por defecto)
 
 static const char *AYStereoNames[AYStereoModeCount] =
 {
@@ -153,6 +155,8 @@ static const TKeyBinding KeyBindings[] =
 	{0x13,           TRUE,  ActionPause,        "Alt+P",  0},
 	{KEY_PAD_SELECT, FALSE, ActionJoystick,     "Select", 0},	// botón del mando
 	{KEY_PAD_SELECT2, FALSE, ActionJoystick2,   "Select", 0},	// botón de un mando del jugador 2
+	{KEY_PAD_FILES,   FALSE, ActionFiles,       "Select", 0},	// navegador de ficheros, desde un mando
+	{KEY_PAD_SETTINGS, FALSE, ActionSettings,   "Start",  0},	// configuración, desde un mando
 };
 
 CKernel *CKernel::s_pThis = 0;
@@ -184,6 +188,7 @@ CKernel::CKernel (void)
 		m_PadLED[i] = 0xFF;
 		m_PadProfileMode[i] = 0xFF;
 		m_PadButtonCount[i] = 0;
+		m_PadStickJoy[i] = 0;
 	}
 	m_nPadEdit = -1;
 	m_nPadEditStage = 0;
@@ -1016,10 +1021,27 @@ void CKernel::GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *
 		return;
 	}
 
+	pThis->m_PadStickJoy[nDeviceIndex] = nJoy;		// para Alt+D
+
 	// Los botones, por el perfil del mando (padprofile.cpp)
 	TPadOutput Out;
 	pThis->m_PadProfile[nDeviceIndex].Evaluate (nButtons, nOldButtons, &Out);
+	u8 nStick = nJoy;
 	nJoy |= Out.nJoy;
+
+	// En los menús, L y R (LB y RB; en los genéricos, los botones 5 y 6)
+	// cambian de página, y no cuentan para navegar
+	u32 nL = bKnown ? GamePadButtonLB : BIT (4);
+	u32 nR = bKnown ? GamePadButtonRB : BIT (5);
+	u8 nNavJoy = nJoy;
+	if (pThis->m_Keyboard.IsCaptured ())
+	{
+		TPadOutput Nav;
+		pThis->m_PadProfile[nDeviceIndex].Evaluate (nButtons & ~(nL | nR), nOldButtons & ~(nL | nR), &Nav);
+		nNavJoy = nStick | Nav.nJoy;
+		if ((nButtons & nL) && !(nOldButtons & nL))	pThis->m_Keyboard.InjectKeyEvent (0x4B, 0);	// RePág
+		if ((nButtons & nR) && !(nOldButtons & nR))	pThis->m_Keyboard.InjectKeyEvent (0x4E, 0);	// AvPág
+	}
 
 	pThis->m_Keyboard.SetGamePadState (nDeviceIndex, nJoy);
 	pThis->m_Keyboard.SetPadKeys (nDeviceIndex, Out.Matrix);	// teclas del Spectrum
@@ -1039,7 +1061,7 @@ void CKernel::GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *
 	if (pThis->m_Keyboard.IsCaptured ())
 	{
 		// En los menús: cruceta = cursores, disparo = ENTER, disparo 2 = ESC
-		u8 nNew = nJoy & ~nOldJoy;
+		u8 nNew = nNavJoy & ~nOldJoy;
 		if (nNew & JOY_UP)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_UP, 0);
 		if (nNew & JOY_DOWN)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_DOWN, 0);
 		if (nNew & JOY_LEFT)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_LEFT, 0);
@@ -1047,13 +1069,24 @@ void CKernel::GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *
 		if (nNew & JOY_FIRE)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_ENTER, 0);
 		if (nNew & JOY_FIRE2)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_ESC, 0);
 	}
-	else if (Out.bMenu)
+	else
 	{
-		pThis->m_Keyboard.InjectKeyEvent (HID_KEY_F1, 0);	// Start: ayuda y selector de cintas
+		if (Out.bMenu)
+		{
+			pThis->m_Keyboard.InjectKeyEvent (HID_KEY_F1, 0);		// la ayuda
+		}
+		if (Out.bSettings)
+		{
+			pThis->m_Keyboard.InjectKeyEvent (KEY_PAD_SETTINGS, 0);	// la configuración (Start)
+		}
+		if (Out.bFiles)
+		{
+			pThis->m_Keyboard.InjectKeyEvent (KEY_PAD_FILES, 0);	// los ficheros (Select)
+		}
 	}
 
 	pThis->m_PrevPadButtons[nDeviceIndex] = nButtons;
-	pThis->m_PrevPadJoy[nDeviceIndex] = nJoy;
+	pThis->m_PrevPadJoy[nDeviceIndex] = pThis->m_Keyboard.IsCaptured () ? nNavJoy : nJoy;
 }
 
 void CKernel::GamePadRemovedHandler (CDevice *pDevice, void *pContext)
@@ -5204,7 +5237,12 @@ void CKernel::DrawKeyDebug (TPixel *pScreen)
 	const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
 	int x0 = rVisible.x + 4, y0 = rVisible.y + 4;
 
-	m_Video.FillRect (pScreen, x0 - 2, y0 - 2, 34 * 8 + 4, 12 * 8 + 4, COLOR_UI_PANEL);
+	unsigned nPadLines = 0;				// una línea por mando, debajo
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		nPadLines += m_pGamePads[i] != 0;
+	}
+	m_Video.FillRect (pScreen, x0 - 2, y0 - 2, 34 * 8 + 4, (12 + nPadLines) * 8 + 4, COLOR_UI_PANEL);
 
 	CString Line;
 	Line.Format ("USB mod %02X teclas %02X %02X %02X %02X %02X %02X",
@@ -5242,6 +5280,42 @@ void CKernel::DrawKeyDebug (TPixel *pScreen)
 		Line.Format ("+3 R8-12: %03X %03X %03X %03X %03X",
 			     pRaw[8] >> 5, pRaw[9] >> 5, pRaw[10] >> 5, pRaw[11] >> 5, pRaw[12] >> 5);
 		m_Video.DrawText (pScreen, x0, y0 + 11 * 8, Line, COLOR_UI_DIM, COLOR_UI_PANEL);
+	}
+
+	// Mandos: a qué jugador van, los botones pulsados (su nombre o número,
+	// el mismo que en los perfiles) y el stick
+	unsigned nPadLine = 0;
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		if (m_pGamePads[i] == 0)
+		{
+			continue;
+		}
+		boolean bKnown = (m_GamePadProps[i] & GamePadPropertyIsKnown) != 0;
+		u8 nPlayer = m_Keyboard.GetPadPlayer (i);
+		Line.Format ("%u %04X:%04X %s:", i + 1, m_PadVID[i], m_PadPID[i],
+			     nPlayer == PAD_MENU_ONLY ? T ("menú") : (nPlayer == 1 ? "J2" : "J1"));
+		unsigned nButtons = m_PrevPadButtons[i];
+		for (unsigned b = 0; b < 32; b++)
+		{
+			if (nButtons & (1U << b))
+			{
+				const char *pName = CPadProfile::ButtonName (b, bKnown);
+				CString Name;
+				Name.Format (" %s", pName != 0 ? pName : "?");
+				Line.Append (Name);
+			}
+		}
+		u8 nStick = m_PadStickJoy[i];
+		if (nStick != 0)
+		{
+			Line.Append (" stick ");
+			if (nStick & JOY_UP)	Line.Append ("^");
+			if (nStick & JOY_DOWN)	Line.Append ("v");
+			if (nStick & JOY_LEFT)	Line.Append ("<");
+			if (nStick & JOY_RIGHT)	Line.Append (">");
+		}
+		m_Video.DrawText (pScreen, x0, y0 + (12 + nPadLine++) * 8, Line, COLOR_UI_TEXT, COLOR_UI_PANEL, 34);
 	}
 
 	// Matriz del Spectrum (todas las fuentes juntas): pulsadas en vídeo inverso
