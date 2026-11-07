@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Corregido**: con "Buscar al arrancar", se veía que buscaba pero no el resultado si ya se tenía la última versión o si GitHub no respondía (solo avisaba de una versión nueva). Ahora dice siempre el resultado.
 - **Cambiado**: por la web se pueden subir hasta 32 MB de una vez (antes 8), como los ZIP que abre el emulador. Las descargas de ZXDB admiten ficheros de hasta 16 MB, tanto lo que llega como lo que se guarda descomprimido; antes el límite real eran 4 MB (lo que llegaba) y 2 MB (lo descomprimido). La memoria solo se usa mientras dura la subida o la descarga.
 - **Nuevo**: en la configuración, ENTER en una opción de más de 4 valores (modelo, idioma de la ROM del TK, joysticks de los jugadores, zona horaria, GPIO del casete) abre la lista entera, con el valor puesto marcado; al elegir se vuelve a la configuración con ese valor, aplicado como con las flechas, y ESC vuelve sin cambiarlo. En las de joystick, la lista no ofrece el del otro jugador. Las flechas siguen pasando de uno en uno, y en las opciones de pocos valores ENTER sigue pasando al siguiente.
 - **Corregido**: en la pantalla "Botones del mando", al pulsar un botón del mando no se marcaba su fila ni salía cuál era, ni se cerraba la pantalla al desconectar el mando: la comprobación estaba en una parte del bucle principal que no se ejecuta con el menú abierto. Probado en QEMU con una pulsación simulada.

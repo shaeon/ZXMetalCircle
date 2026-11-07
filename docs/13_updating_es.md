@@ -11,7 +11,7 @@ Desde la versión 1.07, el emulador se puede actualizar solo, desde las versione
 | Versión instalada | la que tienes |
 | Buscar actualización | con ENTER, consulta GitHub; si hay una versión nueva, la fila pasa a decir «ENTER: instalar 1.07» |
 | Paquete guardado | con ENTER, lista los paquetes de la carpeta `update` para volver a instalar uno (también una versión anterior) |
-| Buscar al arrancar | `updboot=`: con `1`, la primera vez que hay red busca sola y avisa si hay una versión nueva. Desactivado por defecto |
+| Buscar al arrancar | `updboot=`: con `1`, la primera vez que hay red busca sola y dice el resultado: «Ya tienes la última», «Hay una versión nueva» o «No se pudo consultar GitHub». Desactivado por defecto |
 | Paquetes guardados | `updkeep=`: `2` deja en `update` el de la versión instalada y el de la anterior (para poder volver); `all`, todos |
 | Config. al actualizar | `updconfig=`: `keep` conserva tus ficheros de configuración; `new` pone los nuevos |
 

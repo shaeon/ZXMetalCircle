@@ -194,7 +194,7 @@ void CKernel::UpdateBootCheck (void)
 	    && strcmp (Setting (m_Settings, "updboot"), "1") == 0)
 	{
 		m_bUpdateBootChecked = TRUE;
-		UpdateCheck (TRUE);
+		UpdateCheck (FALSE);		// con el resultado a la vista: se ve que busca
 	}
 }
 
