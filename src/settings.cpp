@@ -397,6 +397,57 @@ boolean CSettings::IsPad (unsigned nIndex)
 	return nIndex < NUM_SETTINGS && strcmp (Settings[nIndex].pValues, "*pad") == 0;
 }
 
+unsigned CSettings::GetValueCount (unsigned nIndex)
+{
+	if (nIndex >= NUM_SETTINGS || IsEditable (nIndex) || IsAction (nIndex) || IsPad (nIndex))
+	{
+		return 0;
+	}
+	char Item[SETTING_VALUE_LEN];
+	unsigned n = 0;
+	while (GetItem (Settings[nIndex].pValues, n, Item, sizeof Item))
+	{
+		n++;
+	}
+	return n;
+}
+
+boolean CSettings::GetValueItemName (unsigned nIndex, unsigned nItem, char *pName, unsigned nSize)
+{
+	return nIndex < NUM_SETTINGS && GetItem (T (Settings[nIndex].pNames), nItem, pName, nSize);
+}
+
+boolean CSettings::IsValueAllowed (unsigned nIndex, unsigned nItem) const
+{
+	char Item[SETTING_VALUE_LEN];
+	if (nIndex >= NUM_SETTINGS || !GetItem (Settings[nIndex].pValues, nItem, Item, sizeof Item))
+	{
+		return FALSE;
+	}
+	const char *pKey = Settings[nIndex].pKey;
+	if (strcmp (pKey, "joystick") == 0 || strcmp (pKey, "joystick2") == 0)
+	{
+		int nOther = Find (strcmp (pKey, "joystick") == 0 ? "joystick2" : "joystick");
+		return nOther < 0 || !JoyConflict (Item, m_Value[nOther]);
+	}
+	return TRUE;
+}
+
+int CSettings::GetValueItem (unsigned nIndex) const
+{
+	return nIndex < NUM_SETTINGS ? IndexOf (Settings[nIndex].pValues, m_Value[nIndex]) : -1;
+}
+
+void CSettings::ChooseValue (unsigned nIndex, unsigned nItem)
+{
+	char Item[SETTING_VALUE_LEN];
+	if (nIndex < NUM_SETTINGS && GetItem (Settings[nIndex].pValues, nItem, Item, sizeof Item))
+	{
+		strcpy (m_Value[nIndex], Item);
+		m_bDirty = TRUE;
+	}
+}
+
 void CSettings::Step (unsigned nIndex, int nDirection)
 {
 	if (IsPad (nIndex))

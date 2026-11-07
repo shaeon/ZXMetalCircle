@@ -96,6 +96,7 @@ From the help screen (F1), the **C** key opens the settings: ten pages with the 
 | 10 Update | check and install, saved package, check at boot, saved packages, settings on update |
 
 - Up and down to choose; **left and right** (or ENTER) to change the value; **PgUp and PgDn** (or Tab) to change page.
+- **For options with many values** (model, TK ROM language, joysticks, time zone, cassette GPIO), **ENTER opens the whole list**, with the current value highlighted: choose with the cursor keys (or 1-9) and ENTER to go back to the settings; ESC goes back without changing it. The arrows still go one by one.
 - **IP addresses are typed in**: ENTER on "Fixed IP", "Network mask", "Gateway" or "DNS server" and type the digits and dots (also on the numeric keypad); Backspace deletes, DEL empties it (automatic, with DHCP), ENTER accepts it if it is a valid IP and ESC leaves it as it was.
 - The ROM and hard disk lists only show files without spaces in their names (`cmdline.txt` separates options with spaces).
 - Changes apply **at once**, except those marked with `*`, which need the Pi to be restarted.

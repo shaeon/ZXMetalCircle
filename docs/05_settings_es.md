@@ -96,6 +96,7 @@ Desde la ayuda (F1), la tecla **C** abre la configuración: diez páginas con la
 | 10 Actualización | buscar e instalar, paquete guardado, buscar al arrancar, paquetes guardados, configuración al actualizar |
 
 - Cursores arriba y abajo para elegir; **izquierda y derecha** (o ENTER) para cambiar el valor; **RePág y AvPág** (o Tab) para cambiar de página.
+- **En las opciones de muchos valores** (modelo, idioma de la ROM del TK, joysticks, zona horaria, GPIO del casete), **ENTER abre la lista entera**, con el valor puesto marcado: se elige con los cursores (o 1-9) y ENTER, y se vuelve a la configuración; ESC vuelve sin cambiarlo. Las flechas siguen pasando de uno en uno.
 - **Las direcciones IP se escriben**: ENTER en "IP fija", "Máscara de red", "Puerta de enlace" o "Servidor DNS" y se teclean los números y los puntos (también con el teclado numérico); Retroceso borra, SUPR la deja vacía (automática, con DHCP), ENTER acepta si es una IP válida y ESC la deja como estaba.
 - En las listas de ROMs y de discos duros solo salen los ficheros sin espacios en el nombre (`cmdline.txt` separa las opciones con espacios).
 - Los cambios se aplican **al momento**, salvo los marcados con `*`, que necesitan reiniciar la Pi.

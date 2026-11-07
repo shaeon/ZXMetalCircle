@@ -169,6 +169,12 @@ private:
 	unsigned m_nScrollSelected;
 	unsigned m_nScrollChoice;	// opción elegida en la lista (para su desplazamiento)
 	unsigned m_nScrollSetting;	// fila elegida en la configuración (ídem)
+	// ENTER en una opción de muchos valores: su lista (ver HandleKey)
+	#define SETTING_LIST_MIN	4	// con más valores que estos
+	boolean m_bSettingChoice;
+	unsigned m_nSettingChoiceIndex;
+	unsigned m_nSettingChoiceItems;
+	u16 m_SettingChoiceItem[MENU_CHOICE_ITEMS];	// opción de la lista -> valor
 
 	char m_CurrentDir[MENU_PATH_LEN];
 	char m_SelectedPath[MENU_PATH_LEN];

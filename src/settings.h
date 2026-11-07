@@ -66,6 +66,15 @@ public:
 	// Filas de mando (pValues = "*pad"): "auto" o el id (vid:pid) de un mando;
 	// las flechas pasan por los conectados, que pone el kernel con SetPads
 	static boolean IsPad (unsigned nIndex);
+
+	// Lista de valores de una opción (ENTER en las filas de muchos valores):
+	// cuántos hay, el nombre en pantalla de cada uno, si se puede elegir
+	// (joysticks: no el del otro jugador), cuál está puesto y elegir uno
+	static unsigned GetValueCount (unsigned nIndex);
+	static boolean GetValueItemName (unsigned nIndex, unsigned nItem, char *pName, unsigned nSize);
+	boolean IsValueAllowed (unsigned nIndex, unsigned nItem) const;
+	int GetValueItem (unsigned nIndex) const;
+	void ChooseValue (unsigned nIndex, unsigned nItem);
 	void SetPads (unsigned nCount, const char Ids[][SETTING_PAD_ID], const char Names[][SETTING_NAME_LEN]);
 	void SetActionText (const char *pKey, const char *pText);
 	static boolean IsValidIP (const char *p);

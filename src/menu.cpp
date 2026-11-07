@@ -61,6 +61,9 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nListSelected = 0;
 	m_nListTop = 0;
 	m_nListKey = 0;
+	m_bSettingChoice = FALSE;
+	m_nSettingChoiceIndex = 0;
+	m_nSettingChoiceItems = 0;
 	m_InputFooter[0] = '\0';
 	m_ListTitle[0] = m_ListNote[0] = '\0';
 	m_ListHelp[0][0] = m_ListHelp[1][0] = '\0';
@@ -1195,6 +1198,21 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 			m_Mode = ModeClosed;
 			Result = MenuResultChoiceCancel;
 		}
+
+		// La lista de valores de una opción (ENTER en la configuración): se
+		// vuelve a la configuración, con el valor elegido como con las flechas
+		if (m_bSettingChoice && (Result == MenuResultChoice || Result == MenuResultChoiceCancel))
+		{
+			m_bSettingChoice = FALSE;
+			m_Mode = ModeSettings;
+			if (Result == MenuResultChoice && m_nChoiceSelected < m_nSettingChoiceItems)
+			{
+				m_nChangedSetting = m_nSettingChoiceIndex;
+				m_pSettings->ChooseValue (m_nSettingChoiceIndex, m_SettingChoiceItem[m_nChoiceSelected]);
+				return MenuResultSetting;
+			}
+			return MenuResultNone;
+		}
 		return Result;
 	}
 
@@ -1300,6 +1318,39 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 			m_EditBuf[sizeof m_EditBuf - 1] = '\0';
 			m_bEditing = TRUE;
 			m_bEditBad = FALSE;
+		}
+		else if (   (nKey == HID_KEY_ENTER || nKey == 0x58) && bApplies
+			 && CSettings::GetValueCount (Index[m_nSettingsRow]) > SETTING_LIST_MIN)
+		{
+			// Muchos valores (modelo, idioma de la ROM del TK, joysticks...):
+			// ENTER abre la lista entera, con el valor puesto marcado
+			unsigned nIndex = Index[m_nSettingsRow];
+			m_nSettingChoiceIndex = nIndex;
+			m_nSettingChoiceItems = 0;
+			OpenChoice (T (m_pSettings->GetDef (nIndex).pLabel));
+			int nCurrent = m_pSettings->GetValueItem (nIndex);
+			unsigned nCount = CSettings::GetValueCount (nIndex);
+			for (unsigned i = 0; i < nCount && m_nSettingChoiceItems < MENU_CHOICE_ITEMS; i++)
+			{
+				char Name[SETTING_NAME_LEN];
+				if (!m_pSettings->IsValueAllowed (nIndex, i) || !CSettings::GetValueItemName (nIndex, i, Name, sizeof Name))
+				{
+					continue;		// joysticks: no el del otro jugador
+				}
+				m_SettingChoiceItem[m_nSettingChoiceItems] = i;
+				SetChoiceItem (m_nSettingChoiceItems++, Name);
+			}
+			if (nCurrent >= 0)			// el valor puesto, marcado
+			{
+				for (unsigned j = 0; j < m_nSettingChoiceItems; j++)
+				{
+					if ((int) m_SettingChoiceItem[j] == nCurrent)
+					{
+						SetChoiceSelected (j);
+					}
+				}
+			}
+			m_bSettingChoice = TRUE;
 		}
 		else if (   (nKey == HID_KEY_LEFT || nKey == HID_KEY_RIGHT || nKey == HID_KEY_ENTER || nKey == 0x58)
 			 && bApplies && !CSettings::IsEditable (Index[m_nSettingsRow]))
