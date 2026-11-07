@@ -35,7 +35,8 @@ El Spectrum solo puede leer dos joysticks a la vez si no se pisan, así que **no
 | Mandos de más | `padextra=` | se suman al jugador 1 (por defecto) o al 2, o solo sirven en los menús |
 
 - **Un mando concreto** se guarda por fabricante y modelo (`045e:028e` es un mando de Xbox 360). Con las flechas se pasa por los mandos conectados; si el elegido no está, se ve su código con «(no conectado)».
-- **Con dos mandos del mismo modelo**, el primero conectado es el del jugador 1.
+- **Con dos mandos del mismo modelo**, el primero conectado es el del jugador 1. Para elegirlos por separado, **el segundo lleva su número**: `045e:028e#2` (y se ve «Mando 2» o, con alias, «XBOX 2»). Ese número sale del orden de conexión, porque dos mandos iguales no tienen nada que los distinga: si desconectas el primero, el segundo pasa a ser el primero.
+- **Un alias** (por ejemplo «XBOX») se pone con la **A** en la pantalla «Botones del mando» y se ve en lugar de «Mando 1 (045E:028E)» en la página 5, en la lista para elegir mando, en esa pantalla y en Alt+D. Se guarda por modelo, en `joysticks/VVVV-PPPP/alias.txt`, así que lo comparten los mandos iguales, cada uno con su número. Dejándolo vacío se quita.
 - **En los mandos con luces de jugador** (PS3, PS4…), la luz dice de qué jugador es: 1 o 2, y apagada si solo sirve en los menús.
 - **F4** cambia el joystick del jugador 1. Un botón con la acción `joystick` (ver los perfiles) cambia el del jugador al que pertenece su mando.
 - **Sin tocar nada**, todo funciona como siempre: un solo jugador, y todos los mandos son suyos.
@@ -72,7 +73,7 @@ En los mandos genéricos los botones solo tienen número, y no se ve cuál es cu
 
 Se abre con **ENTER en la última fila de la página 5**. Si hay varios mandos conectados, primero pregunta cuál. Edita el perfil del tipo de joystick del jugador de ese mando.
 
-- **La primera fila es el perfil**: «por defecto» o uno con nombre. Con ← → se pasa por los guardados. **N** crea uno nuevo (copiando el que se ve), **R** le cambia el nombre y **SUPR** lo borra.
+- **La primera fila es el perfil**: «por defecto» o uno con nombre. Con ← → se pasa por los guardados. **N** crea uno nuevo (copiando el que se ve), **R** le cambia el nombre y **SUPR** lo borra. **A** pone el alias del mando.
 - **Las demás, un botón cada una.** Al pulsar un botón del mando, se marca su fila y abajo sale cuál es («Has pulsado: Botón 5»). Mientras la pantalla está abierta, los botones de ese mando no hacen nada más.
   - **← →**: ninguno, disparo, disparo 2, arriba, abajo, izquierda, derecha, joystick, ayuda, configuración o ficheros.
   - **ENTER**: una tecla del Spectrum, CAPS SHIFT + tecla, SYMBOL SHIFT + tecla, o una tecla del emulador (F1 a F12, Alt+F1 a Alt+F12, Enter, Esc, Tab, Pausa, RePág, AvPág, Inicio, Fin, Supr y los cursores).

@@ -148,6 +148,9 @@ private:
 	void OpenTapeSelect (void);
 	void UpdateRTC (void);
 	void RebootPi (boolean bSaveSettings);
+	void LoadPadAlias (unsigned nPad);		// joysticks/VVVV-PPPP/alias.txt
+	unsigned PadInstance (unsigned nPad) const;	// 1 = el primero de su modelo, 2 = el segundo...
+	CString PadName (unsigned nPad) const;		// el alias (o "Mando N (VVVV:PPPP)"), con su número
 	void PadEditStart (void);
 	void PadEditOpen (unsigned nPad);
 	void PadEditScanProfiles (void);
@@ -260,6 +263,7 @@ private:
 	u8			m_PadLED[MAX_GAMEPADS];		// luz de jugador puesta (0xFF = ninguna aún)
 	CPadProfile		m_PadProfile[MAX_GAMEPADS];	// qué hace cada botón (joysticks/VVVV-PPPP/)
 	unsigned		m_PadButtonCount[MAX_GAMEPADS];	// botones de cada mando (genéricos)
+	char			m_PadAlias[MAX_GAMEPADS][24];	// el alias de su modelo ("" = ninguno)
 	volatile u8		m_PadStickJoy[MAX_GAMEPADS];	// direcciones del stick (para Alt+D)
 
 	// Pantalla "Botones del mando" (kernelpad.cpp)

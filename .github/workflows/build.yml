@@ -75,6 +75,8 @@ jobs:
           ./players_test
           g++ -O2 -std=c++17 -I. -I$S -o padassign_test padassign_test.cpp $S/padassign.cpp
           ./padassign_test
+          g++ -O2 -std=c++17 -I. -I$S -o padsettings_test padsettings_test.cpp $S/settings.cpp t_stub.cpp
+          ./padsettings_test
           g++ -O2 -std=c++17 -I. -I$S -o padprofile_test padprofile_test.cpp $S/padprofile.cpp
           ./padprofile_test
           g++ -O2 -std=c++17 -I. -I$S -o keyboard_hold_test keyboard_hold_test.cpp $S/zxkeyboard.cpp

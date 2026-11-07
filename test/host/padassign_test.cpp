@@ -53,6 +53,12 @@ int main (void)
 	AssignPads (4, Ids, Gap, "auto", "auto", "menu", TRUE, P);
 	chk ("huecos vacíos entre mandos: se reparten los conectados (huecos 2 y 4)", P[1] == 0 && P[3] == 1);
 
+	// Dos mandos iguales: el segundo lleva su número (045e:028e#2)
+	const char *Same[4] = {"045e:028e", "045e:028e#2", "x", "y"};
+	boolean Both[4] = {TRUE, TRUE, FALSE, FALSE};
+	AssignPads (4, Same, Both, "045e:028e#2", "045e:028e", "menu", TRUE, P);
+	chk ("dos iguales, cruzados: el segundo (#2) al 1 y el primero al 2", P[1] == 0 && P[0] == 1);
+
 	printf (fails ? "%d fallos\n" : "todo OK\n", fails);
 	return fails ? 1 : 0;
 }

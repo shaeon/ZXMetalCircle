@@ -188,6 +188,7 @@ CKernel::CKernel (void)
 		m_PadLED[i] = 0xFF;
 		m_PadProfileMode[i] = 0xFF;
 		m_PadButtonCount[i] = 0;
+		m_PadAlias[i][0] = '\0';
 		m_PadStickJoy[i] = 0;
 	}
 	m_nPadEdit = -1;
@@ -896,6 +897,7 @@ void CKernel::UpdateUSB (void)
 		m_PadLED[i] = 0xFF;			// la luz se pone al asignarle jugador
 		m_PadProfile[i].SetDefault ((m_GamePadProps[i] & GamePadPropertyIsKnown) != 0);
 		m_PadProfileMode[i] = 0xFF;		// el suyo, al asignarle jugador
+		LoadPadAlias (i);
 		m_pGamePads[i] = pGamePad;
 		m_bPadsChanged = TRUE;
 
@@ -1221,7 +1223,16 @@ void CKernel::UpdatePadPlayers (void)
 	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
 	{
 		CString Id;
-		Id.Format ("%04x:%04x", m_PadVID[i], m_PadPID[i]);
+		// el código del modelo; los mandos iguales, con su número (045e:028e#2)
+		unsigned nInstance = m_pGamePads[i] != 0 ? PadInstance (i) : 1;
+		if (nInstance > 1)
+		{
+			Id.Format ("%04x:%04x#%u", m_PadVID[i], m_PadPID[i], nInstance);
+		}
+		else
+		{
+			Id.Format ("%04x:%04x", m_PadVID[i], m_PadPID[i]);
+		}
 		strncpy (Ids[i], Id, SETTING_PAD_ID - 1);
 		Ids[i][SETTING_PAD_ID - 1] = '\0';
 	}
@@ -1266,8 +1277,7 @@ void CKernel::UpdatePadPlayers (void)
 		if (nPads < MAX_GAMEPADS)
 		{
 			strcpy (Ids[nPads], Ids[i]);
-			CString Name;
-			Name.Format (T ("Mando %u (%04X:%04X)"), i + 1, m_PadVID[i], m_PadPID[i]);
+			CString Name (PadName (i));
 			strncpy (Names[nPads], Name, SETTING_NAME_LEN - 1);
 			Names[nPads][SETTING_NAME_LEN - 1] = '\0';
 			nPads++;
@@ -5294,8 +5304,15 @@ void CKernel::DrawKeyDebug (TPixel *pScreen)
 		}
 		boolean bKnown = (m_GamePadProps[i] & GamePadPropertyIsKnown) != 0;
 		u8 nPlayer = m_Keyboard.GetPadPlayer (i);
-		Line.Format ("%u %04X:%04X %s:", i + 1, m_PadVID[i], m_PadPID[i],
-			     nPlayer == PAD_MENU_ONLY ? T ("menú") : (nPlayer == 1 ? "J2" : "J1"));
+		const char *pPlayer = nPlayer == PAD_MENU_ONLY ? T ("menú") : (nPlayer == 1 ? "J2" : "J1");
+		if (m_PadAlias[i][0] != '\0')
+		{
+			Line.Format ("%u %s %s:", i + 1, (const char *) PadName (i), pPlayer);
+		}
+		else
+		{
+			Line.Format ("%u %04X:%04X %s:", i + 1, m_PadVID[i], m_PadPID[i], pPlayer);
+		}
 		unsigned nButtons = m_PrevPadButtons[i];
 		for (unsigned b = 0; b < 32; b++)
 		{

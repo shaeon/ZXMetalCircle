@@ -35,7 +35,8 @@ enum
 	PadEditChooseKey,	// la tecla
 	PadEditInputName,	// nombre de un perfil nuevo o nuevo nombre
 	PadEditConfirmExit,	// ESC con cambios
-	PadEditConfirmDelete	// SUPR en la fila del perfil
+	PadEditConfirmDelete,	// SUPR en la fila del perfil
+	PadEditInputAlias	// A: el alias del mando
 };
 
 static const char *JoyTypes[JoystickModeCount] =		// como joystick=
@@ -69,6 +70,72 @@ static void PadDir (CString *pDir, u16 nVID, u16 nPID)
 	pDir->Format ("SD:/joysticks/%04x-%04x", nVID, nPID);
 }
 
+// El alias de un modelo de mando (joysticks/VVVV-PPPP/alias.txt, la primera
+// línea); lo comparten los mandos iguales
+void CKernel::LoadPadAlias (unsigned nPad)
+{
+	m_PadAlias[nPad][0] = '\0';
+	CString Dir, Path;
+	PadDir (&Dir, m_PadVID[nPad], m_PadPID[nPad]);
+	Path.Format ("%s/alias.txt", (const char *) Dir);
+	FIL File;
+	UINT nRead = 0;
+	char Text[sizeof m_PadAlias[0]];
+	if (f_open (&File, Path, FA_READ) != FR_OK)
+	{
+		return;
+	}
+	f_read (&File, Text, sizeof Text - 1, &nRead);
+	f_close (&File);
+	Text[nRead] = '\0';
+	unsigned n = 0;
+	while (Text[n] != '\0' && Text[n] != '\r' && Text[n] != '\n')
+	{
+		n++;
+	}
+	Text[n] = '\0';
+	strcpy (m_PadAlias[nPad], Text);
+}
+
+// Qué número es entre los conectados de su mismo modelo (por orden de hueco,
+// que es el de conexión): 1 el primero, 2 el segundo...
+unsigned CKernel::PadInstance (unsigned nPad) const
+{
+	unsigned n = 1;
+	for (unsigned i = 0; i < nPad; i++)
+	{
+		if (m_pGamePads[i] != 0 && m_PadVID[i] == m_PadVID[nPad] && m_PadPID[i] == m_PadPID[nPad])
+		{
+			n++;
+		}
+	}
+	return n;
+}
+
+// Cómo se llama un mando en pantalla: su alias o "Mando N (VVVV:PPPP)"; si hay
+// otro igual antes, con su número ("XBOX 2")
+CString CKernel::PadName (unsigned nPad) const
+{
+	CString Name;
+	unsigned nInstance = PadInstance (nPad);
+	if (m_PadAlias[nPad][0] != '\0')
+	{
+		if (nInstance > 1)
+		{
+			Name.Format ("%s %u", m_PadAlias[nPad], nInstance);
+		}
+		else
+		{
+			Name = m_PadAlias[nPad];
+		}
+	}
+	else
+	{
+		Name.Format (T ("Mando %u (%04X:%04X)"), nPad + 1, m_PadVID[nPad], m_PadPID[nPad]);
+	}
+	return Name;
+}
+
 void CKernel::PadEditStart (void)
 {
 	unsigned nPads = 0, nLast = 0;
@@ -97,9 +164,7 @@ void CKernel::PadEditStart (void)
 	{
 		if (m_pGamePads[i] != 0)
 		{
-			CString Item;
-			Item.Format (T ("Mando %u (%04X:%04X)"), i + 1, m_PadVID[i], m_PadPID[i]);
-			m_Menu.SetChoiceItem (n, Item);
+			m_Menu.SetChoiceItem (n, PadName (i));
 			m_PadEditChoice[n++] = i;
 		}
 	}
@@ -208,14 +273,14 @@ void CKernel::PadEditOpen (unsigned nPad)
 	}
 
 	m_Menu.OpenList ("", T ("<- -> acción  ENTER teclas  G guardar"),
-			 T ("N nuevo  R nombre  SUPR borrar  ESC sal"));
+			 T ("N nuevo R nombre SUPR borrar A alias ESC"));
 	PadEditRefresh ();
 }
 
 void CKernel::PadEditRefresh (void)
 {
 	CString Title;
-	Title.Format (T ("Mando %u: %s"), m_nPadEdit + 1, T (JoystickNames[m_PadEditMode % JoystickModeCount]));
+	Title.Format ("%s: %s", (const char *) PadName (m_nPadEdit), T (JoystickNames[m_PadEditMode % JoystickModeCount]));
 	m_Menu.SetListTitle (Title);
 
 	m_Menu.SetListRow (0, T ("Perfil"), m_PadEditName[0] != '\0' ? m_PadEditName : T ("por defecto"));
@@ -399,7 +464,14 @@ void CKernel::PadEditKey (u8 nKey, unsigned nRow)
 		}
 	}
 
-	if (nKey == 0x0A)					// G: guardar
+	if (nKey == 0x04)					// A: alias del mando
+	{
+		m_nPadEditStage = PadEditInputAlias;
+		m_Menu.OpenInput (T ("Alias del mando"), T ("Letras, números y espacios"), T ("Vacío: quitar el alias"),
+				  T ("ENTER aceptar  BORRAR corrige  ESC salir"));
+		return;
+	}
+	else if (nKey == 0x0A)					// G: guardar
 	{
 		PadEditSave ();
 	}
@@ -435,7 +507,7 @@ void CKernel::PadEditBackToList (unsigned nRow)
 	unsigned nSelected = nRow;
 	m_nPadEditStage = PadEditList;
 	m_Menu.OpenList ("", T ("<- -> acción  ENTER teclas  G guardar"),
-			 T ("N nuevo  R nombre  SUPR borrar  ESC sal"));
+			 T ("N nuevo R nombre SUPR borrar A alias ESC"));
 	PadEditRefresh ();
 	m_Menu.SetListSelected (nSelected);
 }
@@ -627,6 +699,66 @@ boolean CKernel::PadEditMenuResult (TMenuResult Result)
 			return TRUE;
 		}
 		else if (Result != MenuResultChoice && Result != MenuResultChoiceCancel)
+		{
+			return FALSE;
+		}
+		PadEditBackToList (0);
+		return TRUE;
+
+	case PadEditInputAlias:
+		if (Result == MenuResultInput)
+		{
+			// letras, números y espacios; vacío = sin alias
+			char Alias[sizeof m_PadAlias[0]];
+			unsigned n = 0;
+			for (const char *p = m_Menu.GetInput (); *p != '\0' && n + 1 < sizeof Alias; p++)
+			{
+				char c = *p;
+				if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || (c == ' ' && n > 0))
+				{
+					Alias[n++] = c;
+				}
+			}
+			while (n > 0 && Alias[n - 1] == ' ')
+			{
+				n--;
+			}
+			Alias[n] = '\0';
+
+			CString Dir, Path;
+			PadDir (&Dir, m_PadVID[m_nPadEdit], m_PadPID[m_nPadEdit]);
+			Path.Format ("%s/alias.txt", (const char *) Dir);
+			boolean bOK;
+			if (n == 0)
+			{
+				f_unlink (Path);
+				bOK = TRUE;
+			}
+			else
+			{
+				f_mkdir ("SD:/joysticks");
+				f_mkdir (Dir);
+				FIL File;
+				UINT nWritten = 0;
+				bOK = f_open (&File, Path, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK;
+				if (bOK)
+				{
+					bOK = f_write (&File, Alias, n, &nWritten) == FR_OK && nWritten == n;
+					bOK = f_close (&File) == FR_OK && bOK;
+				}
+			}
+			// en todos los mandos de ese modelo
+			for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+			{
+				if (m_pGamePads[i] != 0 && m_PadVID[i] == m_PadVID[m_nPadEdit] && m_PadPID[i] == m_PadPID[m_nPadEdit])
+				{
+					LoadPadAlias (i);
+				}
+			}
+			UpdatePadPlayers ();			// los nombres de la página 5
+			UpdateMessage (!bOK ? T ("No se pudo guardar el alias") : (n == 0 ? T ("Alias quitado") : T ("Alias guardado")));
+		}
+		else if (Result != MenuResultInputCancel)
 		{
 			return FALSE;
 		}

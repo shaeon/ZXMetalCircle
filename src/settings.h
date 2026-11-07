@@ -31,7 +31,7 @@ struct TSettingDef
 #define SETTINGS_MAX		80
 #define SETTING_NAME_LEN	32
 #define SETTING_VALUE_LEN	96	// (rutas de hdd=)
-#define SETTING_PAD_ID		10	// "045e:028e"
+#define SETTING_PAD_ID		16	// "045e:028e" o, el segundo igual, "045e:028e#2"
 #define SETTING_MAX_PADS	4
 
 class CSettings

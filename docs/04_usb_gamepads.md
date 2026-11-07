@@ -35,7 +35,8 @@ The Spectrum can only read two joysticks at once if they do not overlap, so **th
 | Extra gamepads | `padextra=` | they join player 1 (default) or player 2, or are for the menus only |
 
 - **A specific gamepad** is stored by vendor and product (`045e:028e` is an Xbox 360 controller). The arrows go through the connected gamepads; if the chosen one is not there, its code is shown with "(not connected)".
-- **With two gamepads of the same model**, the first one connected is player 1's.
+- **With two gamepads of the same model**, the first one connected is player 1's. To choose them separately, **the second one carries its number**: `045e:028e#2` (shown as "Gamepad 2" or, with an alias, "XBOX 2"). That number comes from the connection order, because two identical gamepads have nothing to tell them apart: if you unplug the first one, the second becomes the first.
+- **An alias** (for example "XBOX") is set with **A** on the "Gamepad buttons" screen and is shown instead of "Gamepad 1 (045E:028E)" on page 5, in the list to choose a gamepad, on that screen and in Alt+D. It is stored per model, in `joysticks/VVVV-PPPP/alias.txt`, so identical gamepads share it, each with its number. Leaving it empty removes it.
 - **On gamepads with player lights** (PS3, PS4...), the light shows which player it belongs to: 1 or 2, and off if it is for the menus only.
 - **F4** changes player 1's joystick. A button with the `joystick` action (see the profiles) changes the joystick of the player its gamepad belongs to.
 - **Without changing anything**, everything works as always: a single player, and all gamepads are theirs.
@@ -72,7 +73,7 @@ On generic gamepads the buttons only have numbers, and you cannot tell which is 
 
 It opens with **ENTER on the last row of page 5**. If several gamepads are connected, it first asks which one. It edits the profile for the joystick type of that gamepad's player.
 
-- **The first row is the profile**: "default" or a named one. ← → go through the saved ones. **N** creates a new one (copying the one shown), **R** renames it and **DEL** deletes it.
+- **The first row is the profile**: "default" or a named one. ← → go through the saved ones. **N** creates a new one (copying the one shown), **R** renames it and **DEL** deletes it. **A** sets the gamepad's alias.
 - **The other rows, one button each.** Pressing a button on the gamepad highlights its row and the bottom line says which one it is ("You pressed: Button 5"). While the screen is open, that gamepad's buttons do nothing else.
   - **← →**: none, fire, fire 2, up, down, left, right, joystick, help, settings or files.
   - **ENTER**: a Spectrum key, CAPS SHIFT + key, SYMBOL SHIFT + key, or an emulator key (F1 to F12, Alt+F1 to Alt+F12, Enter, Esc, Tab, Pause, PgUp, PgDn, Home, End, Delete and the cursor keys).
