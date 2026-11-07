@@ -23,6 +23,7 @@
 #include "download/circleglue.h"
 #include "download/httpsclient.h"
 #include <circle/timer.h>
+#include <circle/sched/task.h>
 #include <circle/util.h>
 #include <circle/string.h>
 #include <fatfs/ff.h>
@@ -187,44 +188,24 @@ boolean CKernel::UpdateInit (void)
 	return TRUE;
 }
 
-// "Buscar al arrancar": la primera vez que hay red
-void CKernel::UpdateBootCheck (void)
+// La última versión publicada en GitHub: primero la redirección de
+// github.com/.../releases/latest a .../tag/vX.YY (una sola petición pequeña y
+// sin límite de consultas) y, si falla, la API. Sin nada de pantalla: la usan
+// la búsqueda a mano y la de al arrancar (en segundo plano).
+static boolean QueryLatest (ITransport *pTransport, char *pVersion, size_t nVersionSize,
+			    char *pURL, size_t nURLSize)
 {
-	if (   !m_bUpdateBootChecked && CNetworkManager::IsNetRunning ()
-	    && strcmp (Setting (m_Settings, "updboot"), "1") == 0)
-	{
-		m_bUpdateBootChecked = TRUE;
-		UpdateCheck (FALSE);		// con el resultado a la vista: se ve que busca
-	}
-}
-
-void CKernel::UpdateCheck (boolean bQuiet)
-{
-	if (!CNetworkManager::IsNetRunning ())
-	{
-		if (!bQuiet)
-		{
-			UpdateMessage (T ("Sin red: no se puede buscar"));
-		}
-		return;
-	}
-	if (!bQuiet)
-	{
-		UpdateBusy (T ("Buscando actualización..."));
-	}
-
-	// Primero la redirección de github.com/.../releases/latest a .../tag/vX.YY:
-	// una sola petición pequeña y sin límite de consultas. Si falla, la API.
-	CBusyTransport Transport (UpdateShowBusy, this, T ("Buscando: conectando con %s..."),
-				  T ("Buscando: esperando a GitHub (%u s)..."));
-	CHTTPSClient Client (&Transport);
-	char Version[sizeof m_UpdateVersion], URL[sizeof m_UpdateURL];
+	CHTTPSClient Client (pTransport);
 	boolean bFound = FALSE;
-	static char Location[1024];
-	int nStatus = Client.GetRedirect (UPDATE_WEB_URL, Location, sizeof Location);
-	if (nStatus >= 300 && nStatus < 400)
+	char *pLocation = new char[1024];
+	if (pLocation != 0)
 	{
-		bFound = CUpdater::ParseTagURL (Location, Version, sizeof Version, URL, sizeof URL);
+		int nStatus = Client.GetRedirect (UPDATE_WEB_URL, pLocation, 1024);
+		if (nStatus >= 300 && nStatus < 400)
+		{
+			bFound = CUpdater::ParseTagURL (pLocation, pVersion, nVersionSize, pURL, nURLSize);
+		}
+		delete [] pLocation;
 	}
 	if (!bFound)
 	{
@@ -233,36 +214,101 @@ void CKernel::UpdateCheck (boolean bQuiet)
 		if (pPage != 0 && Client.Get (UPDATE_API_URL, pPage, UPDATE_PAGE_MAX, &nLength) == 200)
 		{
 			bFound = CUpdater::ParseRelease ((const char *) pPage, nLength,
-							 Version, sizeof Version, URL, sizeof URL);
+							 pVersion, nVersionSize, pURL, nURLSize);
 		}
 		delete [] pPage;
 	}
+	return bFound;
+}
 
+// La búsqueda de al arrancar, en una tarea aparte: el Spectrum sigue mientras
+// se espera a GitHub (la tarea avanza cuando el bucle principal espera al
+// cuadro siguiente). Deja el resultado en el kernel (la tarea se borra sola al
+// terminar, así que no se lee nada de ella) y avisa con bDone.
+class CUpdateCheckTask : public CTask
+{
+public:
+	CUpdateCheckTask (TUpdateBootResult *pResult)
+	:	CTask (0x20000),		// el TLS necesita bastante pila
+		m_pResult (pResult)
+	{
+	}
+
+	void Run (void)
+	{
+		CCircleTransport Transport;
+		m_pResult->bFound = QueryLatest (&Transport, m_pResult->Version, sizeof m_pResult->Version,
+						 m_pResult->URL, sizeof m_pResult->URL);
+		m_pResult->bDone = TRUE;
+	}
+
+private:
+	TUpdateBootResult *m_pResult;
+};
+
+// Lo que se ha encontrado, en pantalla y en las filas de la página 10
+void CKernel::UpdateShowResult (boolean bFound, const char *pVersion, const char *pURL)
+{
 	CString Message;
 	if (!bFound)
 	{
-		if (!bQuiet)
-		{
-			UpdateMessage (T ("No se pudo consultar GitHub"));
-		}
+		UpdateMessage (T ("No se pudo consultar GitHub"));
 	}
-	else if (CUpdater::CompareVersions (Version, ZXCIRCLE_VERSION) > 0)
+	else if (CUpdater::CompareVersions (pVersion, ZXCIRCLE_VERSION) > 0)
 	{
-		strcpy (m_UpdateVersion, Version);
-		strcpy (m_UpdateURL, URL);
-		Message.Format (T ("Hay una versión nueva: %s"), Version);
+		strncpy (m_UpdateVersion, pVersion, sizeof m_UpdateVersion - 1);
+		m_UpdateVersion[sizeof m_UpdateVersion - 1] = '\0';
+		strncpy (m_UpdateURL, pURL, sizeof m_UpdateURL - 1);
+		m_UpdateURL[sizeof m_UpdateURL - 1] = '\0';
+		Message.Format (T ("Hay una versión nueva: %s"), pVersion);
 		UpdateMessage (Message);
 	}
 	else
 	{
 		m_UpdateVersion[0] = '\0';
-		if (!bQuiet)
-		{
-			Message.Format (T ("Ya tienes la última (%s)"), ZXCIRCLE_VERSION);
-			UpdateMessage (Message);
-		}
+		Message.Format (T ("Ya tienes la última (%s)"), ZXCIRCLE_VERSION);
+		UpdateMessage (Message);
 	}
 	UpdateRows ();
+}
+
+// A mano ("Buscar actualización"): con el menú abierto, esperando, y con los
+// avisos de lo que pasa
+void CKernel::UpdateCheck (void)
+{
+	if (!CNetworkManager::IsNetRunning ())
+	{
+		UpdateMessage (T ("Sin red: no se puede buscar"));
+		return;
+	}
+	UpdateBusy (T ("Buscando actualización..."));
+	CBusyTransport Transport (UpdateShowBusy, this, T ("Buscando: conectando con %s..."),
+				  T ("Buscando: esperando a GitHub (%u s)..."));
+	char Version[sizeof m_UpdateVersion], URL[sizeof m_UpdateURL];
+	boolean bFound = QueryLatest (&Transport, Version, sizeof Version, URL, sizeof URL);
+	UpdateShowResult (bFound, Version, URL);
+}
+
+// "Buscar al arrancar": la primera vez que hay red, en segundo plano (el
+// Spectrum sigue arrancando); el resultado se dice cuando llega
+void CKernel::UpdateBootCheck (void)
+{
+	if (   !m_bUpdateBootChecked && CNetworkManager::IsNetRunning ()
+	    && strcmp (Setting (m_Settings, "updboot"), "1") == 0)
+	{
+		m_bUpdateBootChecked = TRUE;
+		m_UpdateBootResult.bDone = FALSE;
+		m_UpdateBootResult.bFound = FALSE;
+		m_bUpdateBootRunning = TRUE;
+		ShowMessage (T ("Buscando actualización..."));
+		m_nMessageFrames = 1500;			// hasta el resultado (como mucho, 30 s)
+		new CUpdateCheckTask (&m_UpdateBootResult);	// se borra sola al terminar
+	}
+	if (m_bUpdateBootRunning && m_UpdateBootResult.bDone)
+	{
+		m_bUpdateBootRunning = FALSE;
+		UpdateShowResult (m_UpdateBootResult.bFound, m_UpdateBootResult.Version, m_UpdateBootResult.URL);
+	}
 }
 
 // Confirmación: la instalación termina reiniciando
@@ -291,7 +337,7 @@ void CKernel::UpdateAction (const char *pKey)
 	{
 		if (m_UpdateVersion[0] == '\0')
 		{
-			UpdateCheck (FALSE);		// si hay una nueva, la fila lo dice
+			UpdateCheck ();		// si hay una nueva, la fila lo dice
 		}
 		else
 		{

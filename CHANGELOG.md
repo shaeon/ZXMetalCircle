@@ -8,6 +8,8 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Cambiado**: "Buscar al arrancar" busca en segundo plano, en una tarea aparte: el Spectrum sigue funcionando mientras se espera a GitHub (antes se quedaba parado unos segundos, a veces en mitad del arranque, con la pantalla a medio hacer), y el resultado se dice cuando llega. "Buscar actualización" en la página 10 sigue esperando, con sus avisos, porque ahí el menú está abierto.
+- **Corregido**: el aviso "Ratón conectado (inactivo con joystick Kempston)" no cabía en pantalla; ahora es "Ratón: inactivo con joystick Kempston".
 - **Corregido**: con "Buscar al arrancar", se veía que buscaba pero no el resultado si ya se tenía la última versión o si GitHub no respondía (solo avisaba de una versión nueva). Ahora dice siempre el resultado.
 - **Cambiado**: por la web se pueden subir hasta 32 MB de una vez (antes 8), como los ZIP que abre el emulador. Las descargas de ZXDB admiten ficheros de hasta 16 MB, tanto lo que llega como lo que se guarda descomprimido; antes el límite real eran 4 MB (lo que llegaba) y 2 MB (lo descomprimido). La memoria solo se usa mientras dura la subida o la descarga.
 - **Nuevo**: en la configuración, ENTER en una opción de más de 4 valores (modelo, idioma de la ROM del TK, joysticks de los jugadores, zona horaria, GPIO del casete) abre la lista entera, con el valor puesto marcado; al elegir se vuelve a la configuración con ese valor, aplicado como con las flechas, y ESC vuelve sin cambiarlo. En las de joystick, la lista no ofrece el del otro jugador. Las flechas siguen pasando de uno en uno, y en las opciones de pocos valores ENTER sigue pasando al siguiente.

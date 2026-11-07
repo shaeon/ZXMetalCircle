@@ -11,7 +11,7 @@ From version 1.07, the emulator can update itself from the releases published on
 | Installed version | the one you have |
 | Check for update | with ENTER, asks GitHub; if there is a new version, the row then says "ENTER: install 1.07" |
 | Saved package | with ENTER, lists the packages in the `update` folder to install one again (also an older version) |
-| Check at boot | `updboot=`: with `1`, the first time there is network it checks by itself and shows the result: "You have the latest", "There is a new version" or "Could not reach GitHub". Off by default |
+| Check at boot | `updboot=`: with `1`, the first time there is network it checks by itself, in the background (the Spectrum keeps running meanwhile), and shows the result: "You have the latest", "There is a new version" or "Could not reach GitHub". Off by default |
 | Saved packages | `updkeep=`: `2` keeps in `update` the installed version's package and the previous one (to go back); `all`, all of them |
 | Settings on update | `updconfig=`: `keep` keeps your configuration files; `new` uses the new ones |
 

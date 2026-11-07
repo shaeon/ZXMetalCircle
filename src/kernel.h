@@ -61,6 +61,15 @@ enum TShutdownMode
 
 extern const char *JoystickNames[JoystickModeCount];	// sus nombres (N_), en kernel.cpp
 
+// Resultado de la búsqueda de al arrancar (la escribe una tarea aparte)
+struct TUpdateBootResult
+{
+	volatile boolean bDone;
+	boolean bFound;
+	char Version[16];
+	char URL[600];
+};
+
 class CKernel : public CTapeSaveHandler
 {
 public:
@@ -160,7 +169,8 @@ private:
 	boolean UpdateInit (void);		// TRUE: avisa de una instalación a medias
 	void UpdateRows (void);
 	void UpdateBootCheck (void);
-	void UpdateCheck (boolean bQuiet);
+	void UpdateCheck (void);			// a mano, esperando
+	void UpdateShowResult (boolean bFound, const char *pVersion, const char *pURL);
 	void UpdateConfirm (void);
 	void UpdateAction (const char *pKey);
 	boolean UpdateMenuResult (TMenuResult Result);
@@ -375,6 +385,8 @@ private:
 	boolean			m_bUpdateListChoice;	// pregunta: qué paquete
 	boolean			m_bUpdateErrorChoice;	// pregunta: falló a medias
 	boolean			m_bUpdateBootChecked;
+	boolean			m_bUpdateBootRunning;	// la tarea de al arrancar está buscando
+	TUpdateBootResult	m_UpdateBootResult;
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZipOverwriteChoice;	// pregunta: usar el de tmp o sobrescribir
 	unsigned		m_nZipPending;

@@ -208,6 +208,7 @@ CKernel::CKernel (void)
 	m_bUpdateListChoice = FALSE;
 	m_bUpdateErrorChoice = FALSE;
 	m_bUpdateBootChecked = FALSE;
+	m_bUpdateBootRunning = FALSE;
 	m_pTKROM = 0;
 	m_pTK95ROM = 0;
 	m_bIndicators = TRUE;
@@ -925,7 +926,7 @@ void CKernel::UpdateUSB (void)
 
 			m_Logger.Write (FromKernel, LogNotice, "Mouse attached");
 			ShowMessage (m_Keyboard.GetJoystickMode () == JoystickKempston
-				     ? T ("Ratón conectado (inactivo con joystick Kempston)")
+				     ? T ("Ratón: inactivo con joystick Kempston")
 				     : T ("Ratón Kempston conectado"));
 		}
 	}
