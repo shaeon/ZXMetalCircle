@@ -9,6 +9,7 @@
 //
 #include "webserver.h"
 #include "webfiles.h"
+#include "zipfile.h"
 #include <circle/bcmrandom.h>
 #include "i18n.h"
 #include "exclusions.h"
@@ -178,6 +179,7 @@ static char s_CSRF[20] = "";
 static char s_Cut[HTTP_MAX_PATH + 1] = "";
 
 static bool IsHardDisk (const char *pName);
+static const char *BaseOf (const char *pPath);
 
 static bool ValidCSRF (const char *pParams, const char *pFormData);
 
@@ -225,6 +227,37 @@ static boolean IsLoadable (const char *pName)
 		}
 	}
 	return FALSE;
+}
+
+static const char PageStyle[] =
+	"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+	"<title>ZXMetalCircle</title><style>"
+	"body{font-family:sans-serif;background:#10123a;color:#e8e8e8;margin:0;padding:12px}"
+	"h1{color:#eeeb46;font-size:1.3em;margin:0 0 4px}"
+	"a{color:#7fd6ff}.st{color:#8a8ca0;font-size:.9em}"
+	".msg{background:#36efde;color:#000;padding:6px;margin:8px 0}"
+	"table{border-collapse:collapse;width:100%}td{padding:4px 6px;border-bottom:1px solid #2a2c5a}"
+	"td.s{text-align:right;color:#8a8ca0;white-space:nowrap}"
+	"form{margin:10px 0;padding:8px;background:#1c1f55}"
+	"form.i{display:inline;margin:0;padding:0;background:none}"
+	"form.i button,.cut a{background:none;border:0;color:#7fd6ff;padding:0;font:inherit;"
+	"text-decoration:underline;cursor:pointer}"
+	"td.a{white-space:nowrap}td.a>*{margin-right:.6em}.pr{color:#8a8ca0}"
+	".cut{background:#3a3d8a;padding:6px;margin:8px 0}"
+	"</style></head><body>";
+
+static bool IsZipEntryLoadable (const char *pName)
+{
+	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx", ".rom",
+				    ".dsk", ".mdr", ".mdv"};
+	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
+	{
+		if (HasExtension (pName, Ext[i]))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 static bool IsHardDisk (const char *pName)
@@ -559,6 +592,15 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 	{
 		Message = Move (pParams);
 	}
+	else if (strcmp (pPath, "/zip") == 0)
+	{
+		char File[HTTP_MAX_PATH + 1], CleanFile[HTTP_MAX_PATH + 1];
+		if (   GetParam (pParams, "f", File, sizeof File) && CleanPath (File, CleanFile, sizeof CleanFile)
+		    && HasExtension (CleanFile, ".zip"))
+		{
+			return SendZip (Clean, CleanFile, pBuffer, pLength);
+		}
+	}
 	else if (strcmp (pPath, "/cut") == 0)
 	{
 		char File[HTTP_MAX_PATH + 1], CleanFile[HTTP_MAX_PATH + 1];
@@ -610,8 +652,19 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 			}
 			else
 			{
-				WebRequestLoad (SDPath);
-				Message.Format (T ("Cargando en el Spectrum: %s"), CleanFile);
+				char Entry[HTTP_MAX_PATH + 1];
+				if (GetParam (pParams, "e", Entry, sizeof Entry) && Entry[0] != '\0')
+				{
+					CString ZipEntry;		// un fichero de dentro del ZIP
+					ZipEntry.Format ("%s|%s", (const char *) SDPath, Entry);
+					WebRequestLoad (ZipEntry);
+					Message.Format (T ("Cargando en el Spectrum: %s"), BaseOf (Entry));
+				}
+				else
+				{
+					WebRequestLoad (SDPath);
+					Message.Format (T ("Cargando en el Spectrum: %s"), CleanFile);
+				}
 			}
 		}
 	}
@@ -1054,6 +1107,106 @@ static int CompareEntries (const TDirEntry *a, const TDirEntry *b)
 	return strcasecmp (a->Name, b->Name);
 }
 
+// El contenido de un ZIP: los ficheros que se pueden cargar llevan enlace (se
+// carga ese, sin preguntar en la pantalla de la Pi); el resto, solo el nombre
+#define WEB_ZIP_MAX_SIZE	(32 * 1024 * 1024)		// como los que abre el emulador
+
+THTTPStatus CZXWebServer::SendZip (const char *pDir, const char *pZip, u8 *pBuffer, unsigned *pLength)
+{
+	CString Html, Line, Esc, Enc, Message;
+	Html.Format ("<!DOCTYPE html><html lang=\"%s\"><head><meta charset=\"utf-8\">", CI18n::Get ()->GetLanguage ());
+	Html.Append (PageStyle);
+
+	CString DirEnc;
+	URLEncode (pDir, &DirEnc);
+	CString ZipEnc;
+	URLEncode (pZip, &ZipEnc);
+	HTMLEscape (pZip, &Esc);
+	Line.Format ("<h1>ZXMetalCircle %s</h1><p><a href=\"/?d=%s\">%s</a></p><p><b>%s</b></p>", ZXCIRCLE_VERSION,
+		     (const char *) DirEnc, T ("Volver a la carpeta"), (const char *) Esc);
+	Html.Append (Line);
+
+	// el ZIP entero a memoria (el directorio central apunta a todo el fichero)
+	CString SDPath;
+	SDPath.Format ("SD:/%s", pZip);
+	FIL File;
+	u8 *pData = 0;
+	unsigned nSize = 0;
+	if (f_open (&File, SDPath, FA_READ | FA_OPEN_EXISTING) == FR_OK)
+	{
+		nSize = f_size (&File);
+		if (nSize > 0 && nSize <= WEB_ZIP_MAX_SIZE)
+		{
+			BusyFile (T ("Red: leyendo %s (%u KB)"), pZip, nSize);
+			pData = new u8[nSize];
+			unsigned nRead = 0;
+			if (pData != 0 && (f_read (&File, pData, nSize, &nRead) != FR_OK || nRead != nSize))
+			{
+				delete [] pData;
+				pData = 0;
+			}
+		}
+		f_close (&File);
+	}
+
+	CZipFile Zip;
+	if (pData == 0 || !Zip.Open (pData, nSize))
+	{
+		Line.Format ("<div class=\"msg\">%s</div>", nSize > WEB_ZIP_MAX_SIZE ? T ("ZIP demasiado grande")
+										       : T ("ZIP no válido"));
+		Html.Append (Line);
+	}
+	else
+	{
+		Html.Append ("<table>");
+		unsigned nShown = 0;
+		for (unsigned i = 0; i < Zip.GetCount (); i++)
+		{
+			const char *pName = Zip.GetName (i);
+			const char *pBase = Zip.GetBaseName (i);
+			if (Zip.IsDirectory (i) || strncmp (pName, "__MACOSX", 8) == 0 || pBase[0] == '.')
+			{
+				continue;
+			}
+			HTMLEscape (pName, &Esc);
+			CString NameCell;
+			if (IsZipEntryLoadable (pBase))
+			{
+				URLEncode (pName, &Enc);
+				NameCell.Format ("<a href=\"/load?d=%s&f=%s&e=%s\">%s</a>", (const char *) DirEnc,
+						 (const char *) ZipEnc, (const char *) Enc, (const char *) Esc);
+			}
+			else
+			{
+				NameCell = Esc;
+			}
+			Line.Format ("<tr><td>%s</td><td class=\"s\">%u KB</td></tr>", (const char *) NameCell,
+				     (Zip.GetSize (i) + 1023) / 1024);
+			Html.Append (Line);
+			nShown++;
+		}
+		Html.Append ("</table>");
+		if (nShown == 0)
+		{
+			Line.Format ("<p class=\"st\">%s</p>", T ("El ZIP está vacío"));
+			Html.Append (Line);
+		}
+	}
+	delete [] pData;
+
+	Html.Append ("</body></html>");
+	AddToken (&Html);
+
+	unsigned nLen = Html.GetLength ();
+	if (nLen > *pLength)
+	{
+		return HTTPInternalServerError;
+	}
+	memcpy (pBuffer, (const char *) Html, nLen);
+	*pLength = nLen;
+	return HTTPOK;
+}
+
 THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 					 u8 *pBuffer, unsigned *pLength)
 {
@@ -1110,21 +1263,7 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 	CString Esc, Enc, Line;
 
 	Html.Format ("<!DOCTYPE html><html lang=\"%s\"><head><meta charset=\"utf-8\">", CI18n::Get ()->GetLanguage ());
-	Html.Append ("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-	       "<title>ZXMetalCircle</title><style>"
-	       "body{font-family:sans-serif;background:#10123a;color:#e8e8e8;margin:0;padding:12px}"
-	       "h1{color:#eeeb46;font-size:1.3em;margin:0 0 4px}"
-	       "a{color:#7fd6ff}.st{color:#8a8ca0;font-size:.9em}"
-	       ".msg{background:#36efde;color:#000;padding:6px;margin:8px 0}"
-	       "table{border-collapse:collapse;width:100%}td{padding:4px 6px;border-bottom:1px solid #2a2c5a}"
-	       "td.s{text-align:right;color:#8a8ca0;white-space:nowrap}"
-	       "form{margin:10px 0;padding:8px;background:#1c1f55}"
-	       "form.i{display:inline;margin:0;padding:0;background:none}"
-	       "form.i button,.cut a{background:none;border:0;color:#7fd6ff;padding:0;font:inherit;"
-	       "text-decoration:underline;cursor:pointer}"
-	       "td.a{white-space:nowrap}td.a>*{margin-right:.6em}.pr{color:#8a8ca0}"
-	       ".cut{background:#3a3d8a;padding:6px;margin:8px 0}"
-	       "</style></head><body>");
+	Html.Append (PageStyle);
 
 	Line.Format ("<h1>ZXMetalCircle %s</h1><div class=\"st\">", ZXCIRCLE_VERSION);
 	Html.Append (Line);
@@ -1244,6 +1383,11 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 		{
 			Name.Format ("<a href=\"/?d=%s\">[%s]</a>", (const char *) Enc, (const char *) Esc);
 		}
+		else if (HasExtension (pEntries[i].Name, ".zip"))
+		{
+			Name.Format ("<a href=\"/zip?d=%s&f=%s\">%s</a>", (const char *) DirEnc, (const char *) Enc,
+				     (const char *) Esc);
+		}
 		else if (IsLoadable (pEntries[i].Name))
 		{
 			CString Confirm;
@@ -1265,7 +1409,13 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 
 		// las acciones
 		CString Actions;
-		if (!bDir)
+		if (!bDir && pEntries[i].nSize > MAX_CONTENT_SIZE)
+		{
+			// el servidor de Circle prepara la respuesta entera en memoria
+			Line.Format ("<span class=\"pr\">%s</span>", T ("más de 4 MB"));
+			Actions.Append (Line);
+		}
+		else if (!bDir)
 		{
 			Line.Format ("<a href=\"/sd/%s\" download>%s</a>", (const char *) Enc, T ("descargar"));
 			Actions.Append (Line);

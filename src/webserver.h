@@ -50,6 +50,7 @@ private:
 	CString Rename (const char *pParams);
 	CString Move (const char *pParams);
 	THTTPStatus SendSearch (const char *pQuery, u8 *pBuffer, unsigned *pLength);
+	THTTPStatus SendZip (const char *pDir, const char *pZip, u8 *pBuffer, unsigned *pLength);
 	CString Download (const char *pPath);
 	THTTPStatus SendLogin (const char *pMessage, u8 *pBuffer, unsigned *pLength);
 	void AddToken (CString *pHtml);		// la clave de sesión en enlaces y formularios

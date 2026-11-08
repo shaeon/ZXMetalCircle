@@ -1846,6 +1846,22 @@ bool CKernel::WebInUse (const char *pPath, void *pParam)
 
 void CKernel::LoadAnyFile (const char *pPath)
 {
+	// "SD:/carpeta/pack.zip|dentro/juego.tap" (desde la web): ese fichero del ZIP
+	for (const char *p = pPath; *p != '\0'; p++)
+	{
+		if (*p == '|' && p - pPath > 4 && strncasecmp (p - 4, ".zip", 4) == 0)
+		{
+			CString Zip;
+			for (const char *q = pPath; q < p; q++)
+			{
+				char c[2] = {*q, '\0'};
+				Zip.Append (c);
+			}
+			OpenZip (Zip, p + 1);
+			return;
+		}
+	}
+
 	if (strncmp (pPath, "NET:", 4) == 0)
 	{
 		DownloadAndLoad (pPath);
@@ -1955,7 +1971,7 @@ boolean CKernel::ReadSource (const char *pPath, u8 *pBuffer, unsigned nSize)
 	return bOK;
 }
 
-void CKernel::OpenZip (const char *pPath)
+void CKernel::OpenZip (const char *pPath, const char *pEntry)
 {
 	FIL File;
 	if (f_open (&File, pPath, FA_READ | FA_OPEN_EXISTING) != FR_OK)
@@ -1979,6 +1995,25 @@ void CKernel::OpenZip (const char *pPath)
 	if (!bOK || !m_Zip.Open (m_pZipData, nSize))
 	{
 		ShowMessage (T ("ZIP no válido"));
+		return;
+	}
+
+	// uno concreto (lo ha elegido la web): por su nombre completo dentro del ZIP
+	if (pEntry != 0)
+	{
+		for (unsigned i = 0; i < m_Zip.GetCount (); i++)
+		{
+			if (!m_Zip.IsDirectory (i) && strcmp (m_Zip.GetName (i), pEntry) == 0)
+			{
+				if (!ZipLoadable (m_Zip.GetBaseName (i), 0))
+				{
+					break;
+				}
+				LoadZipEntry (i);
+				return;
+			}
+		}
+		ShowMessage (T ("No está en el ZIP"));
 		return;
 	}
 

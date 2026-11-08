@@ -17,8 +17,9 @@ At boot, the connection is made in the background. When it is ready, a message w
 
 **Web server**: open that address in the PC's or phone's browser. From there you can:
 - browse the folders of the SD card;
-- **load** a file into the Spectrum **by clicking its name**: it does the same as choosing it in the Pi's file browser (tape, snapshot, cartridge, microdrive, +3 disk, ZIP or hard disk). Files the emulator cannot load are shown without a link. A hard disk (`.hdf`, `.img`, `.vhd`, `.raw`) asks for confirmation, because mounting it restarts the Spectrum;
-- **download** any file (up to 4 MB), for example your saved games, snapshots or microdrive cartridges;
+- **load** a file into the Spectrum **by clicking its name**: it does the same as choosing it in the Pi's file browser (tape, snapshot, cartridge, microdrive, +3 disk or hard disk). Files the emulator cannot load are shown without a link. A hard disk (`.hdf`, `.img`, `.vhd`, `.raw`) asks for confirmation, because mounting it restarts the Spectrum;
+- **see what is inside a ZIP** by clicking its name, and **load** the file you want from it by clicking its name (without choosing it on the Pi's screen). Disks and microdrive cartridges from a ZIP are extracted to `tmp`, as from the Pi; if one is already there, the Pi's screen asks whether to use it or overwrite it;
+- **download** any file up to 4 MB, for example your saved games, snapshots or microdrive cartridges. Bigger ones show "over 4 MB": copy them by taking the card out;
 - **upload** several files at once to the current folder (up to 32 MB in total, like the ZIP files the emulator opens);
 - **rename** files and folders;
 - **move** files and folders: "move" marks it, you go to the destination folder and click "Paste here" (or "Cancel"). It is instant, because nothing is copied: it just changes folder;

@@ -17,8 +17,9 @@ Al arrancar, la conexión se hace en segundo plano. Cuando está lista, aparece 
 
 **Servidor web**: abre esa dirección en el navegador del PC o del móvil. Desde ahí puedes:
 - recorrer las carpetas de la SD;
-- **cargar** un fichero en el Spectrum **pulsando su nombre**: hace lo mismo que elegirlo en el navegador de ficheros de la Pi (cinta, snapshot, cartucho, microdrive, disco del +3, ZIP o disco duro). Los ficheros que el emulador no sabe cargar salen sin enlace. Con un disco duro (`.hdf`, `.img`, `.vhd`, `.raw`) se pide confirmación, porque montarlo reinicia el Spectrum;
-- **descargar** cualquier fichero (hasta 4 MB), por ejemplo tus partidas, snapshots o cartuchos de microdrive;
+- **cargar** un fichero en el Spectrum **pulsando su nombre**: hace lo mismo que elegirlo en el navegador de ficheros de la Pi (cinta, snapshot, cartucho, microdrive, disco del +3 o disco duro). Los ficheros que el emulador no sabe cargar salen sin enlace. Con un disco duro (`.hdf`, `.img`, `.vhd`, `.raw`) se pide confirmación, porque montarlo reinicia el Spectrum;
+- **ver el contenido de un ZIP** pulsando su nombre, y **cargar** el fichero de dentro que quieras pulsando el suyo (sin tener que elegirlo en la pantalla de la Pi). Los discos y microdrives de un ZIP se sacan a `tmp`, como desde la Pi; si ya estaba ahí, se pregunta en la pantalla de la Pi si usar el que hay o sobrescribirlo;
+- **descargar** cualquier fichero de hasta 4 MB, por ejemplo tus partidas, snapshots o cartuchos de microdrive. Los más grandes muestran «más de 4 MB»: cópialos sacando la tarjeta;
 - **subir** varios ficheros a la vez a la carpeta en la que estés (hasta 32 MB en total, como los ZIP que abre el emulador);
 - **renombrar** ficheros y carpetas;
 - **mover** ficheros y carpetas: «mover» lo marca, vas a la carpeta de destino y pulsas «Pegar aquí» (o «Cancelar»). Es inmediato, porque no se copia: solo cambia de carpeta;

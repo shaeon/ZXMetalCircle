@@ -93,7 +93,7 @@ private:
 	boolean LoadSnapshot (const char *pPath);
 	// ZIP: cintas y snapshots al vuelo, discos y Microdrive a SD:/tmp
 	void LoadTKROMs (const char *pTKROM, const char *pTKLang, const char *pMenu, boolean bReset);
-	void OpenZip (const char *pPath);
+	void OpenZip (const char *pPath, const char *pEntry = 0);	// pEntry: cargar ese, sin preguntar
 	void LoadZipEntry (unsigned nEntry);
 	void ExtractZipToTmp (unsigned nEntry, boolean bOverwrite);
 	int SourceSize (const char *pPath);		// SD o "ZIP:nombre"
