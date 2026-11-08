@@ -6,7 +6,7 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
-## Sin publicar
+## 1.08
 
 - **Cambiado**: "Mando del jugador 2" ya no sale en gris cuando el jugador 2 no tiene joystick, igual que la del jugador 1. Hay jugador 2 si tiene joystick o si se le elige un mando concreto; sin joystick, ese mando sirve con un perfil de teclas (juegos de dos jugadores con teclas). Con "automático" y sin joystick, todo sigue como antes: no hay jugador 2.
 - **Corregido**: con dos mandos del mismo modelo, en "Mando del jugador" de la página 5 no se podía elegir el segundo (los dos tenían el mismo código). Ahora el segundo lleva su número (`045e:028e#2`), por orden de conexión. Pruebas `padsettings_test` (nueva, en la Action) y `padassign_test`.
