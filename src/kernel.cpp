@@ -1215,7 +1215,11 @@ void CKernel::UpdatePadPlayers (void)
 	const char *pPad1 = n1 >= 0 ? m_Settings.GetValue (n1) : pNone;
 	const char *pPad2 = n2 >= 0 ? m_Settings.GetValue (n2) : pNone;
 	const char *pExtra = nX >= 0 ? m_Settings.GetValue (nX) : pNone;
-	boolean bPlayer2 = m_Keyboard.GetJoystickMode2 () != JoystickNone;
+	// Hay jugador 2 si tiene joystick o un mando concreto (sin joystick, ese mando
+	// sirve con un perfil de teclas); con "auto" y sin joystick, no lo hay y los
+	// mandos de más van con el jugador 1, como siempre
+	boolean bPlayer2 =    m_Keyboard.GetJoystickMode2 () != JoystickNone
+			   || (pPad2[0] != '\0' && strcmp (pPad2, "auto") != 0);
 
 	char Ids[MAX_GAMEPADS][SETTING_PAD_ID];
 	char Names[MAX_GAMEPADS][SETTING_NAME_LEN];

@@ -31,9 +31,10 @@ The Spectrum can only read two joysticks at once if they do not overlap, so **th
 | Row on page 5 | Option | Values |
 | --- | --- | --- |
 | Player 1 gamepad | `pad1=` | automatic (the first one connected) or a specific gamepad |
-| Player 2 gamepad | `pad2=` | automatic (the next one) or a specific gamepad. Greyed out if there is no player 2 |
+| Player 2 gamepad | `pad2=` | automatic (the next one, if player 2 has a joystick) or a specific gamepad |
 | Extra gamepads | `padextra=` | they join player 1 (default) or player 2, or are for the menus only |
 
+- **There is a player 2 if they have a joystick or a specific gamepad is chosen for them.** Without a joystick, their gamepad works with a key profile: for example, for a two-player game played with keys (player 1 with Q, A, O, P and player 2 with 6, 7, 8, 9), give player 2's gamepad a profile with those keys. With "automatic" and no joystick there is no player 2, and the extra gamepads go with player 1, as always.
 - **A specific gamepad** is stored by vendor and product (`045e:028e` is an Xbox 360 controller). The arrows go through the connected gamepads; if the chosen one is not there, its code is shown with "(not connected)".
 - **With two gamepads of the same model**, the first one connected is player 1's. To choose them separately, **the second one carries its number**: `045e:028e#2` (shown as "Gamepad 2" or, with an alias, "XBOX 2"). That number comes from the connection order, because two identical gamepads have nothing to tell them apart: if you unplug the first one, the second becomes the first.
 - **An alias** (for example "XBOX") is set with **A** on the "Gamepad buttons" screen and is shown instead of "Gamepad 1 (045E:028E)" on page 5, in the list to choose a gamepad, on that screen and in Alt+D. It is stored per model, in `joysticks/VVVV-PPPP/alias.txt`, so identical gamepads share it, each with its number. Leaving it empty removes it.

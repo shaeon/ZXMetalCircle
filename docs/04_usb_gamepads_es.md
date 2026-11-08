@@ -31,9 +31,10 @@ El Spectrum solo puede leer dos joysticks a la vez si no se pisan, así que **no
 | Fila de la página 5 | Opción | Valores |
 | --- | --- | --- |
 | Mando del jugador 1 | `pad1=` | automático (el primero conectado) o un mando concreto |
-| Mando del jugador 2 | `pad2=` | automático (el siguiente) o un mando concreto. En gris si no hay jugador 2 |
+| Mando del jugador 2 | `pad2=` | automático (el siguiente, si el jugador 2 tiene joystick) o un mando concreto |
 | Mandos de más | `padextra=` | se suman al jugador 1 (por defecto) o al 2, o solo sirven en los menús |
 
+- **Hay jugador 2 si tiene joystick o si se le elige un mando concreto.** Sin joystick, su mando sirve con un perfil de teclas: por ejemplo, para un juego de dos jugadores que se maneja con teclas (el 1 con Q, A, O, P y el 2 con 6, 7, 8, 9), se le pone al mando del jugador 2 un perfil con esas teclas. Con «automático» y sin joystick no hay jugador 2, y los mandos de más van con el jugador 1, como siempre.
 - **Un mando concreto** se guarda por fabricante y modelo (`045e:028e` es un mando de Xbox 360). Con las flechas se pasa por los mandos conectados; si el elegido no está, se ve su código con «(no conectado)».
 - **Con dos mandos del mismo modelo**, el primero conectado es el del jugador 1. Para elegirlos por separado, **el segundo lleva su número**: `045e:028e#2` (y se ve «Mando 2» o, con alias, «XBOX 2»). Ese número sale del orden de conexión, porque dos mandos iguales no tienen nada que los distinga: si desconectas el primero, el segundo pasa a ser el primero.
 - **Un alias** (por ejemplo «XBOX») se pone con la **A** en la pantalla «Botones del mando» y se ve en lugar de «Mando 1 (045E:028E)» en la página 5, en la lista para elegir mando, en esa pantalla y en Alt+D. Se guarda por modelo, en `joysticks/VVVV-PPPP/alias.txt`, así que lo comparten los mandos iguales, cada uno con su número. Dejándolo vacío se quita.

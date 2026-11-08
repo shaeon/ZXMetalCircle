@@ -32,6 +32,11 @@ int main (void)
 	chk ("el segundo, desconectado: se ve su código \"(no conectado)\"", strstr (S.GetValueName (n), "045e:028e#2") != 0
 	     && strstr (S.GetValueName (n), "no conectado") != 0);
 
+	// La fila del mando del jugador 2 nunca en gris, como la del 1
+	int n2 = S.Find ("pad2");
+	chk ("\"Mando del jugador 2\" se puede elegir aunque su joystick sea \"ninguno\"",
+	     strcmp (S.GetValue (S.Find ("joystick2")), "none") == 0 && S.IsApplicable (n2));
+
 	printf (fails ? "%d fallos\n" : "todo OK\n", fails);
 	return fails ? 1 : 0;
 }

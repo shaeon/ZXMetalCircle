@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Cambiado**: "Mando del jugador 2" ya no sale en gris cuando el jugador 2 no tiene joystick, igual que la del jugador 1. Hay jugador 2 si tiene joystick o si se le elige un mando concreto; sin joystick, ese mando sirve con un perfil de teclas (juegos de dos jugadores con teclas). Con "automático" y sin joystick, todo sigue como antes: no hay jugador 2.
 - **Corregido**: con dos mandos del mismo modelo, en "Mando del jugador" de la página 5 no se podía elegir el segundo (los dos tenían el mismo código). Ahora el segundo lleva su número (`045e:028e#2`), por orden de conexión. Pruebas `padsettings_test` (nueva, en la Action) y `padassign_test`.
 - **Nuevo**: alias de los mandos, con la A en "Botones del mando" (`joysticks/VVVV-PPPP/alias.txt`, por modelo): se ve en lugar de "Mando 1 (045E:028E)" en la página 5, al elegir mando, en esa pantalla y en Alt+D; los mandos iguales lo comparten, con su número ("XBOX 2").
 - **Cambiado**: "Buscar al arrancar" busca en segundo plano, en una tarea aparte: el Spectrum sigue funcionando mientras se espera a GitHub (antes se quedaba parado unos segundos, a veces en mitad del arranque, con la pantalla a medio hacer), y el resultado se dice cuando llega. "Buscar actualización" en la página 10 sigue esperando, con sus avisos, porque ahí el menú está abierto.

@@ -700,12 +700,6 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 		return !Is ("joystick", "none") && !Is ("cursors", "keys");
 	}
 
-	// El mando del jugador 2, solo si hay jugador 2
-	if (strcmp (pKey, "pad2") == 0)
-	{
-		return !Is ("joystick2", "none");
-	}
-
 	// ROM del TK90X: solo con ese modelo; el idioma, solo con la v3
 	if (strcmp (pKey, "tkrom") == 0)
 	{
