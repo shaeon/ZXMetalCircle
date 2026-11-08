@@ -313,6 +313,11 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
  webpass=         Web page password (empty = no password). It is asked
                   once; it is not encrypted: it protects you on your local
                   network, not from someone eavesdropping
+ webprotect=1     System files on the web page: 1 = protected (they cannot
+                  be renamed, moved, replaced or deleted: kernels,
+                  config.txt, cmdline.txt, locales...), 0 = unprotected
+                  (asks for confirmation). What is in use, always
+                  protected. It cannot be changed from the web page
 
  ip=              Fixed IP. Without it, DHCP is used (the normal case).
  mask=            Network mask          (default 255.255.255.0)

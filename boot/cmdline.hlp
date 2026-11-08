@@ -310,6 +310,11 @@ defecto.
  webpass=         Contrasena de la pagina web (vacia = sin contrasena). Se
                   pide una vez; va sin cifrar: protege en tu red local, no
                   de alguien que la espie
+ webprotect=1     Ficheros del sistema en la web: 1 = protegidos (no se
+                  pueden renombrar, mover, sustituir ni borrar: kernels,
+                  config.txt, cmdline.txt, locales...), 0 = sin proteger
+                  (se pide confirmacion). Lo que esta en uso, siempre
+                  protegido. Desde la web no se puede cambiar
 
  ip=              IP fija. Si no se pone, se usa DHCP (lo normal).
  mask=            Mascara de red        (por defecto 255.255.255.0)

@@ -156,6 +156,18 @@ static bool InUse (const char *pPath)
 	return s_pInUse != 0 && (*s_pInUse) (pPath, s_pInUseParam);
 }
 
+// Lo del sistema, mientras esté protegido (webprotect=1, en la configuración
+// de la Pi: desde la web no se puede cambiar)
+static bool Protected (const char *pPath)
+{
+	return WebProtect () && WebIsSystem (pPath);
+}
+
+static bool ProtectedFolder (const char *pDir)
+{
+	return WebProtect () && WebIsSystemFolder (pDir);
+}
+
 // Código de seguridad: va en todos los enlaces y formularios de la página, y
 // se exige en lo que cambia algo. Una página de fuera no lo conoce, así que no
 // puede hacer que el navegador borre o cargue algo con un enlace escondido
@@ -578,7 +590,7 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 				FILINFO Info;
 				boolean bDir = f_stat (SDPath, &Info) == FR_OK && (Info.fattrib & AM_DIR);
 				FRESULT Result;
-				if (WebIsSystem (CleanFile))
+				if (Protected (CleanFile))
 				{
 					Message.Format (T ("Protegido: %s"), CleanFile);
 				}
@@ -620,7 +632,7 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 	{
 		char Name[HTTP_MAX_PATH + 1];
 		GetParam (pParams, "n", Name, sizeof Name);
-		if (WebIsSystemFolder (Clean))
+		if (ProtectedFolder (Clean))
 		{
 			Message = T ("Protegido: aquí no se puede crear nada");
 		}
@@ -706,7 +718,7 @@ static const char *CheckSource (const char *pPath)
 	{
 		return T ("No existe: %s");
 	}
-	if (WebIsSystem (pPath))
+	if (Protected (pPath))
 	{
 		return T ("Protegido: %s");
 	}
@@ -744,7 +756,7 @@ CString CZXWebServer::Rename (const char *pParams)
 	SDPathOf (Dir, Name, &To);
 	NewRel.Format (Dir[0] != '\0' ? "%s/%s" : "%s%s", Dir, Name);
 	FILINFO Info;
-	if (WebIsSystem (NewRel))
+	if (Protected (NewRel))
 	{
 		Message.Format (T ("Protegido: %s"), Name);
 	}
@@ -790,7 +802,7 @@ CString CZXWebServer::Move (const char *pParams)
 		Message.Format (T ("No existe: %s"), Dest);
 		return Message;
 	}
-	if (WebIsSystemFolder (Dest))
+	if (ProtectedFolder (Dest))
 	{
 		return CString (T ("Protegido: aquí no se puede crear nada"));
 	}
@@ -803,7 +815,7 @@ CString CZXWebServer::Move (const char *pParams)
 	From.Format ("SD:/%s", Path);
 	SDPathOf (Dest, pName, &To);
 	NewRel.Format (Dest[0] != '\0' ? "%s/%s" : "%s%s", Dest, pName);
-	if (WebIsSystem (NewRel))
+	if (Protected (NewRel))
 	{
 		Message.Format (T ("Protegido: %s"), pName);
 	}
@@ -894,7 +906,7 @@ CString CZXWebServer::Upload (const char *pDir, const char *pParams)
 	{
 		Replace[0] = '\0';
 	}
-	if (WebIsSystemFolder (pDir))
+	if (ProtectedFolder (pDir))
 	{
 		return CString (T ("Protegido: aquí no se puede crear nada"));
 	}
@@ -961,7 +973,7 @@ CString CZXWebServer::Upload (const char *pDir, const char *pParams)
 		Temp.Format ("%s.~subida", (const char *) SDPath);
 		FILINFO Info;
 		boolean bExists = f_stat (SDPath, &Info) == FR_OK;
-		if (WebIsSystem (Rel))
+		if (Protected (Rel))
 		{
 			Message.Format (T ("Protegido: %s"), pBase);
 			return Message;
@@ -1161,24 +1173,36 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 
 	boolean bReadOnly = WebMode () == 2;
 
+	// sin protección, en la raíz o en una carpeta del sistema se avisa antes de
+	// poner algo (subir o pegar), porque puede sustituir algo del sistema
+	CString PutWarn;
+	if (!WebProtect () && (pDir[0] == '\0' || WebIsSystemFolder (pDir)))
+	{
+		CString WarnJS, WarnAttr;
+		JSText (T ("Aquí hay ficheros del sistema: si sustituyes alguno por error, la Pi puede no arrancar. ¿Seguro?"),
+			&WarnJS);
+		HTMLEscape (WarnJS, &WarnAttr);
+		PutWarn.Format (" onsubmit=\"return confirm('%s')\"", (const char *) WarnAttr);
+	}
+
 	if (s_Cut[0] != '\0' && !bReadOnly)
 	{
 		CString CutEsc;
 		HTMLEscape (s_Cut, &CutEsc);
 		Line.Format ("<div class=\"cut\">%s <b>%s</b> "
-			     "<form class=\"i\" action=\"/mv\"><input type=\"hidden\" name=\"d\" value=\"%s\">"
+			     "<form class=\"i\" action=\"/mv\"%s><input type=\"hidden\" name=\"d\" value=\"%s\">"
 			     "<input type=\"hidden\" name=\"f\" value=\"%s\">"
 			     "<input type=\"hidden\" name=\"to\" value=\"%s\"><button>%s</button></form> "
 			     "<a href=\"/nocut?d=%s\">%s</a></div>",
-			     T ("Moviendo:"), (const char *) CutEsc, (const char *) DirEsc, (const char *) CutEsc,
+			     T ("Moviendo:"), (const char *) CutEsc, (const char *) PutWarn, (const char *) DirEsc, (const char *) CutEsc,
 			     (const char *) DirEsc, T ("Pegar aquí"), (const char *) DirEnc, T ("Cancelar"));
 		Html.Append (Line);
 	}
 	if (!bReadOnly)
 	{
-		Line.Format ("<form method=\"post\" enctype=\"multipart/form-data\" action=\"/up?d=%s\">"
+		Line.Format ("<form method=\"post\" enctype=\"multipart/form-data\" action=\"/up?d=%s\"%s>"
 			     "%s <input type=\"file\" name=\"f\" multiple> "
-			     "<input type=\"submit\" value=\"%s\"></form>", (const char *) DirEnc,
+			     "<input type=\"submit\" value=\"%s\"></form>", (const char *) DirEnc, (const char *) PutWarn,
 			     T ("Subir a esta carpeta:"), T ("Subir"));
 		Html.Append (Line);
 	}
@@ -1250,7 +1274,7 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 		{
 			// solo descargar
 		}
-		else if (WebIsSystem (Rel))
+		else if (Protected (Rel))
 		{
 			Line.Format ("<span class=\"pr\">%s</span>", T ("protegido"));
 			Actions.Append (Line);
@@ -1264,27 +1288,45 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 		{
 			CString Text, TextJS, TextAttr;
 
+			// sin protección, lo del sistema avisa antes de cada operación
+			boolean bSystem = WebIsSystem (Rel);
+			CString Warn, WarnJS, WarnAttr, WarnPrefix;
+			if (bSystem)
+			{
+				JSText (T ("Es del sistema: si lo cambias mal, la Pi puede no arrancar. ¿Seguro?"), &WarnJS);
+				HTMLEscape (WarnJS, &WarnAttr);
+				WarnPrefix.Format ("if(!confirm('%s'))return false;", (const char *) WarnAttr);
+			}
+
 			// renombrar: se pide el nombre nuevo
 			JSText (T ("Nuevo nombre:"), &TextJS);
 			HTMLEscape (TextJS, &TextAttr);
-			Line.Format ("<form class=\"i\" action=\"/ren\" onsubmit=\"var n=prompt('%s',this.n.value);"
+			Line.Format ("<form class=\"i\" action=\"/ren\" onsubmit=\"%svar n=prompt('%s',this.n.value);"
 				     "if(!n||n==this.n.value)return false;this.n.value=n\">"
 				     "<input type=\"hidden\" name=\"d\" value=\"%s\">"
 				     "<input type=\"hidden\" name=\"f\" value=\"%s\">"
 				     "<input type=\"hidden\" name=\"n\" value=\"%s\"><button>%s</button></form>",
-				     (const char *) TextAttr, (const char *) DirEsc, (const char *) RelEsc,
-				     (const char *) Esc, T ("renombrar"));
+				     (const char *) WarnPrefix, (const char *) TextAttr, (const char *) DirEsc,
+				     (const char *) RelEsc, (const char *) Esc, T ("renombrar"));
 			Actions.Append (Line);
 
 			// mover: se marca y se pega en la carpeta de destino
-			Line.Format ("<a href=\"/cut?d=%s&f=%s\">%s</a>", (const char *) DirEnc, (const char *) Enc,
-				     T ("mover"));
+			Line.Format ("<a href=\"/cut?d=%s&f=%s\"%s%s%s>%s</a>", (const char *) DirEnc, (const char *) Enc,
+				     bSystem ? " onclick=\"return confirm('" : "", (const char *) WarnAttr,
+				     bSystem ? "')\"" : "", T ("mover"));
 			Actions.Append (Line);
 
 			// sustituir: se elige el fichero nuevo y se confirma
 			if (!bDir)
 			{
 				Text.Format (T ("¿Sustituir %s por el fichero elegido?"), pEntries[i].Name);
+				if (bSystem)
+				{
+					CString Both;
+					Both.Format ("%s %s", T ("Es del sistema: si lo cambias mal, la Pi puede no arrancar. ¿Seguro?"),
+						     (const char *) Text);
+					Text = Both;
+				}
 				JSText (Text, &TextJS);
 				HTMLEscape (TextJS, &TextAttr);
 				CString NameEnc;
@@ -1300,6 +1342,13 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 
 			// borrar (las carpetas, solo si están vacías)
 			Text.Format (T ("¿Borrar %s?"), pEntries[i].Name);
+			if (bSystem)
+			{
+				CString Both;
+				Both.Format ("%s %s", T ("Es del sistema: si lo cambias mal, la Pi puede no arrancar. ¿Seguro?"),
+					     (const char *) Text);
+				Text = Both;
+			}
 			JSText (Text, &TextJS);
 			HTMLEscape (TextJS, &TextAttr);
 			Line.Format ("<a href=\"/del?d=%s&f=%s\" onclick=\"return confirm('%s')\">%s</a>",

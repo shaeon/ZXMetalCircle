@@ -116,6 +116,7 @@ static TSettingDef Settings[] =
 	{"esxdir",	N_("Importar a esxDOS desde"), 7, "esxdos_i|0", N_("esxdos_i|no"),		"esxdos_i", FALSE},
 	{"web",		N_("Página web"),	8, "1|ro|0", N_("sí|solo lectura|no"),			"1",	FALSE},
 	{"webpass",	N_("Contraseña de la web"),	8, "*pass", N_("sin contraseña"),			"",	FALSE},
+	{"webprotect",	N_("Ficheros del sistema"),	8, "1|0", N_("protegidos|sin proteger"),		"1",	TRUE},
 	// Actualización (página 10): filas de acción y opciones
 	{"_updversion",	N_("Versión instalada"),	9, "*accion", "",				"",	TRUE},
 	{"_updcheck",	N_("Buscar actualización"),	9, "*accion", N_("ENTER: buscar"),		"",	TRUE},
@@ -722,7 +723,7 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 		return Is ("model", "16k") || Is ("model", "48k");
 	}
 	// contraseña de la web: solo con la web y la red
-	if (strcmp (pKey, "webpass") == 0)
+	if (strcmp (pKey, "webpass") == 0 || strcmp (pKey, "webprotect") == 0)
 	{
 		return !Is ("web", "0") && !Is ("net", "0");
 	}

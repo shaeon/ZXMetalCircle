@@ -1794,6 +1794,7 @@ void CKernel::StartNetwork (void)
 	WebSetInUseCheck (WebInUse, this);
 	m_Network.SetWebOptions (strcmp (pWeb, "0") == 0 ? 0 : (strcasecmp (pWeb, "ro") == 0 ? 2 : 1),
 				 m_Options.GetAppOptionString ("webpass", ""));
+	m_Network.SetWebProtect (strcmp (m_Options.GetAppOptionString ("webprotect", "1"), "0") != 0);
 	m_Network.Start (Mode, "zxmetalcircle", nTimeZone, bDST,
 			 bStatic ? IP : 0, Mask, Gateway, DNS);
 
@@ -2489,7 +2490,11 @@ void CKernel::ApplySetting (unsigned nIndex)
 		return;
 	}
 
-	if (strcmp (pKey, "lang") == 0)
+	if (strcmp (pKey, "webprotect") == 0)
+	{
+		m_Network.SetWebProtect (strcmp (pValue, "0") != 0);
+	}
+	else if (strcmp (pKey, "lang") == 0)
 	{
 		m_I18n.SetLanguage (pValue);
 		SetupHardDiskList ();		// ("ninguno" en el idioma nuevo)

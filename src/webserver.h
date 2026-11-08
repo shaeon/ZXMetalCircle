@@ -19,6 +19,7 @@ void WebRequestLoad (const char *pPath);	// pide cargar un fichero en el Spectru
 boolean WebTLSVerify (void);			// comprobar certificados (tlsverify=1)
 unsigned WebMode (void);			// 1 = completo, 2 = solo lectura
 const char *WebPassword (void);		// "" = sin contraseña
+bool WebProtect (void);			// lo del sistema, protegido (webprotect=1)
 void WebBusy (const char *pText);		// aviso en pantalla: red en uso (operación larga)
 
 // Lo registra el kernel: si el emulador usa esa ruta (un disco, un microdrive,
