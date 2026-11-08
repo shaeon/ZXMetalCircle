@@ -42,7 +42,7 @@ Todas las opciones van en una sola línea:
 | `issue=` | `3` (Issue 3), `2` (Issue 2, solo afecta al 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |
 | `ulaplus=` | `1` (ULAplus disponible), `0` (desactivado) | `1` |
-| `lang=` | `es` (español), `en` (inglés), `pt` (portugués de Brasil), `pt-pt` (portugués de Portugal) o cualquier otro idioma de `locales/` | `es` |
+| `lang=` | `es` (español), `en` (inglés), `pt` (portugués de Portugal), `pt-br` (portugués de Brasil) o cualquier otro idioma de `locales/` | `es` |
 | `net=` | `auto` (WiFi si hay `wpa_supplicant.conf`, si no cable), `wifi`, `eth`, `0` | `auto` |
 | `tz=` | diferencia horaria en minutos (60 = España peninsular, 0 = Canarias) | `60` |
 | `dst=` | `1` (horario de verano europeo automático), `0` | `1` |

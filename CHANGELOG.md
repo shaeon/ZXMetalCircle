@@ -8,7 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
-- **Nuevo**: portugués de Portugal (`lang=pt-pt`, «Português (PT)»), junto al de Brasil (`lang=pt`, ahora «Português (BR)»). Hecho a partir del de Brasil con los términos de Portugal (ficheiro, guardar, comando, rato, ligar, ecrã, saltar, ejectar, «A descarregar…»), tomando como referencia la traducción de RetroArch; pendiente de revisión por un hablante nativo. Con el idioma automático, la ROM del TK sale en portugués con los dos.
+- **Nuevo**: portugués de Portugal y de Brasil, por separado: `pt.json` (`lang=pt`, «Português (PT)») es el de Portugal, y `pt-BR.json` (`lang=pt-br`, «Português (BR)») el de Brasil, que antes era `pt.json`. **Quien tuviera `lang=pt` pasa a ver el de Portugal**: para el de Brasil, elegir «Português (BR)» en la configuración o poner `lang=pt-br`. El de Portugal está hecho a partir del de Brasil con los términos de Portugal (ficheiro, guardar, comando, rato, ligar, ecrã, saltar, ejectar, «A descarregar…»), tomando como referencia la traducción de RetroArch; pendiente de revisión por un hablante nativo. Con el idioma automático, la ROM del TK sale en portugués con los dos.
 - **Corregido**: el aviso de las 8 unidades ocupadas no cabía en la barra; ahora es "8 unidades ocupadas (Alt+M las vacía)".
 
 ## 1.09

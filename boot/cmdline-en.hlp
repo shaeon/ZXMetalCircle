@@ -33,7 +33,7 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                     tk95    Microdigital TK95
 
  lang=es          Language of the menus and the web page: es (Spanish),
-                  en (English), pt (Brazilian Portuguese) or pt-pt (European
+                  en (English), pt (European Portuguese) or pt-br (Brazilian
                   Portuguese), or any other in the
                   locales folder. Also
                   changed in the settings (F1 and then C).

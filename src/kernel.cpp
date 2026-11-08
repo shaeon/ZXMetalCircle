@@ -3271,7 +3271,7 @@ void CKernel::LoadTKROMs (const char *pTKROM, const char *pTKLang, const char *p
 		const char *pLang = pTKLang;
 		if (strcasecmp (pLang, "auto") == 0)
 		{
-			pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strncasecmp (pMenu, "pt", 2) == 0 ? "pt" : "es";	// pt y pt-pt
+			pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strncasecmp (pMenu, "pt", 2) == 0 ? "pt" : "es";	// pt y pt-br
 		}
 		boolean bPT = strcasecmp (pLang, "pt") == 0;
 

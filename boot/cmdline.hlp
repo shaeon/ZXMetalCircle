@@ -252,7 +252,7 @@ defecto.
                   nucleo 1 (0 = todo en el nucleo 0)
 
  lang=es          Idioma de los menus y la web: es (espanol), en (ingles),
-                  pt (portugues de Brasil), pt-pt (portugues de Portugal), o
+                  pt (portugues de Portugal), pt-br (portugues de Brasil), o
                   cualquier otro que haya en la carpeta locales. Tambien se
                   cambia en la configuracion (F1 y luego C).
 
