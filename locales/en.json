@@ -12,6 +12,7 @@
 	"Cabeceras demasiado largas": "Headers too long",
 	"Fichero demasiado grande": "File too large",
 	"Conexión interrumpida": "Connection interrupted",
+	"ZXInfo no responde ahora: prueba más tarde": "ZXInfo is not responding: try again later",
 	"El buscador ha devuelto un error": "The search engine returned an error",
 	"Respuesta del buscador no válida": "Invalid response from the search engine",
 	"El servidor no tiene ese fichero": "The server does not have that file",

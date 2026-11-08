@@ -183,7 +183,11 @@ int ZXInfoSearch (CHTTPSClient *pClient, const char *pQuery, TZXInfoResult *pRes
 	int nStatus = pClient->Get (URL, pWork, nJSONMax - 1, &nLength);
 	if (nStatus != 200)
 	{
-		*pError = nStatus < 0 ? pClient->GetError () : N_("El buscador ha devuelto un error");
+		// 500 o más: el fallo es del servidor de ZXInfo (caído o saturado), no
+		// de la búsqueda: que se entienda que es pasajero
+		*pError =   nStatus < 0 ? pClient->GetError ()
+			  : nStatus >= 500 ? N_("ZXInfo no responde ahora: prueba más tarde")
+			  : N_("El buscador ha devuelto un error");
 		return -1;
 	}
 	pWork[nLength] = '\0';
