@@ -17,16 +17,25 @@ At boot, the connection is made in the background. When it is ready, a message w
 
 **Web server**: open that address in the PC's or phone's browser. From there you can:
 - browse the folders of the SD card;
-- **upload** several files at once to the current folder (up to 32 MB in total, like the ZIP files the emulator opens);
+- **load** a file into the Spectrum **by clicking its name**: it does the same as choosing it in the Pi's file browser (tape, snapshot, cartridge, microdrive, +3 disk, ZIP or hard disk). Files the emulator cannot load are shown without a link. A hard disk (`.hdf`, `.img`, `.vhd`, `.raw`) asks for confirmation, because mounting it restarts the Spectrum;
 - **download** any file (up to 4 MB), for example your saved games, snapshots or microdrive cartridges;
-- **load** a tape, snapshot, cartridge or microdrive straight into the Spectrum;
-- **delete** files (it asks for confirmation) and **create folders**.
+- **upload** several files at once to the current folder (up to 32 MB in total, like the ZIP files the emulator opens);
+- **rename** files and folders;
+- **move** files and folders: "move" marks it, you go to the destination folder and click "Paste here" (or "Cancel"). It is instant, because nothing is copied: it just changes folder;
+- **replace** a file with another one you choose on your computer (it asks for confirmation);
+- **delete** files and empty folders (it asks for confirmation) and **create folders**.
+
+**What cannot be touched from the web page** (it cannot be renamed, moved, replaced or deleted):
+- **What the emulator is using**: a +3 disk or a microdrive cartridge that is inserted, the mounted hard disk (by default, `hdd/esxdos.img`) and the inserted tape if SAVEs go to the SD card. It is shown as "in use": eject it first.
+- **System files**, shown as "protected": the boot files in the root (kernels, firmware, `config.txt`, `cmdline.txt`...), the folders the emulator uses (`roms`, `saves`, `snaps`, `descargas`, `joysticks`, `hdd`..., although their contents can be changed, for example to add your ROMs or delete saved games) and everything in `overlays`, `firmware`, `certs`, `locales` and `update`. To change any of that, take the card out and do it on your computer.
+
+Uploads are first written to a temporary file, and only replace the existing one when they finish: if something fails halfway, the original is not lost. And everything that changes something carries a security code that only the page itself knows, so that another web page cannot do it through a hidden link: if you ever see "Request expired", reload the page (it happens, for example, after restarting the Pi).
 
 It also announces itself on the local network (mDNS) as the "ZXMetalCircle" web service.
 
 **Protecting the page** (F1, C, page 9, or in `cmdline.txt`):
 - `web=0` turns it off completely (the server is not even started); in F1 the network line says "(web off)".
-- `web=ro` makes it **read-only**: you can browse the SD card, download files, search ZXDB and load a game, but not upload, delete, create folders or download from ZXDB to the SD card (those options do not even appear).
+- `web=ro` makes it **read-only**: you can browse the SD card, download files, search ZXDB and load a game, but not upload, delete, rename, move, replace, create folders or download from ZXDB to the SD card (those options do not even appear).
 - `webpass=` sets a **password** (in the settings it is typed with lowercase letters and numbers, and shown as `********`). The page asks for it once and then creates a random session key that goes into the links and forms (Circle's web server gives no access to cookies or to the browser's password). The keys are lost when the Pi is switched off; after 5 failed attempts you have to wait 30 s. It is not encrypted (HTTP): it protects you from curious people on your network, not from someone eavesdropping.
 
 **Time**: taken from `pool.ntp.org`. The files you save (SAVE, snapshots, microdrives) carry the real date and time. The zone is set with `tz=` and European summer time is applied automatically (`dst=1`).

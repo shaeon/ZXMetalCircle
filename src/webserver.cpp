@@ -161,6 +161,12 @@ static bool InUse (const char *pPath)
 // puede hacer que el navegador borre o cargue algo con un enlace escondido
 static char s_CSRF[20] = "";
 
+// Lo que se está moviendo: "mover" lo marca, se navega a la carpeta de destino
+// y "Pegar aquí" lo mueve. Una sola cosa a la vez (la web es para una persona)
+static char s_Cut[HTTP_MAX_PATH + 1] = "";
+
+static bool IsHardDisk (const char *pName);
+
 static bool ValidCSRF (const char *pParams, const char *pFormData);
 
 static boolean CleanPath (const char *pIn, char *pOut, unsigned nOutSize)
@@ -207,6 +213,23 @@ static boolean IsLoadable (const char *pName)
 		}
 	}
 	return FALSE;
+}
+
+static bool IsHardDisk (const char *pName)
+{
+	return    HasExtension (pName, ".vhd") || HasExtension (pName, ".img")
+	       || HasExtension (pName, ".raw") || HasExtension (pName, ".hdf");
+}
+
+// Texto para JavaScript entre comillas simples: sin comillas simples ni '\'
+static void JSText (const char *pText, CString *pOut)
+{
+	*pOut = "";
+	for (const char *p = pText; *p != '\0'; p++)
+	{
+		char c[2] = {*p == '\'' || *p == '\\' ? ' ' : *p, '\0'};
+		pOut->Append (c);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -524,6 +547,19 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 	{
 		Message = Move (pParams);
 	}
+	else if (strcmp (pPath, "/cut") == 0)
+	{
+		char File[HTTP_MAX_PATH + 1], CleanFile[HTTP_MAX_PATH + 1];
+		if (   GetParam (pParams, "f", File, sizeof File) && CleanPath (File, CleanFile, sizeof CleanFile)
+		    && CleanFile[0] != '\0')
+		{
+			strcpy (s_Cut, CleanFile);
+		}
+	}
+	else if (strcmp (pPath, "/nocut") == 0)
+	{
+		s_Cut[0] = '\0';
+	}
 	else if (strcmp (pPath, "/up") == 0)
 	{
 		Message = Upload (Clean, pParams);
@@ -778,6 +814,10 @@ CString CZXWebServer::Move (const char *pParams)
 	else if (f_rename (From, To) == FR_OK)
 	{
 		Message.Format (T ("Movido: %s"), pName);
+		if (strcmp (s_Cut, Path) == 0)
+		{
+			s_Cut[0] = '\0';
+		}
 	}
 	else
 	{
@@ -1067,6 +1107,11 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 	       "table{border-collapse:collapse;width:100%}td{padding:4px 6px;border-bottom:1px solid #2a2c5a}"
 	       "td.s{text-align:right;color:#8a8ca0;white-space:nowrap}"
 	       "form{margin:10px 0;padding:8px;background:#1c1f55}"
+	       "form.i{display:inline;margin:0;padding:0;background:none}"
+	       "form.i button,.cut a{background:none;border:0;color:#7fd6ff;padding:0;font:inherit;"
+	       "text-decoration:underline;cursor:pointer}"
+	       "td.a{white-space:nowrap}td.a>*{margin-right:.6em}.pr{color:#8a8ca0}"
+	       ".cut{background:#3a3d8a;padding:6px;margin:8px 0}"
 	       "</style></head><body>");
 
 	Line.Format ("<h1>ZXMetalCircle %s</h1><div class=\"st\">", ZXCIRCLE_VERSION);
@@ -1111,8 +1156,24 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 
 	URLEncode (pDir, &Enc);
 	CString DirEnc = Enc;
+	CString DirEsc;
+	HTMLEscape (pDir, &DirEsc);
 
 	boolean bReadOnly = WebMode () == 2;
+
+	if (s_Cut[0] != '\0' && !bReadOnly)
+	{
+		CString CutEsc;
+		HTMLEscape (s_Cut, &CutEsc);
+		Line.Format ("<div class=\"cut\">%s <b>%s</b> "
+			     "<form class=\"i\" action=\"/mv\"><input type=\"hidden\" name=\"d\" value=\"%s\">"
+			     "<input type=\"hidden\" name=\"f\" value=\"%s\">"
+			     "<input type=\"hidden\" name=\"to\" value=\"%s\"><button>%s</button></form> "
+			     "<a href=\"/nocut?d=%s\">%s</a></div>",
+			     T ("Moviendo:"), (const char *) CutEsc, (const char *) DirEsc, (const char *) CutEsc,
+			     (const char *) DirEsc, T ("Pegar aquí"), (const char *) DirEnc, T ("Cancelar"));
+		Html.Append (Line);
+	}
 	if (!bReadOnly)
 	{
 		Line.Format ("<form method=\"post\" enctype=\"multipart/form-data\" action=\"/up?d=%s\">"
@@ -1149,40 +1210,112 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 		Rel.Format (pDir[0] != '\0' ? "%s/%s" : "%s%s", pDir, pEntries[i].Name);
 		URLEncode (Rel, &Enc);
 		HTMLEscape (pEntries[i].Name, &Esc);
+		CString RelEsc;
+		HTMLEscape (Rel, &RelEsc);
+		boolean bDir = pEntries[i].bDir;
 
-		if (pEntries[i].bDir)
+		// el nombre: entra en la carpeta, carga el fichero o, si no se puede cargar, nada
+		CString Name;
+		if (bDir)
 		{
-			Line.Format ("<tr><td><a href=\"/?d=%s\">[%s]</a></td><td></td><td></td></tr>",
-				     (const char *) Enc, (const char *) Esc);
+			Name.Format ("<a href=\"/?d=%s\">[%s]</a>", (const char *) Enc, (const char *) Esc);
+		}
+		else if (IsLoadable (pEntries[i].Name))
+		{
+			CString Confirm;
+			if (IsHardDisk (pEntries[i].Name))
+			{
+				CString Ask, AskJS, AskAttr;
+				Ask.Format (T ("¿Montar %s como disco duro? Se reinicia el Spectrum."), pEntries[i].Name);
+				JSText (Ask, &AskJS);
+				HTMLEscape (AskJS, &AskAttr);
+				Confirm.Format (" onclick=\"return confirm('%s')\"", (const char *) AskAttr);
+			}
+			Name.Format ("<a href=\"/load?d=%s&f=%s\"%s>%s</a>", (const char *) DirEnc, (const char *) Enc,
+				     (const char *) Confirm, (const char *) Esc);
 		}
 		else
 		{
-			CString Actions;
-			if (IsLoadable (pEntries[i].Name))
+			Name = Esc;
+		}
+
+		// las acciones
+		CString Actions;
+		if (!bDir)
+		{
+			Line.Format ("<a href=\"/sd/%s\" download>%s</a>", (const char *) Enc, T ("descargar"));
+			Actions.Append (Line);
+		}
+		if (bReadOnly)
+		{
+			// solo descargar
+		}
+		else if (WebIsSystem (Rel))
+		{
+			Line.Format ("<span class=\"pr\">%s</span>", T ("protegido"));
+			Actions.Append (Line);
+		}
+		else if (InUse (Rel))
+		{
+			Line.Format ("<span class=\"pr\">%s</span>", T ("en uso"));
+			Actions.Append (Line);
+		}
+		else
+		{
+			CString Text, TextJS, TextAttr;
+
+			// renombrar: se pide el nombre nuevo
+			JSText (T ("Nuevo nombre:"), &TextJS);
+			HTMLEscape (TextJS, &TextAttr);
+			Line.Format ("<form class=\"i\" action=\"/ren\" onsubmit=\"var n=prompt('%s',this.n.value);"
+				     "if(!n||n==this.n.value)return false;this.n.value=n\">"
+				     "<input type=\"hidden\" name=\"d\" value=\"%s\">"
+				     "<input type=\"hidden\" name=\"f\" value=\"%s\">"
+				     "<input type=\"hidden\" name=\"n\" value=\"%s\"><button>%s</button></form>",
+				     (const char *) TextAttr, (const char *) DirEsc, (const char *) RelEsc,
+				     (const char *) Esc, T ("renombrar"));
+			Actions.Append (Line);
+
+			// mover: se marca y se pega en la carpeta de destino
+			Line.Format ("<a href=\"/cut?d=%s&f=%s\">%s</a>", (const char *) DirEnc, (const char *) Enc,
+				     T ("mover"));
+			Actions.Append (Line);
+
+			// sustituir: se elige el fichero nuevo y se confirma
+			if (!bDir)
 			{
-				Actions.Format ("<a href=\"/load?d=%s&f=%s\">%s</a> ",
-						(const char *) DirEnc, (const char *) Enc, T ("cargar"));
-			}
-			CString Del;
-			CString Ask;
-			Ask.Format (T ("¿Borrar %s?"), (const char *) Esc);
-			CString AskJS;		// para JavaScript: sin comillas simples
-			for (const char *p = Ask; *p != '\0'; p++)
-			{
-				char c[2] = {*p == '\'' ? ' ' : *p, '\0'};
-				AskJS.Append (c);
-			}
-			if (!bReadOnly)
-			{
-				Del.Format ("<a href=\"/del?d=%s&f=%s\" onclick=\"return confirm('%s')\">%s</a>",
-					    (const char *) DirEnc, (const char *) Enc, (const char *) AskJS, T ("borrar"));
-				Actions.Append (Del);
+				Text.Format (T ("¿Sustituir %s por el fichero elegido?"), pEntries[i].Name);
+				JSText (Text, &TextJS);
+				HTMLEscape (TextJS, &TextAttr);
+				CString NameEnc;
+				URLEncode (pEntries[i].Name, &NameEnc);
+				Line.Format ("<form class=\"i\" method=\"post\" enctype=\"multipart/form-data\" "
+					     "action=\"/up?d=%s&r=%s\"><input type=\"file\" name=\"f\" style=\"display:none\" "
+					     "onchange=\"if(this.files.length&&confirm('%s'))this.form.submit();else this.value=''\">"
+					     "<button type=\"button\" onclick=\"this.form.f.click()\">%s</button></form>",
+					     (const char *) DirEnc, (const char *) NameEnc, (const char *) TextAttr,
+					     T ("sustituir"));
+				Actions.Append (Line);
 			}
 
-			Line.Format ("<tr><td><a href=\"/sd/%s\" download>%s</a></td>"
-				     "<td class=\"s\">%u KB</td><td>%s</td></tr>",
-				     (const char *) Enc, (const char *) Esc,
-				     (pEntries[i].nSize + 1023) / 1024, (const char *) Actions);
+			// borrar (las carpetas, solo si están vacías)
+			Text.Format (T ("¿Borrar %s?"), pEntries[i].Name);
+			JSText (Text, &TextJS);
+			HTMLEscape (TextJS, &TextAttr);
+			Line.Format ("<a href=\"/del?d=%s&f=%s\" onclick=\"return confirm('%s')\">%s</a>",
+				     (const char *) DirEnc, (const char *) Enc, (const char *) TextAttr, T ("borrar"));
+			Actions.Append (Line);
+		}
+
+		if (bDir)
+		{
+			Line.Format ("<tr><td>%s</td><td></td><td class=\"a\">%s</td></tr>",
+				     (const char *) Name, (const char *) Actions);
+		}
+		else
+		{
+			Line.Format ("<tr><td>%s</td><td class=\"s\">%u KB</td><td class=\"a\">%s</td></tr>",
+				     (const char *) Name, (pEntries[i].nSize + 1023) / 1024, (const char *) Actions);
 		}
 		Html.Append (Line);
 	}
