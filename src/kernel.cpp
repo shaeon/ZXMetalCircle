@@ -7,6 +7,8 @@
 // (at your option) any later version.
 //
 #include "kernel.h"
+#include "webserver.h"
+#include "webfiles.h"
 #include "snapshot.h"
 #include <circle/sound/pwmsoundbasedevice.h>
 #include <circle/sound/hdmisoundbasedevice.h>
@@ -1789,6 +1791,7 @@ void CKernel::StartNetwork (void)
 	m_Network.SetTLSVerify (m_Options.GetAppOptionDecimal ("tlsverify", 1) != 0);
 	// web=1 (completa), ro (solo lectura) o 0 (apagada); webpass= contraseña
 	const char *pWeb = m_Options.GetAppOptionString ("web", "1");
+	WebSetInUseCheck (WebInUse, this);
 	m_Network.SetWebOptions (strcmp (pWeb, "0") == 0 ? 0 : (strcasecmp (pWeb, "ro") == 0 ? 2 : 1),
 				 m_Options.GetAppOptionString ("webpass", ""));
 	m_Network.Start (Mode, "zxmetalcircle", nTimeZone, bDST,
@@ -1803,6 +1806,43 @@ void CKernel::StartNetwork (void)
 }
 
 // Carga cualquier fichero según su extensión (selector y web)
+// Para la web: si el emulador usa pPath o algo dentro de ella (si es una
+// carpeta). En uso es lo que se escribirá en su sitio: los discos del +3, los
+// microdrives, el disco duro montado y la cinta si los SAVE van a la SD
+bool CKernel::IsPathInUse (const char *pPath)
+{
+	auto Used = [&] (const char *pUsed)
+	{
+		return pUsed[0] != '\0' && strncmp (pUsed, "ZIP:", 4) != 0 && WebPathIsUnder (pUsed, pPath);
+	};
+	for (unsigned i = 0; i < 2; i++)
+	{
+		if (Used (m_DSKPath[i]))
+		{
+			return true;
+		}
+	}
+	for (unsigned i = 0; i < MICRODRIVES; i++)
+	{
+		if (Used (m_MDRPath[i]))
+		{
+			return true;
+		}
+	}
+	if (Used (m_HDDPath))
+	{
+		return true;
+	}
+	int nSave = m_Settings.Find ("savetrap");
+	return    m_Tape.IsInserted () && nSave >= 0 && strcmp (m_Settings.GetValue (nSave), "1") == 0
+	       && Used (m_TapePath);
+}
+
+bool CKernel::WebInUse (const char *pPath, void *pParam)
+{
+	return static_cast<CKernel *> (pParam)->IsPathInUse (pPath);
+}
+
 void CKernel::LoadAnyFile (const char *pPath)
 {
 	if (strncmp (pPath, "NET:", 4) == 0)

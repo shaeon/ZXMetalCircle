@@ -106,6 +106,8 @@ private:
 	void InsertDisk (const char *pPath, int nForceUnit = -1);	// 0: disco nuevo en la primera unidad libre
 	void EjectDisks (void);
 	void MountHardDisk (const char *pPath);
+	bool IsPathInUse (const char *pPath);		// la web: ¿se usa esta ruta o algo dentro?
+	static bool WebInUse (const char *pPath, void *pParam);
 	void DownloadAndLoad (const char *pNetPath);
 	static void BusyHandler (const char *pText, void *pParam);
 	static void NetBusyHandler (const char *pText, void *pParam);

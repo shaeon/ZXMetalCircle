@@ -21,6 +21,11 @@ unsigned WebMode (void);			// 1 = completo, 2 = solo lectura
 const char *WebPassword (void);		// "" = sin contraseña
 void WebBusy (const char *pText);		// aviso en pantalla: red en uso (operación larga)
 
+// Lo registra el kernel: si el emulador usa esa ruta (un disco, un microdrive,
+// el disco duro, la cinta en la que se graba) o algo dentro de ella
+typedef bool (*TWebInUse) (const char *pPath, void *pParam);
+void WebSetInUseCheck (TWebInUse pFunc, void *pParam);
+
 // Servidor web: navegador de la SD con subida, descarga, borrado y carga
 class CZXWebServer : public CHTTPDaemon
 {
@@ -40,7 +45,9 @@ private:
 			      const char **ppContentType);
 	THTTPStatus SendDirectory (const char *pDir, const char *pMessage,
 				   u8 *pBuffer, unsigned *pLength);
-	CString Upload (const char *pDir);
+	CString Upload (const char *pDir, const char *pParams);
+	CString Rename (const char *pParams);
+	CString Move (const char *pParams);
 	THTTPStatus SendSearch (const char *pQuery, u8 *pBuffer, unsigned *pLength);
 	CString Download (const char *pPath);
 	THTTPStatus SendLogin (const char *pMessage, u8 *pBuffer, unsigned *pLength);

@@ -8,6 +8,8 @@
 // (at your option) any later version.
 //
 #include "webserver.h"
+#include "webfiles.h"
+#include <circle/bcmrandom.h>
 #include "i18n.h"
 #include "exclusions.h"
 #include "version.h"
@@ -139,6 +141,28 @@ static void HTMLEscape (const char *pIn, CString *pOut)
 }
 
 // Ruta relativa a la SD, sin ".." ni barras invertidas; devuelve "" si no vale
+// Lo que usa el emulador (lo registra el kernel)
+static TWebInUse s_pInUse = 0;
+static void *s_pInUseParam = 0;
+
+void WebSetInUseCheck (TWebInUse pFunc, void *pParam)
+{
+	s_pInUse = pFunc;
+	s_pInUseParam = pParam;
+}
+
+static bool InUse (const char *pPath)
+{
+	return s_pInUse != 0 && (*s_pInUse) (pPath, s_pInUseParam);
+}
+
+// Código de seguridad: va en todos los enlaces y formularios de la página, y
+// se exige en lo que cambia algo. Una página de fuera no lo conoce, así que no
+// puede hacer que el navegador borre o cargue algo con un enlace escondido
+static char s_CSRF[20] = "";
+
+static bool ValidCSRF (const char *pParams, const char *pFormData);
+
 static boolean CleanPath (const char *pIn, char *pOut, unsigned nOutSize)
 {
 	if (strstr (pIn, "..") != 0 || strchr (pIn, '\\') != 0 || strchr (pIn, ':') != 0)
@@ -193,6 +217,13 @@ CZXWebServer::CZXWebServer (CNetSubSystem *pNetSubSystem, CSocket *pSocket)
 		     REQUEST_TIMEOUT)
 {
 	m_Token[0] = '\0';
+	if (s_CSRF[0] == '\0')
+	{
+		CBcmRandomNumberGenerator Random;
+		CString Code;
+		Code.Format ("%08x%08x", Random.GetNumber (), Random.GetNumber ());
+		strncpy (s_CSRF, Code, sizeof s_CSRF - 1);
+	}
 }
 
 CHTTPDaemon *CZXWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pSocket)
@@ -274,19 +305,26 @@ static const char *NewSession (void)
 // un CString lo copia entero cada vez y una carpeta grande tardaría mucho.
 void CZXWebServer::AddToken (CString *pHtml)
 {
-	if (m_Token[0] == '\0')
-	{
-		return;
-	}
-
 	const char *pIn = *pHtml;
 	unsigned nInLen = strlen (pIn);
 
-	CString HiddenText;
-	HiddenText.Format ("<input type=\"hidden\" name=\"k\" value=\"%s\">", m_Token);
+	// lo que se añade: el código de seguridad y, con contraseña, la clave
+	CString QueryText, HiddenText;
+	if (m_Token[0] != '\0')
+	{
+		QueryText.Format ("k=%s&t=%s", m_Token, s_CSRF);
+		HiddenText.Format ("<input type=\"hidden\" name=\"k\" value=\"%s\">"
+				   "<input type=\"hidden\" name=\"t\" value=\"%s\">", m_Token, s_CSRF);
+	}
+	else
+	{
+		QueryText.Format ("t=%s", s_CSRF);
+		HiddenText.Format ("<input type=\"hidden\" name=\"t\" value=\"%s\">", s_CSRF);
+	}
 	const char *Hidden = HiddenText;
 	unsigned nHidden = strlen (Hidden);
-	unsigned nToken = strlen (m_Token);
+	const char *pQuery = QueryText;
+	unsigned nToken = strlen (pQuery);
 
 	// cuántos sitios: cada uno añade como mucho la clave o el campo oculto
 	unsigned nPlaces = 0;
@@ -343,8 +381,8 @@ void CZXWebServer::AddToken (CString *pHtml)
 					bQuery |= *q == '?';
 				}
 				Put (p, pEnd - p);
-				Put (bQuery ? "&k=" : "?k=", 3);
-				Put (m_Token, nToken);
+				Put (bQuery ? "&" : "?", 1);
+				Put (pQuery, nToken);
 				p = pEnd;
 				continue;
 			}
@@ -467,15 +505,28 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 
 	CString Message;
 
-	if (   bReadOnly
-	    && (   strcmp (pPath, "/up") == 0 || strcmp (pPath, "/del") == 0
-		|| strcmp (pPath, "/mkdir") == 0 || strcmp (pPath, "/bajar") == 0))
+	boolean bChanges =    strcmp (pPath, "/up") == 0 || strcmp (pPath, "/del") == 0
+			   || strcmp (pPath, "/mkdir") == 0 || strcmp (pPath, "/bajar") == 0
+			   || strcmp (pPath, "/ren") == 0 || strcmp (pPath, "/mv") == 0;
+	if ((bChanges || strcmp (pPath, "/load") == 0) && !ValidCSRF (pParams, pFormData))
+	{
+		Message = T ("Petición caducada: vuelve a cargar la página");
+	}
+	else if (bReadOnly && bChanges)
 	{
 		Message = T ("La web está en modo solo lectura");
 	}
+	else if (strcmp (pPath, "/ren") == 0)
+	{
+		Message = Rename (pParams);
+	}
+	else if (strcmp (pPath, "/mv") == 0)
+	{
+		Message = Move (pParams);
+	}
 	else if (strcmp (pPath, "/up") == 0)
 	{
-		Message = Upload (Clean);
+		Message = Upload (Clean, pParams);
 	}
 	else if (strcmp (pPath, "/del") == 0 || strcmp (pPath, "/load") == 0)
 	{
@@ -488,8 +539,26 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 
 			if (pPath[1] == 'd')
 			{
-				Message.Format (f_unlink (SDPath) == FR_OK ? T ("Borrado: %s") : T ("No se pudo borrar %s"),
-						CleanFile);
+				FILINFO Info;
+				boolean bDir = f_stat (SDPath, &Info) == FR_OK && (Info.fattrib & AM_DIR);
+				FRESULT Result;
+				if (WebIsSystem (CleanFile))
+				{
+					Message.Format (T ("Protegido: %s"), CleanFile);
+				}
+				else if (InUse (CleanFile))
+				{
+					Message.Format (T ("En uso: %s (sácalo antes)"), CleanFile);
+				}
+				else if ((Result = f_unlink (SDPath)) == FR_OK)
+				{
+					Message.Format (T ("Borrado: %s"), CleanFile);
+				}
+				else
+				{
+					Message.Format (bDir && Result == FR_DENIED ? T ("La carpeta no está vacía: %s")
+										  : T ("No se pudo borrar %s"), CleanFile);
+				}
 			}
 			else
 			{
@@ -515,8 +584,15 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 	{
 		char Name[HTTP_MAX_PATH + 1];
 		GetParam (pParams, "n", Name, sizeof Name);
-		if (   Name[0] != '\0' && strchr (Name, '/') == 0 && strchr (Name, '\\') == 0
-		    && strstr (Name, "..") == 0 && strchr (Name, ':') == 0)
+		if (WebIsSystemFolder (Clean))
+		{
+			Message = T ("Protegido: aquí no se puede crear nada");
+		}
+		else if (!WebValidName (Name))
+		{
+			Message = T ("Nombre no válido");
+		}
+		else
 		{
 			CString SDPath;
 			SDPath.Format (Clean[0] != '\0' ? "SD:/%s/%s" : "SD:/%s%s", Clean, Name);
@@ -530,6 +606,184 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 	}
 
 	return SendDirectory (Clean, Message, pBuffer, pLength);
+}
+
+static bool ValidCSRF (const char *pParams, const char *pFormData)
+{
+	char Code[sizeof s_CSRF];
+	if (   !GetParam (pParams, "t", Code, sizeof Code)
+	    && (pFormData == 0 || !GetParam (pFormData, "t", Code, sizeof Code)))
+	{
+		return false;
+	}
+	return s_CSRF[0] != '\0' && strcmp (Code, s_CSRF) == 0;
+}
+
+// La última '/' de una ruta (Circle no tiene strrchr)
+static const char *LastSlash (const char *pPath)
+{
+	const char *pLast = 0;
+	for (const char *p = pPath; *p != '\0'; p++)
+	{
+		if (*p == '/')
+		{
+			pLast = p;
+		}
+	}
+	return pLast;
+}
+
+// La carpeta de una ruta ("juegos/a.tap" -> "juegos"; "a.tap" -> "")
+static void ParentOf (const char *pPath, char *pOut, unsigned nSize)
+{
+	strncpy (pOut, pPath, nSize - 1);
+	pOut[nSize - 1] = '\0';
+	const char *pSlash = LastSlash (pOut);
+	if (pSlash != 0)
+	{
+		pOut[pSlash - pOut] = '\0';
+	}
+	else
+	{
+		pOut[0] = '\0';
+	}
+}
+
+static const char *BaseOf (const char *pPath)
+{
+	const char *pSlash = LastSlash (pPath);
+	return pSlash != 0 ? pSlash + 1 : pPath;
+}
+
+static void SDPathOf (const char *pDir, const char *pName, CString *pOut)
+{
+	pOut->Format (pDir[0] != '\0' ? "SD:/%s/%s" : "SD:/%s%s", pDir, pName);
+}
+
+// Lo que se comprueba antes de quitar algo de su sitio (renombrar o mover)
+static const char *CheckSource (const char *pPath)
+{
+	FILINFO Info;
+	CString SDPath;
+	SDPath.Format ("SD:/%s", pPath);
+	if (pPath[0] == '\0' || f_stat (SDPath, &Info) != FR_OK)
+	{
+		return T ("No existe: %s");
+	}
+	if (WebIsSystem (pPath))
+	{
+		return T ("Protegido: %s");
+	}
+	if (InUse (pPath))
+	{
+		return T ("En uso: %s (sácalo antes)");
+	}
+	return 0;
+}
+
+// /ren?f=<ruta>&n=<nombre nuevo>: en la misma carpeta
+CString CZXWebServer::Rename (const char *pParams)
+{
+	CString Message;
+	char Arg[HTTP_MAX_PATH + 1], Path[HTTP_MAX_PATH + 1], Name[HTTP_MAX_PATH + 1];
+	if (   !GetParam (pParams, "f", Arg, sizeof Arg) || !CleanPath (Arg, Path, sizeof Path)
+	    || !GetParam (pParams, "n", Name, sizeof Name))
+	{
+		return CString (T ("Petición no válida"));
+	}
+	const char *pError = CheckSource (Path);
+	if (pError != 0)
+	{
+		Message.Format (pError, Path);
+		return Message;
+	}
+	if (!WebValidName (Name))
+	{
+		return CString (T ("Nombre no válido"));
+	}
+	char Dir[HTTP_MAX_PATH + 1];
+	ParentOf (Path, Dir, sizeof Dir);
+	CString From, To, NewRel;
+	From.Format ("SD:/%s", Path);
+	SDPathOf (Dir, Name, &To);
+	NewRel.Format (Dir[0] != '\0' ? "%s/%s" : "%s%s", Dir, Name);
+	FILINFO Info;
+	if (WebIsSystem (NewRel))
+	{
+		Message.Format (T ("Protegido: %s"), Name);
+	}
+	else if (strcasecmp (BaseOf (Path), Name) != 0 && f_stat (To, &Info) == FR_OK)
+	{
+		Message.Format (T ("Ya existe %s"), Name);
+	}
+	else if (f_rename (From, To) == FR_OK)
+	{
+		Message.Format (T ("Renombrado: %s"), Name);
+	}
+	else
+	{
+		Message.Format (T ("No se pudo renombrar %s"), BaseOf (Path));
+	}
+	return Message;
+}
+
+// /mv?f=<ruta>&to=<carpeta>: a otra carpeta de la SD (no se copia: es inmediato)
+CString CZXWebServer::Move (const char *pParams)
+{
+	CString Message;
+	char Arg[HTTP_MAX_PATH + 1], Path[HTTP_MAX_PATH + 1], Dest[HTTP_MAX_PATH + 1];
+	if (   !GetParam (pParams, "f", Arg, sizeof Arg) || !CleanPath (Arg, Path, sizeof Path))
+	{
+		return CString (T ("Petición no válida"));
+	}
+	if (!GetParam (pParams, "to", Arg, sizeof Arg) || !CleanPath (Arg, Dest, sizeof Dest))
+	{
+		Dest[0] = '\0';		// la raíz
+	}
+	const char *pError = CheckSource (Path);
+	if (pError != 0)
+	{
+		Message.Format (pError, Path);
+		return Message;
+	}
+	FILINFO Info;
+	CString DestSD;
+	DestSD.Format ("SD:/%s", Dest);
+	if (Dest[0] != '\0' && (f_stat (DestSD, &Info) != FR_OK || !(Info.fattrib & AM_DIR)))
+	{
+		Message.Format (T ("No existe: %s"), Dest);
+		return Message;
+	}
+	if (WebIsSystemFolder (Dest))
+	{
+		return CString (T ("Protegido: aquí no se puede crear nada"));
+	}
+	if (WebPathIsUnder (Dest, Path))
+	{
+		return CString (T ("No se puede mover una carpeta dentro de sí misma"));
+	}
+	const char *pName = BaseOf (Path);
+	CString From, To, NewRel;
+	From.Format ("SD:/%s", Path);
+	SDPathOf (Dest, pName, &To);
+	NewRel.Format (Dest[0] != '\0' ? "%s/%s" : "%s%s", Dest, pName);
+	if (WebIsSystem (NewRel))
+	{
+		Message.Format (T ("Protegido: %s"), pName);
+	}
+	else if (f_stat (To, &Info) == FR_OK)
+	{
+		Message.Format (T ("Ya existe %s"), pName);
+	}
+	else if (f_rename (From, To) == FR_OK)
+	{
+		Message.Format (T ("Movido: %s"), pName);
+	}
+	else
+	{
+		Message.Format (T ("No se pudo mover %s"), pName);
+	}
+	return Message;
 }
 
 // Aviso en pantalla para las operaciones largas con ficheros (desde 32 KB):
@@ -590,8 +844,20 @@ THTTPStatus CZXWebServer::SendFile (const char *pRelPath, u8 *pBuffer, unsigned 
 	return HTTPOK;
 }
 
-CString CZXWebServer::Upload (const char *pDir)
+// Sube uno o varios ficheros a pDir. Con r=<nombre>, el primero sustituye a
+// ese fichero (que tiene que existir). Se escribe en un temporal y solo al
+// terminar se pone en su sitio: si algo falla, el que había no se pierde
+CString CZXWebServer::Upload (const char *pDir, const char *pParams)
 {
+	char Replace[HTTP_MAX_PATH + 1];
+	if (!GetParam (pParams, "r", Replace, sizeof Replace))
+	{
+		Replace[0] = '\0';
+	}
+	if (WebIsSystemFolder (pDir))
+	{
+		return CString (T ("Protegido: aquí no se puede crear nada"));
+	}
 	unsigned nSaved = 0;
 	CString Message;
 
@@ -636,17 +902,66 @@ CString CZXWebServer::Upload (const char *pDir)
 			continue;
 		}
 
-		CString SDPath;
+		if (Replace[0] != '\0')
+		{
+			if (nSaved > 0)
+			{
+				break;			// al sustituir, solo el primero
+			}
+			pBase = Replace;
+		}
+		if (!WebValidName (pBase))
+		{
+			Message.Format (T ("Nombre no válido: %s"), pBase);
+			return Message;
+		}
+		CString SDPath, Rel, Temp;
 		SDPath.Format (pDir[0] != '\0' ? "SD:/%s/%s" : "SD:/%s%s", pDir, pBase);
+		Rel.Format (pDir[0] != '\0' ? "%s/%s" : "%s%s", pDir, pBase);
+		Temp.Format ("%s.~subida", (const char *) SDPath);
+		FILINFO Info;
+		boolean bExists = f_stat (SDPath, &Info) == FR_OK;
+		if (WebIsSystem (Rel))
+		{
+			Message.Format (T ("Protegido: %s"), pBase);
+			return Message;
+		}
+		if (InUse (Rel))
+		{
+			Message.Format (T ("En uso: %s (sácalo antes)"), pBase);
+			return Message;
+		}
+		if (Replace[0] != '\0' && !bExists)
+		{
+			Message.Format (T ("No existe: %s"), pBase);
+			return Message;
+		}
+		if (bExists && (Info.fattrib & AM_DIR))
+		{
+			Message.Format (T ("Ya existe %s"), pBase);
+			return Message;
+		}
 
 		BusyFile (T ("Red: guardando %s (%u KB)"), pBase, nLength);
 
 		FIL File;
 		unsigned nWritten = 0;
-		boolean bOK =    f_open (&File, SDPath, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK
+		boolean bOK =    f_open (&File, Temp, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK
 			      && f_write (&File, pData, nLength, &nWritten) == FR_OK
 			      && nWritten == nLength;
-		f_close (&File);
+		bOK = f_close (&File) == FR_OK && bOK;
+		if (bOK && bExists)
+		{
+			bOK = f_unlink (SDPath) == FR_OK;
+		}
+		if (bOK)
+		{
+			bOK = f_rename (Temp, SDPath) == FR_OK;
+		}
+		if (!bOK)
+		{
+			f_unlink (Temp);
+		}
 
 		if (bOK)
 		{
