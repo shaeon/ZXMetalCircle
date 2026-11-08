@@ -21,7 +21,9 @@
 #define JSMN_STATIC
 #include "../../third_party/jsmn.h"
 
-#define SEARCH_URL	"https://api.zxinfo.dk/v3/search?mode=compact&contenttype=SOFTWARE&size=%u&query="
+// API v5 (la v3 dejó de funcionar en 2026): el texto va en la ruta (%s), no
+// en ?query=; la respuesta tiene la misma forma que la de la v3
+#define SEARCH_URL	"https://api.zxinfo.dk/v5/search/%s?mode=compact&contenttype=SOFTWARE&size=%u"
 #define FILES_HOST	"https://spectrumcomputing.co.uk"
 
 // Extensiones útiles, de más a menos preferida
@@ -124,14 +126,17 @@ static void GetString (const TJSON &J, int i, char *pDest, size_t nSize)
 	}
 }
 
-static void URLEncode (const char *pIn, char *pOut, size_t nSize)
+// bSegment: un trozo de ruta (el texto de la búsqueda), con la / y el punto
+// también codificados; si no, una ruta entera (las de descarga)
+static void URLEncode (const char *pIn, char *pOut, size_t nSize, bool bSegment = false)
 {
 	static const char Hex[] = "0123456789ABCDEF";
 	size_t o = 0;
 	for (const unsigned char *p = (const unsigned char *) pIn; *p != '\0' && o + 4 < nSize; p++)
 	{
 		if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9')
-		    || *p == '-' || *p == '_' || *p == '.' || *p == '/' || *p == '(' || *p == ')')
+		    || *p == '-' || *p == '_' || *p == '(' || *p == ')'
+		    || (!bSegment && (*p == '.' || *p == '/')))
 		{
 			pOut[o++] = *p;
 		}
@@ -156,8 +161,8 @@ int ZXInfoSearch (CHTTPSClient *pClient, const char *pQuery, TZXInfoResult *pRes
 
 	static char URL[512];
 	static char Encoded[256];
-	URLEncode (pQuery, Encoded, sizeof Encoded);
-	// SEARCH_URL lleva un %u para el número de resultados
+	URLEncode (pQuery, Encoded, sizeof Encoded, true);
+	// SEARCH_URL lleva un %s para el texto y un %u para el número de resultados
 	unsigned nAsk = nMaxResults * 2;	// se descartan los de otras máquinas
 	const char *pFmt = SEARCH_URL;
 	size_t n = 0;
@@ -172,10 +177,18 @@ int ZXInfoSearch (CHTTPSClient *pClient, const char *pQuery, TZXInfoResult *pRes
 			p++;
 			continue;
 		}
+		if (p[0] == '%' && p[1] == 's')
+		{
+			for (const char *q = Encoded; *q != '\0' && n < sizeof URL - 1; q++)
+			{
+				URL[n++] = *q;
+			}
+			p++;
+			continue;
+		}
 		URL[n++] = *p;
 	}
 	URL[n] = '\0';
-	Copy (URL + n, sizeof URL - n, Encoded, strlen (Encoded));
 
 	// El JSON va al principio de pWork y los "tokens" de jsmn detrás
 	size_t nJSONMax = nWorkSize / 2;
@@ -183,7 +196,11 @@ int ZXInfoSearch (CHTTPSClient *pClient, const char *pQuery, TZXInfoResult *pRes
 	int nStatus = pClient->Get (URL, pWork, nJSONMax - 1, &nLength);
 	if (nStatus != 200)
 	{
-		*pError = nStatus < 0 ? pClient->GetError () : N_("El buscador ha devuelto un error");
+		// 500 o más: el fallo es del servidor de ZXInfo (caído o saturado), no
+		// de la búsqueda: que se entienda que es pasajero
+		*pError =   nStatus < 0 ? pClient->GetError ()
+			  : nStatus >= 500 ? N_("ZXInfo no responde ahora: prueba más tarde")
+			  : N_("El buscador ha devuelto un error");
 		return -1;
 	}
 	pWork[nLength] = '\0';

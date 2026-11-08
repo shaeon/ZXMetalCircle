@@ -1549,8 +1549,12 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 		m_nPortFE = value;
 	}
 
-	// ULAplus: 0xBF3B registro, 0xFF3B datos (decodificación por A2 = 0, como JSpeccy)
-	if (m_bULAplusEnabled && (port & 0x0004) == 0)
+	// ULAplus: solo 0xBF3B (registro) y 0xFF3B (datos), como Fuse. Mirando solo
+	// A2 (como JSpeccy) respondía también a los de la divMMC (0xE3, 0xEB) y a
+	// los del reloj de esxDOS (0x7C3B, 0x7D3B): esxDOS, al abrir y cerrar el
+	// navegador de la NMI, escribe en el reloj después de apagar ULAplus, y eso
+	// lo volvía a encender con la paleta sin preparar (pantalla en negro)
+	if (m_bULAplusEnabled && (port == 0xBF3B || port == 0xFF3B))
 	{
 		ULAplusWrite (port, value);
 	}

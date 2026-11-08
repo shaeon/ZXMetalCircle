@@ -6,6 +6,12 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## 1.09
+
+- **Corregido**: el buscador de ZXDB de la web no funcionaba: la API v3 de ZXInfo dejó de funcionar (responde con un error 502). Ahora usa la v5, donde el texto va en la ruta (`/v5/search/<texto>`) y la respuesta tiene la misma forma; la descarga desde Spectrum Computing no cambia. El texto se codifica como trozo de ruta (también la `/`). Prueba en vivo `test/host/zxinfo_live.cpp` (necesita red; fuera de la Action): busca y descarga con el mismo código que el emulador.
+- **Corregido**: con ULAplus activado (como viene por defecto), al salir del navegador de esxDOS (la NMI) con ESC la pantalla se quedaba en negro. El emulador tomaba como de ULAplus cualquier puerto con A2 = 0, y esxDOS, al salir, escribe en los puertos de su reloj (0x7C3B, 0x7D3B) justo después de apagar ULAplus, lo que lo volvía a encender con la paleta sin preparar; también los de la divMMC (0xE3, 0xEB) podían encenderlo al leer la tarjeta. Ahora ULAplus solo responde a sus puertos, 0xBF3B y 0xFF3B, como en Fuse. Prueba nueva en la Action (`ulaplus_ports_test`), que falla con el código de antes; los programas de ULAplus siguen funcionando.
+- **Cambiado**: si el buscador de ZXDB de la web falla porque el servidor de ZXInfo no responde (errores 500 y siguientes), lo dice así: "ZXInfo no responde ahora: prueba más tarde", en lugar de un error genérico.
+
 ## 1.08
 
 - **Cambiado**: "Mando del jugador 2" ya no sale en gris cuando el jugador 2 no tiene joystick, igual que la del jugador 1. Hay jugador 2 si tiene joystick o si se le elige un mando concreto; sin joystick, ese mando sirve con un perfil de teclas (juegos de dos jugadores con teclas). Con "automático" y sin joystick, todo sigue como antes: no hay jugador 2.
