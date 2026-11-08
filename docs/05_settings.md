@@ -14,7 +14,7 @@ All the options go on a single line:
 | `tkula=` | TK90X and TK95 ULA: `50` (Microdigital at 50 Hz: Uruguay), `60` (Microdigital at 60 Hz: Brazil) or `ferranti` (the first export units; 48K timings) | `50` |
 | `tkrom=` | TK90X ROM: `v3` (Rodolfo Guerra's, the most compatible), `v1` (original, the most widespread) or `v2` (original; the TK95 always has it). Applied at once: with a TK, it restarts with the new ROM | `v3` |
 | `tklang=` | Language of the TK90X and TK95 ROM: `auto` (the menu's), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. The originals only have Spanish and Portuguese (other languages use Spanish): v1 chooses with the diode of the Brazilian TK90X (bit 7 of port 254 at 0 gives Portuguese), v2 and the TK95 with their Spanish or Brazilian ROM. v3 has all 17. Applied at once | `auto` |
-| `updboot=` | `1`: check for a new version the first time there is network. Also on page 9 of the settings | `0` |
+| `updboot=` | `1`: check for a new version the first time there is network. Also on page 10 of the settings | `0` |
 | `updkeep=` | Packages kept in `update/`: `2` (the installed one and the previous one) or `all` | `2` |
 | `updconfig=` | On update, the configuration files: `keep` (kept; the new one is left as `.nuevo`) or `new` (the new one is used; yours is kept as `.bak`) | `keep` |
 | `tape=` | `flash` (instant), `fast`, `normal` (real) | `flash` |
@@ -26,6 +26,11 @@ All the options go on a single line:
 | `beeperfilter=` | `1` (removes the 1-bit whine), `0` | `1` |
 | `recreated=` | `0` (never), `auto` (through a USB cable it is recognised when connected; otherwise, automatic detection), `1` (every USB keyboard is a Recreated) | `auto` |
 | `cursors=` | `both` (cursors = CAPS SHIFT+5-8 and joystick), `keys` (keys only), `joystick` (joystick only) | `both` |
+| `kbdfire=` | Keyboard key that acts as joystick fire: `win` (both Windows keys; both Ctrl keys are SYMBOL SHIFT), `rctrl` (right Ctrl, as before 1.08) or `none` | `win` |
+| `joystick2=` | Player 2 joystick: same values as `joystick=`; it cannot be player 1's, nor Cursor with Sinclair 1 | `none` |
+| `pad1=` | Player 1 gamepad: `auto` (connection order) or a specific gamepad (`vendor:product`, for example `045e:028e`) | `auto` |
+| `pad2=` | Player 2 gamepad, likewise | `auto` |
+| `padextra=` | The other gamepads: `p1` or `p2` (they join that player) or `menu` (menus only) | `p1` |
 | `f5=` | `nmi` (F5 = NMI, Alt+F5 = files), `files` (F5 = files, Alt+F5 = NMI) | `nmi` |
 | `aystereo=` | `abc`, `acb`, `bac`, `mono` | `abc` |
 | `tapesound=` | `1` (loading is heard), `0` (silent) | `1` |
@@ -75,20 +80,23 @@ The emulator is in **Spanish** (the main language, built into the program) and *
 
 ## Settings in the emulator
 
-From the help screen (F1), the **C** key opens the settings: seven pages with the `cmdline.txt` options that can be changed without editing the file. Options that are not used with the current choices are shown in grey and the cursor skips them: they cannot be changed until they make sense again (for example, after choosing another model): for example, the Issue 2/3 keyboard outside the 16K and 48K, the +3e language and hard disk on the other models, the SAVE format without SAVE to the SD card, or the netmask, gateway and DNS with automatic IP.
+From the help screen (F1), the **C** key opens the settings: ten pages with the `cmdline.txt` options that can be changed without editing the file. Options that are not used with the current choices are shown in grey and the cursor skips them: they cannot be changed until they make sense again (for example, after choosing another model): for example, the Issue 2/3 keyboard outside the 16K and 48K, the +3e language and hard disk on the other models, the SAVE format without SAVE to the SD card, or the netmask, gateway and DNS with automatic IP.
 
 | Page | Options |
 | --- | --- |
 | 1 Machine | language, model, Issue 2/3 keyboard, speed, ULAplus, +3e language*, boot hard disk* |
 | 2 Video and sound | border, scanlines, AY sound, hear loading, speaker, remove 1-bit whine, sound output*, sound on GPIO12*, video on core 1* |
 | 3 Tapes and saving | loading mode, SAVE to the SD card, SAVE format, F8 format |
-| 4 Keyboard and gamepads | joystick, PC cursor keys, Recreated ZX, GPIO keyboard* |
-| 5 Peripherals | Spectranet, divMMC with esxDOS, LEC memory, Interface 1, Multiface, RS232*, ZX Net* |
-| 6 Network, time and tape | network*, time zone*, summer time*, fixed IP*, mask*, gateway*, DNS*, check HTTPS*, real cassette*, invert cassette*, cassette GPIO* |
-| 7 ROMs and folders | ROM of each machine*, of the Interface 1*, of esxDOS* and the Spectranet flash* (those in the `roms` folder with the right size), esxDOS folder* |
-| 8 Web server | web page* (yes, read-only or no) and its password* |
+| 4 Keyboard | F5 / Alt+F5, Recreated ZX, GPIO keyboard* |
+| 5 Joysticks and pads | players 1 and 2 joysticks, each player's gamepad, extra gamepads, PC cursor keys, keyboard fire, gamepad buttons (see [04_usb_gamepads.md](04_usb_gamepads.md)) |
+| 6 Peripherals | Spectranet, divMMC with esxDOS, LEC memory, Interface 1, Multiface, RS232*, ZX Net* |
+| 7 Network, time and tape | network*, time zone*, summer time*, fixed IP*, mask*, gateway*, DNS*, check HTTPS*, real cassette*, invert cassette*, cassette GPIO* |
+| 8 ROMs and folders | ROM of each machine*, of the Interface 1*, of esxDOS* and the Spectranet flash* (those in the `roms` folder with the right size), esxDOS folder* |
+| 9 Web server | web page* (yes, read-only or no) and its password* |
+| 10 Update | check and install, saved package, check at boot, saved packages, settings on update |
 
 - Up and down to choose; **left and right** (or ENTER) to change the value; **PgUp and PgDn** (or Tab) to change page.
+- **For options with many values** (model, TK ROM language, joysticks, time zone, cassette GPIO), **ENTER opens the whole list**, with the current value highlighted: choose with the cursor keys (or 1-9) and ENTER to go back to the settings; ESC goes back without changing it. The arrows still go one by one.
 - **IP addresses are typed in**: ENTER on "Fixed IP", "Network mask", "Gateway" or "DNS server" and type the digits and dots (also on the numeric keypad); Backspace deletes, DEL empties it (automatic, with DHCP), ENTER accepts it if it is a valid IP and ESC leaves it as it was.
 - The ROM and hard disk lists only show files without spaces in their names (`cmdline.txt` separates options with spaces).
 - Changes apply **at once**, except those marked with `*`, which need the Pi to be restarted.

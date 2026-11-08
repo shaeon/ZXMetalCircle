@@ -17,14 +17,14 @@ Al arrancar, la conexión se hace en segundo plano. Cuando está lista, aparece 
 
 **Servidor web**: abre esa dirección en el navegador del PC o del móvil. Desde ahí puedes:
 - recorrer las carpetas de la SD;
-- **subir** varios ficheros a la vez a la carpeta en la que estés (hasta 8 MB en total);
+- **subir** varios ficheros a la vez a la carpeta en la que estés (hasta 32 MB en total, como los ZIP que abre el emulador);
 - **descargar** cualquier fichero (hasta 4 MB), por ejemplo tus partidas, snapshots o cartuchos de microdrive;
 - **cargar** una cinta, snapshot, cartucho o microdrive directamente en el Spectrum;
 - **borrar** ficheros (pide confirmación) y **crear carpetas**.
 
 Además, se anuncia en la red local (mDNS) como servicio web "ZXMetalCircle".
 
-**Proteger la página** (F1, C, página 8, o en `cmdline.txt`):
+**Proteger la página** (F1, C, página 9, o en `cmdline.txt`):
 - `web=0` la apaga del todo (ni siquiera se arranca el servidor); en F1 la línea de la red dice "(web apagada)".
 - `web=ro` la deja en **solo lectura**: se puede ver la SD, bajar ficheros, buscar en ZXDB y mandar cargar un juego, pero no subir, borrar, crear carpetas ni descargar de ZXDB a la SD (esas opciones ni aparecen).
 - `webpass=` pone una **contraseña** (en la configuración se escribe con letras minúsculas y números, y se ve como `********`). La página la pide una vez y entonces crea una clave de sesión al azar que va en los enlaces y formularios (el servidor web de Circle no da acceso a cookies ni a la contraseña del navegador). Las claves se pierden al apagar la Pi; tras 5 intentos fallidos hay que esperar 30 s. Va sin cifrar (HTTP): protege de curiosos de tu red, no de alguien que la espíe.

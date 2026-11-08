@@ -59,7 +59,7 @@ The file can be up to 4 GB, the FAT32 limit.
 
 The **divMMC** is the most widely used SD card interface for the Spectrum today, and **esxDOS** its system: loading tapes, snapshots and TR-DOS disks from the card, commands `.ls`, `.cd`, `.tapein`…, and a file browser on the NMI. ZXMetalCircle includes **esxDOS 0.8.9** (© Papaya Dezign, https://esxdos.org, non-commercial use).
 
-**Turning it on**: add `divmmc=esxdos` to `cmdline.txt`, or connect it at any time with **Alt+X** or in the settings (F1, C, page 5).
+**Turning it on**: add `divmmc=esxdos` to `cmdline.txt`, or connect it at any time with **Alt+X** or in the settings (F1, C, page 6).
 
 **The card is an image**: `hdd/esxdos.img`, a FAT16 card the emulator creates the first time (16 MB, and bigger if needed, up to 2 GB). esxDOS reads it by sectors, like a real card.
 

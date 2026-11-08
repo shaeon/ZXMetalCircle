@@ -11,14 +11,14 @@ interna a 3,3 V (pull-up): **nunca les metas 5 V**.
 
 | Función | Opción en `cmdline.txt` | En la configuración (F1, C) |
 | --- | --- | --- |
-| Teclado real del 48K/128 (matriz 8 × 5), con los joysticks cableados a la matriz | `gpiokbd=48` (por defecto) | 4 Teclado y mandos: "Teclado por GPIO" = 48K/128 |
+| Teclado real del 48K/128 (matriz 8 × 5), con los joysticks cableados a la matriz | `gpiokbd=48` (por defecto) | 4 Teclado: "Teclado por GPIO" = 48K/128 |
 | Teclado real del +2A/+3 (matriz 13 × 11) | `gpiokbd=plus3` | "Teclado por GPIO" = +2A/+3 |
 | Sin teclado por GPIO | `gpiokbd=0` | "Teclado por GPIO" = ninguno |
 | Pulsador de modo extendido (solo con el teclado 48K/128) | va con `gpiokbd=48` | — |
 | Pulsador de NMI (solo con el teclado 48K/128) | va con `gpiokbd=48` | — |
 | Copia del sonido PWM por el GPIO12 (Pi 1, 2, 3 y Zero) | `sounddev=sndpwm gpioaudio=1` | 2 Imagen y sonido: "Sonido por GPIO12" |
 | Sonido PWM en la Pi 5 (no tiene jack) | `sounddev=sndpwm` | "Salida de sonido" = jack (PWM) |
-| Entrada de un casete real (con un comparador, p. ej. LM393) | `ear=gpio earpin=...` | 6 Red, hora y casete: "Casete real" = GPIO, "GPIO del casete" |
+| Entrada de un casete real (con un comparador, p. ej. LM393) | `ear=gpio earpin=...` | 7 Red, hora y casete: "Casete real" = GPIO, "GPIO del casete" |
 | Registro por el puerto serie | `logdev=ttyS1` | — |
 
 El montaje del teclado es el de pastbytes para ZXBaremulator
@@ -206,7 +206,23 @@ Si al pulsar una tecla se ilumina otra, lo más probable es que una cinta esté 
 - Las filas llevan un diodo cada una, con el cátodo hacia la Raspberry. Las columnas usan las resistencias de pull-up internas, así que no hacen falta componentes extra.
 - El emulador nunca pone las filas a nivel alto: las deja como entradas o las lleva a nivel bajo para seleccionarlas.
 - Los joysticks van cableados a la matriz como en el Interface 2: JOY1 son las teclas 6-0 (Sinclair 1) y JOY2 las teclas 1-5 (Sinclair 2).
-- **Modo extendido**: se activa con el pulsador o con CAPS SHIFT + SYMBOL SHIFT + ENTER, y aparece un icono de teclado azul abajo a la derecha. En ese modo, 1–0 hacen de F1–F10 y SYMBOL SHIFT hace de Alt (SS+K muestra la ayuda de teclado, SS+R hace reset, SS+P pausa). Con la misma combinación se vuelve al modo normal.
+- **Modo extendido**: se activa con el pulsador o con CAPS SHIFT + SYMBOL SHIFT + ENTER, y aparece un icono de teclado azul abajo a la derecha. Con la misma combinación se vuelve al modo normal. Las teclas del PC que no tiene el Spectrum se consiguen así:
+
+  | Con el teclado real | Hace de |
+  | --- | --- |
+  | **Modo extendido:** 1 … 0 | F1 … F10 |
+  | **Modo extendido:** Q, W | F11, F12 (como en ESPectrum) |
+  | **Modo extendido:** SYMBOL SHIFT + tecla | Alt + tecla (SS+1 = Alt+F1, SS+K ayuda del teclado, SS+R reset, SS+P pausa) |
+  | CAPS SHIFT + 1, 2 | Inicio, Fin |
+  | CAPS SHIFT + 3, 4 | RePág, AvPág |
+  | CAPS SHIFT + 5, 6, 7, 8 | cursores |
+  | CAPS SHIFT + 9 | Supr (por ejemplo, para vaciar una unidad en Alt+U) |
+  | CAPS SHIFT + 0 | Retroceso (subir de carpeta) |
+  | CAPS SHIFT + ESPACIO (BREAK) | Esc |
+  | SYMBOL SHIFT + M, escribiendo una IP en la configuración | el punto |
+
+  Las combinaciones con CAPS SHIFT valen en los menús y en modo extendido.
+
 - **En los menús**: los nombres demasiado largos se desplazan solos cuando se seleccionan (los demás terminan en `>`). Los cursores y RePág/AvPág se repiten al mantenerlos pulsados (a los 400 ms y luego cada 60 ms), también con CAPS SHIFT + 5/6/7/8 en el teclado GPIO. Se navega con CAPS SHIFT + 5/6/7/8 (cursores), ENTER, BREAK (Esc) y CAPS SHIFT + 0 (subir de carpeta). Las letras saltan en la lista.
 - El teclado USB y el de GPIO pueden usarse a la vez.
 - **NMI** (solo con `gpiokbd=48`): un pulsador entre el GPIO16 (pin 36) y GND (pin 34) genera una NMI, que activa el Multiface. Tiene antirrebote.

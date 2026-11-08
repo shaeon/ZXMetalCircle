@@ -8,14 +8,14 @@ Numbers are always **GPIO (BCM)**; in brackets, the **physical pin** on the head
 
 | Function | Option in `cmdline.txt` | In the settings (Alt+F1) |
 | --- | --- | --- |
-| Real 48K/128 keyboard (8 × 5 matrix), with joysticks wired to the matrix | `gpiokbd=48` (default) | 4 Keyboard and controllers: "Keyboard via GPIO" = 48K/128 |
+| Real 48K/128 keyboard (8 × 5 matrix), with joysticks wired to the matrix | `gpiokbd=48` (default) | 4 Keyboard: "Keyboard via GPIO" = 48K/128 |
 | Real +2A/+3 keyboard (13 × 11 matrix) | `gpiokbd=plus3` | "Keyboard via GPIO" = +2A/+3 |
 | No GPIO keyboard | `gpiokbd=0` | "Keyboard via GPIO" = none |
 | Extended mode button (48K/128 keyboard only) | comes with `gpiokbd=48` | — |
 | NMI button (48K/128 keyboard only) | comes with `gpiokbd=48` | — |
 | Copy of the PWM sound on GPIO12 (Pi 1, 2, 3 and Zero) | `sounddev=sndpwm gpioaudio=1` | 2 Picture and sound: "Sound via GPIO12" |
 | PWM sound on the Pi 5 (it has no jack) | `sounddev=sndpwm` | "Sound output" = jack (PWM) |
-| Input from a real cassette player (with a comparator, e.g. LM393) | `ear=gpio earpin=...` | 6 Network, time and cassette: "Real cassette" = GPIO, "Cassette GPIO" |
+| Input from a real cassette player (with a comparator, e.g. LM393) | `ear=gpio earpin=...` | 7 Network, time and cassette: "Real cassette" = GPIO, "Cassette GPIO" |
 | Logging through the serial port | `logdev=ttyS1` | — |
 
 The keyboard wiring is pastbytes' design for ZXBaremulator (https://pastbytes.com/zxb/), with a diode on each row (cathode towards the Raspberry Pi). The +2A/+3 one follows spark2k06's zxunops2 project.
@@ -194,7 +194,23 @@ If pressing a key lights up another one, most likely a ribbon is reversed or has
 - Each row has a diode, with the cathode towards the Raspberry Pi. The columns use the internal pull-up resistors, so no extra components are needed.
 - The emulator never drives the rows high: it leaves them as inputs or pulls them low to select them.
 - The joysticks are wired to the matrix as in the Interface 2: JOY1 is keys 6-0 (Sinclair 1) and JOY2 keys 1-5 (Sinclair 2).
-- **Extended mode**: turned on with the button or with CAPS SHIFT + SYMBOL SHIFT + ENTER, and a blue keyboard icon appears at the bottom right. In that mode, 1–0 act as F1–F10 and SYMBOL SHIFT acts as Alt (SS+K shows the keyboard help, SS+R resets, SS+P pauses). The same combination goes back to normal mode.
+- **Extended mode**: turned on with the button or with CAPS SHIFT + SYMBOL SHIFT + ENTER, and a blue keyboard icon appears at the bottom right. The same combination goes back to normal mode. The PC keys the Spectrum does not have are obtained like this:
+
+  | With the real keyboard | Acts as |
+  | --- | --- |
+  | **Extended mode:** 1 … 0 | F1 … F10 |
+  | **Extended mode:** Q, W | F11, F12 (as in ESPectrum) |
+  | **Extended mode:** SYMBOL SHIFT + key | Alt + key (SS+1 = Alt+F1, SS+K keyboard help, SS+R reset, SS+P pause) |
+  | CAPS SHIFT + 1, 2 | Home, End |
+  | CAPS SHIFT + 3, 4 | PgUp, PgDn |
+  | CAPS SHIFT + 5, 6, 7, 8 | cursor keys |
+  | CAPS SHIFT + 9 | Delete (for example, to empty a drive in Alt+U) |
+  | CAPS SHIFT + 0 | Backspace (go up a folder) |
+  | CAPS SHIFT + SPACE (BREAK) | Esc |
+  | SYMBOL SHIFT + M, typing an IP address in the settings | the dot |
+
+  The CAPS SHIFT combinations work in the menus and in extended mode.
+
 - **In the menus**: names that are too long scroll by themselves when selected (the others end in `>`). The cursor keys and PgUp/PgDn repeat when held down (after 400 ms and then every 60 ms), also with CAPS SHIFT + 5/6/7/8 on the GPIO keyboard. You navigate with CAPS SHIFT + 5/6/7/8 (cursors), ENTER, BREAK (Esc) and CAPS SHIFT + 0 (go up a folder). Letters jump in the list.
 - The USB keyboard and the GPIO one can be used at the same time.
 - **NMI** (only with `gpiokbd=48`): a button between GPIO16 (pin 36) and GND (pin 34) raises an NMI, which activates the Multiface. It is debounced.

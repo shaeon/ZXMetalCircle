@@ -16,6 +16,8 @@
 #include <circle/util.h>
 
 #include "version.h"
+#include "padassign.h"
+#include "padprofile.h"
 #include "harddisk.h"
 #include "tnfsbrowser.h"
 #include "optcheck.h"
@@ -41,13 +43,16 @@ static const char FromKernel[] = "zxcircle";
 #define MESSAGE_FRAMES		150	// 3 s
 #define ACCEL_PRESENT_EVERY	8	// en carga acelerada se muestra 1 de cada 8 cuadros
 
-static const char *JoystickNames[JoystickModeCount] =
+const char *JoystickNames[JoystickModeCount] =
 {
 	N_("ninguno"), "Kempston", "Fuller", "Sinclair 1", "Sinclair 2", "Cursor/AGF/Protek", "QAOPSpaceM"
 };
 
 // Pseudotecla generada por el botón Select/Share/View/Capture de los mandos
 #define KEY_PAD_SELECT	0xF0
+#define KEY_PAD_SELECT2	0xF3		// Select en un mando del jugador 2
+#define KEY_PAD_FILES	0xF4		// acción "ficheros" de un mando (Select por defecto)
+#define KEY_PAD_SETTINGS	0xF5		// acción "configuracion" de un mando (Start por defecto)
 
 static const char *AYStereoNames[AYStereoModeCount] =
 {
@@ -70,6 +75,7 @@ enum TAction
 	ActionTapePlayStop,
 	ActionTapeRewind,
 	ActionJoystick,
+	ActionJoystick2,		// Select en un mando del jugador 2
 	ActionNMI,
 	ActionTapeMode,
 	ActionSettings,			// Alt+F1: la configuración directamente
@@ -148,6 +154,9 @@ static const TKeyBinding KeyBindings[] =
 	{HID_KEY_PAUSE,  FALSE, ActionPause,        "Pausa",  N_("Pausa (también Alt+P)")},
 	{0x13,           TRUE,  ActionPause,        "Alt+P",  0},
 	{KEY_PAD_SELECT, FALSE, ActionJoystick,     "Select", 0},	// botón del mando
+	{KEY_PAD_SELECT2, FALSE, ActionJoystick2,   "Select", 0},	// botón de un mando del jugador 2
+	{KEY_PAD_FILES,   FALSE, ActionFiles,       "Select", 0},	// navegador de ficheros, desde un mando
+	{KEY_PAD_SETTINGS, FALSE, ActionSettings,   "Start",  0},	// configuración, desde un mando
 };
 
 CKernel *CKernel::s_pThis = 0;
@@ -172,6 +181,24 @@ CKernel::CKernel (void)
 	m_nLastKeyTime = 0;
 	m_bF5Files = FALSE;
 	m_bModelList = FALSE;
+	m_bPadsChanged = FALSE;
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		m_PadVID[i] = m_PadPID[i] = 0;
+		m_PadLED[i] = 0xFF;
+		m_PadProfileMode[i] = 0xFF;
+		m_PadButtonCount[i] = 0;
+		m_PadAlias[i][0] = '\0';
+		m_PadStickJoy[i] = 0;
+	}
+	m_nPadEdit = -1;
+	m_nPadEditStage = 0;
+	m_nPadEditPressed = 0;
+	m_nPadEditProfiles = 0;
+	m_nPadEditRows = 0;
+	m_bPadEditDirty = FALSE;
+	m_bPadEditRename = FALSE;
+	m_PadEditName[0] = '\0';
 	m_UpdateVersion[0] = '\0';
 	m_UpdateURL[0] = '\0';
 	m_UpdateTarget[0] = '\0';
@@ -182,6 +209,7 @@ CKernel::CKernel (void)
 	m_bUpdateListChoice = FALSE;
 	m_bUpdateErrorChoice = FALSE;
 	m_bUpdateBootChecked = FALSE;
+	m_bUpdateBootRunning = FALSE;
 	m_pTKROM = 0;
 	m_pTK95ROM = 0;
 	m_bIndicators = TRUE;
@@ -551,6 +579,11 @@ void CKernel::ParseOptions (void)
 	m_Keyboard.SetCursorMode (strcasecmp (pCursors, "keys") == 0 ? CursorKeysOnly
 				  : (strcasecmp (pCursors, "joystick") == 0 ? CursorJoystickOnly : CursorBoth));
 
+	// Tecla de disparo del teclado: win (por defecto), rctrl o none
+	const char *pKbdFire = m_Options.GetAppOptionString ("kbdfire", "win");
+	m_Keyboard.SetKbdFire (strcasecmp (pKbdFire, "rctrl") == 0 ? KbdFireRightCtrl
+			       : (strcasecmp (pKbdFire, "none") == 0 ? KbdFireNone : KbdFireWindows));
+
 	// Teclado Issue 2/3 y velocidad inicial
 	m_pSpectrum->SetIssue2 (m_Options.GetAppOptionDecimal ("issue", 3) == 2);
 	unsigned nSpeed = m_Options.GetAppOptionDecimal ("speed", 1);
@@ -629,15 +662,25 @@ void CKernel::ParseOptions (void)
 	}
 
 	const char *pJoy = m_Options.GetAppOptionString ("joystick", "kempston");
+	const char *pJoy2 = m_Options.GetAppOptionString ("joystick2", "none");
 	for (unsigned i = 0; i < JoystickModeCount; i++)
 	{
 		if (strcasecmp (pJoy, JoyOptions[i]) == 0)
 		{
 			m_Keyboard.SetJoystickMode ((TJoystickMode) i);
 		}
+		if (strcasecmp (pJoy2, JoyOptions[i]) == 0)
+		{
+			m_Keyboard.SetJoystickMode2 ((TJoystickMode) i);
+		}
+	}
+	if (!CZXKeyboard::CanCombine (m_Keyboard.GetJoystickMode (), m_Keyboard.GetJoystickMode2 ()))
+	{
+		m_Keyboard.SetJoystickMode2 (JoystickNone);	// no pueden ir juntos
 	}
 
 	LoadSettings ();
+	UpdatePadPlayers ();
 }
 
 boolean CKernel::InitSound (const char *pDevice)
@@ -789,6 +832,12 @@ void CKernel::KeyboardRemovedHandler (CDevice *pDevice, void *pContext)
 
 void CKernel::UpdateUSB (void)
 {
+	if (m_bPadsChanged)
+	{
+		m_bPadsChanged = FALSE;
+		UpdatePadPlayers ();
+	}
+
 	if (!m_USBHCI.UpdatePlugAndPlay ())
 	{
 		return;
@@ -842,17 +891,22 @@ void CKernel::UpdateUSB (void)
 		m_GamePadProps[i] = pGamePad->GetProperties ();
 		m_PrevPadButtons[i] = 0;
 		m_PrevPadJoy[i] = 0;
+		const TUSBDeviceDescriptor *pPadDesc = pGamePad->GetDevice ()->GetDeviceDescriptor ();
+		m_PadVID[i] = pPadDesc != 0 ? pPadDesc->idVendor : 0;
+		m_PadPID[i] = pPadDesc != 0 ? pPadDesc->idProduct : 0;
+		m_PadLED[i] = 0xFF;			// la luz se pone al asignarle jugador
+		m_PadProfile[i].SetDefault ((m_GamePadProps[i] & GamePadPropertyIsKnown) != 0);
+		m_PadProfileMode[i] = 0xFF;		// el suyo, al asignarle jugador
+		LoadPadAlias (i);
 		m_pGamePads[i] = pGamePad;
+		m_bPadsChanged = TRUE;
 
 		pGamePad->RegisterRemovedHandler (GamePadRemovedHandler, (void *) (uintptr) i);
 		pGamePad->RegisterStatusHandler (GamePadStatusHandler);
 
-		if (m_GamePadProps[i] & GamePadPropertyHasLED)
-		{
-			pGamePad->SetLEDMode ((TGamePadLEDMode) (GamePadLEDModeOn1 + i));
-		}
 
 		const TGamePadState *pState = pGamePad->GetInitialState ();
+		m_PadButtonCount[i] = pState != 0 ? pState->nbuttons : 0;
 		m_Logger.Write (FromKernel, LogNotice, "Gamepad %u attached (%s mapping, %d buttons, %d axes, %d hats)",
 				i + 1, (m_GamePadProps[i] & GamePadPropertyIsKnown) ? "known" : "generic",
 				pState->nbuttons, pState->naxes, pState->nhats);
@@ -874,7 +928,7 @@ void CKernel::UpdateUSB (void)
 
 			m_Logger.Write (FromKernel, LogNotice, "Mouse attached");
 			ShowMessage (m_Keyboard.GetJoystickMode () == JoystickKempston
-				     ? T ("Ratón conectado (inactivo con joystick Kempston)")
+				     ? T ("Ratón: inactivo con joystick Kempston")
 				     : T ("Ratón Kempston conectado"));
 		}
 	}
@@ -931,81 +985,86 @@ void CKernel::GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *
 	CKernel *pThis = s_pThis;
 	unsigned nButtons = pState->buttons;
 	u8 nJoy = 0;
-	boolean bSelect, bStart;
 
-	if (pThis->m_GamePadProps[nDeviceIndex] & GamePadPropertyIsKnown)
+	// Direcciones: el stick izquierdo y, en los genéricos, el primer "hat"
+	// (la cruceta de los conocidos son botones: van por el perfil)
+	boolean bKnown = (pThis->m_GamePadProps[nDeviceIndex] & GamePadPropertyIsKnown) != 0;
+	if (!bKnown && pState->nhats > 0)
 	{
-		// PS3/PS4, Xbox 360/One, Switch Pro, 8BitDo...: mapeo conocido.
-		// Como en ZXBaremulator: A/Cruz, Y/Triángulo, L1 y R1 = disparo;
-		// B/Círculo, X/Cuadrado, L2 y R2 = disparo 2
-		if (nButtons & GamePadButtonUp)		nJoy |= JOY_UP;
-		if (nButtons & GamePadButtonDown)	nJoy |= JOY_DOWN;
-		if (nButtons & GamePadButtonLeft)	nJoy |= JOY_LEFT;
-		if (nButtons & GamePadButtonRight)	nJoy |= JOY_RIGHT;
-
-		if (nButtons & (GamePadButtonA | GamePadButtonY | GamePadButtonLB | GamePadButtonRB))
-		{
-			nJoy |= JOY_FIRE;
-		}
-		if (nButtons & (GamePadButtonB | GamePadButtonX | GamePadButtonLT | GamePadButtonRT))
-		{
-			nJoy |= JOY_FIRE2;
-		}
-
-		int nX = AxisDirection (pState, GamePadAxisLeftX);
-		int nY = AxisDirection (pState, GamePadAxisLeftY);
-		if (nX < 0) nJoy |= JOY_LEFT;
-		if (nX > 0) nJoy |= JOY_RIGHT;
-		if (nY < 0) nJoy |= JOY_UP;
-		if (nY > 0) nJoy |= JOY_DOWN;
-
-		bSelect = (nButtons & (GamePadButtonSelect | GamePadButtonMinus)) != 0;
-		bStart = (nButtons & (GamePadButtonStart | GamePadButtonPlus)) != 0;
+		int nHat = pState->hats[0];	// 0 = arriba, en sentido horario; fuera de rango = centro
+		if (nHat == 7 || nHat == 0 || nHat == 1)	nJoy |= JOY_UP;
+		if (nHat >= 1 && nHat <= 3)			nJoy |= JOY_RIGHT;
+		if (nHat >= 3 && nHat <= 5)			nJoy |= JOY_DOWN;
+		if (nHat >= 5 && nHat <= 7)			nJoy |= JOY_LEFT;
 	}
-	else
+	int nX = AxisDirection (pState, bKnown ? GamePadAxisLeftX : 0);
+	int nY = AxisDirection (pState, bKnown ? GamePadAxisLeftY : 1);
+	if (nX < 0) nJoy |= JOY_LEFT;
+	if (nX > 0) nJoy |= JOY_RIGHT;
+	if (nY < 0) nJoy |= JOY_UP;
+	if (nY > 0) nJoy |= JOY_DOWN;
+
+	unsigned nOldButtons = pThis->m_PrevPadButtons[nDeviceIndex];
+
+	// "Botones del mando" abierto para este mando: sus botones solo marcan
+	// su fila (ni juegan ni navegan)
+	if ((int) nDeviceIndex == pThis->m_nPadEdit)
 	{
-		// Mando HID genérico (o adaptadores Mayflash en modo DirectInput):
-		// cruceta por el primer "hat" y/o los dos primeros ejes
-		if (pState->nhats > 0)
+		unsigned nNew = nButtons & ~nOldButtons;
+		for (unsigned i = 0; i < 32 && nNew != 0; i++)
 		{
-			int nHat = pState->hats[0];	// 0 = arriba, en sentido horario; fuera de rango = centro
-			if (nHat == 7 || nHat == 0 || nHat == 1)	nJoy |= JOY_UP;
-			if (nHat >= 1 && nHat <= 3)			nJoy |= JOY_RIGHT;
-			if (nHat >= 3 && nHat <= 5)			nJoy |= JOY_DOWN;
-			if (nHat >= 5 && nHat <= 7)			nJoy |= JOY_LEFT;
+			if (nNew & (1U << i))
+			{
+				pThis->m_nPadEditPressed = i + 1;
+				break;
+			}
 		}
+		pThis->m_PrevPadButtons[nDeviceIndex] = nButtons;
+		pThis->m_Keyboard.SetGamePadState (nDeviceIndex, 0);
+		return;
+	}
 
-		int nX = AxisDirection (pState, 0);
-		int nY = AxisDirection (pState, 1);
-		if (nX < 0) nJoy |= JOY_LEFT;
-		if (nX > 0) nJoy |= JOY_RIGHT;
-		if (nY < 0) nJoy |= JOY_UP;
-		if (nY > 0) nJoy |= JOY_DOWN;
+	pThis->m_PadStickJoy[nDeviceIndex] = nJoy;		// para Alt+D
 
-		if (nButtons & (BIT (0) | BIT (3) | BIT (4) | BIT (5)))	nJoy |= JOY_FIRE;
-		if (nButtons & (BIT (1) | BIT (2) | BIT (6) | BIT (7)))	nJoy |= JOY_FIRE2;
+	// Los botones, por el perfil del mando (padprofile.cpp)
+	TPadOutput Out;
+	pThis->m_PadProfile[nDeviceIndex].Evaluate (nButtons, nOldButtons, &Out);
+	u8 nStick = nJoy;
+	nJoy |= Out.nJoy;
 
-		bSelect = (nButtons & BIT (8)) != 0;
-		bStart = (nButtons & BIT (9)) != 0;
+	// En los menús, L y R (LB y RB; en los genéricos, los botones 5 y 6)
+	// cambian de página, y no cuentan para navegar
+	u32 nL = bKnown ? GamePadButtonLB : BIT (4);
+	u32 nR = bKnown ? GamePadButtonRB : BIT (5);
+	u8 nNavJoy = nJoy;
+	if (pThis->m_Keyboard.IsCaptured ())
+	{
+		TPadOutput Nav;
+		pThis->m_PadProfile[nDeviceIndex].Evaluate (nButtons & ~(nL | nR), nOldButtons & ~(nL | nR), &Nav);
+		nNavJoy = nStick | Nav.nJoy;
+		if ((nButtons & nL) && !(nOldButtons & nL))	pThis->m_Keyboard.InjectKeyEvent (0x4B, 0);	// RePág
+		if ((nButtons & nR) && !(nOldButtons & nR))	pThis->m_Keyboard.InjectKeyEvent (0x4E, 0);	// AvPág
 	}
 
 	pThis->m_Keyboard.SetGamePadState (nDeviceIndex, nJoy);
+	pThis->m_Keyboard.SetPadKeys (nDeviceIndex, Out.Matrix);	// teclas del Spectrum
+
+	for (unsigned i = 0; i < Out.nPCKeys; i++)
+	{
+		pThis->m_Keyboard.InjectKeyEvent (Out.PCKey[i], Out.PCMods[i]);	// teclas del emulador
+	}
 
 	// Pulsaciones nuevas
-	unsigned nOldButtons = pThis->m_PrevPadButtons[nDeviceIndex];
 	u8 nOldJoy = pThis->m_PrevPadJoy[nDeviceIndex];
-	boolean bOldSelect = (nOldButtons & 0x80000000) != 0;
-	boolean bOldStart = (nOldButtons & 0x40000000) != 0;
-
-	if (bSelect && !bOldSelect)
+	if (Out.bNextJoy)
 	{
-		pThis->m_Keyboard.InjectKeyEvent (KEY_PAD_SELECT, 0);
+		pThis->m_Keyboard.InjectKeyEvent (pThis->m_Keyboard.GetPadPlayer (nDeviceIndex) == 1 ? KEY_PAD_SELECT2 : KEY_PAD_SELECT, 0);
 	}
 
 	if (pThis->m_Keyboard.IsCaptured ())
 	{
 		// En los menús: cruceta = cursores, disparo = ENTER, disparo 2 = ESC
-		u8 nNew = nJoy & ~nOldJoy;
+		u8 nNew = nNavJoy & ~nOldJoy;
 		if (nNew & JOY_UP)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_UP, 0);
 		if (nNew & JOY_DOWN)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_DOWN, 0);
 		if (nNew & JOY_LEFT)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_LEFT, 0);
@@ -1013,13 +1072,24 @@ void CKernel::GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *
 		if (nNew & JOY_FIRE)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_ENTER, 0);
 		if (nNew & JOY_FIRE2)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_ESC, 0);
 	}
-	else if (bStart && !bOldStart)
+	else
 	{
-		pThis->m_Keyboard.InjectKeyEvent (HID_KEY_F1, 0);	// Start: ayuda y selector de cintas
+		if (Out.bMenu)
+		{
+			pThis->m_Keyboard.InjectKeyEvent (HID_KEY_F1, 0);		// la ayuda
+		}
+		if (Out.bSettings)
+		{
+			pThis->m_Keyboard.InjectKeyEvent (KEY_PAD_SETTINGS, 0);	// la configuración (Start)
+		}
+		if (Out.bFiles)
+		{
+			pThis->m_Keyboard.InjectKeyEvent (KEY_PAD_FILES, 0);	// los ficheros (Select)
+		}
 	}
 
-	pThis->m_PrevPadButtons[nDeviceIndex] = (bSelect ? 0x80000000 : 0) | (bStart ? 0x40000000 : 0);
-	pThis->m_PrevPadJoy[nDeviceIndex] = nJoy;
+	pThis->m_PrevPadButtons[nDeviceIndex] = nButtons;
+	pThis->m_PrevPadJoy[nDeviceIndex] = pThis->m_Keyboard.IsCaptured () ? nNavJoy : nJoy;
 }
 
 void CKernel::GamePadRemovedHandler (CDevice *pDevice, void *pContext)
@@ -1034,7 +1104,190 @@ void CKernel::GamePadRemovedHandler (CDevice *pDevice, void *pContext)
 	{
 		s_pThis->m_pGamePads[nIndex] = 0;
 		s_pThis->m_Keyboard.SetGamePadState (nIndex, 0);
+		static const u8 NoKeys[8] = {0};
+		s_pThis->m_Keyboard.SetPadKeys (nIndex, NoKeys);
+		s_pThis->m_bPadsChanged = TRUE;		// se reparte en UpdateUSB
 	}
+}
+
+// El perfil de un mando para un tipo de joystick: joysticks/VVVV-PPPP/ y,
+// dentro, <tipo>.txt (el de ese tipo) o, si activo.txt dice
+// "<tipo> = <nombre>", <tipo>-<nombre>.txt. Sin fichero, el de siempre.
+void CKernel::LoadPadProfile (unsigned nPad, TJoystickMode Mode)
+{
+	boolean bKnown = (m_GamePadProps[nPad] & GamePadPropertyIsKnown) != 0;
+	CPadProfile Profile;
+	Profile.SetDefault (bKnown);
+	m_PadProfileMode[nPad] = (u8) Mode;
+
+	CString Dir;
+	Dir.Format ("SD:/joysticks/%04x-%04x", m_PadVID[nPad], m_PadPID[nPad]);
+	static const char *Types[JoystickModeCount] =		// como joystick=
+		{"none", "kempston", "fuller", "sinclair1", "sinclair2", "cursor", "qaop"};
+	const char *pType = Types[Mode % JoystickModeCount];
+
+	// el perfil activo de este tipo (activo.txt)
+	static char Buffer[4096];
+	FIL File;
+	UINT nRead = 0;
+	CString Path;
+	Path.Format ("%s/activo.txt", (const char *) Dir);
+	if (f_open (&File, Path, FA_READ) == FR_OK)
+	{
+		f_read (&File, Buffer, sizeof Buffer, &nRead);
+		f_close (&File);
+	}
+	char Name[64];
+	CPadProfile::ActiveFile (Buffer, nRead, pType, Name, sizeof Name);
+	Path.Format ("%s/%s", (const char *) Dir, Name);
+	if (f_open (&File, Path, FA_READ) == FR_OK)
+	{
+		nRead = 0;
+		f_read (&File, Buffer, sizeof Buffer, &nRead);
+		f_close (&File);
+		if (!Profile.Parse (Buffer, nRead, bKnown))
+		{
+			CString Message;
+			Message.Format (T ("Perfil con errores: %s"), Name);
+			ShowMessage (Message);
+		}
+		m_Logger.Write (FromKernel, LogNotice, "Gamepad %u: perfil %s", nPad + 1, (const char *) Path);
+	}
+	m_PadProfile[nPad] = Profile;
+}
+
+// A qué jugador va cada mando conectado (pad1=, pad2=, padextra=):
+// - jugador 1: el mando elegido en pad1 o, con "auto", el primero conectado
+//   (que no sea el elegido para el jugador 2);
+// - jugador 2 (solo si joystick2 no es "ninguno"): el de pad2 o, con "auto",
+//   el siguiente;
+// - los demás: padextra (solo menús, o se suman al jugador 1 o al 2).
+// Pone también la luz de jugador en los mandos que la tienen, y la lista de
+// mandos conectados para la configuración.
+// Los joysticks de los dos jugadores nunca pueden chocar (el mismo dos veces,
+// o Cursor con Sinclair 1): si chocan, el jugador 2 se queda sin joystick
+void CKernel::CheckJoystickPair (void)
+{
+	if (!CZXKeyboard::CanCombine (m_Keyboard.GetJoystickMode (), m_Keyboard.GetJoystickMode2 ()))
+	{
+		m_Keyboard.SetJoystickMode2 (JoystickNone);
+		SyncSetting ("joystick2");
+		ShowMessage (T ("Jugador 2 sin joystick: ese es del 1"));
+	}
+}
+
+// F4 o Select: el siguiente joystick del jugador (0 o 1), saltando los que
+// no pueden ir con el del otro jugador. El jugador 2 pasa también por
+// "ninguno" (sin jugador 2).
+void CKernel::NextJoystick (unsigned nPlayer)
+{
+	TJoystickMode Mode = nPlayer == 0 ? m_Keyboard.GetJoystickMode () : m_Keyboard.GetJoystickMode2 ();
+	TJoystickMode Other = nPlayer == 0 ? m_Keyboard.GetJoystickMode2 () : m_Keyboard.GetJoystickMode ();
+	for (unsigned i = 0; i < JoystickModeCount; i++)
+	{
+		Mode = (TJoystickMode) ((Mode + 1) % JoystickModeCount);
+		if (CZXKeyboard::CanCombine (Mode, Other))
+		{
+			break;
+		}
+	}
+	CString Message;
+	if (nPlayer == 0)
+	{
+		m_Keyboard.SetJoystickMode (Mode);
+		Message.Format (T ("Joystick: %s"), T (JoystickNames[Mode]));
+		SyncSetting ("joystick");
+	}
+	else
+	{
+		m_Keyboard.SetJoystickMode2 (Mode);
+		Message.Format (T ("Joystick del jugador 2: %s"), T (JoystickNames[Mode]));
+		SyncSetting ("joystick2");
+		UpdatePadPlayers ();		// con o sin jugador 2, los mandos cambian
+	}
+	ShowMessage (Message);
+}
+
+void CKernel::UpdatePadPlayers (void)
+{
+	static const char *pNone = "";
+	int n1 = m_Settings.Find ("pad1"), n2 = m_Settings.Find ("pad2"), nX = m_Settings.Find ("padextra");
+	const char *pPad1 = n1 >= 0 ? m_Settings.GetValue (n1) : pNone;
+	const char *pPad2 = n2 >= 0 ? m_Settings.GetValue (n2) : pNone;
+	const char *pExtra = nX >= 0 ? m_Settings.GetValue (nX) : pNone;
+	// Hay jugador 2 si tiene joystick o un mando concreto (sin joystick, ese mando
+	// sirve con un perfil de teclas); con "auto" y sin joystick, no lo hay y los
+	// mandos de más van con el jugador 1, como siempre
+	boolean bPlayer2 =    m_Keyboard.GetJoystickMode2 () != JoystickNone
+			   || (pPad2[0] != '\0' && strcmp (pPad2, "auto") != 0);
+
+	char Ids[MAX_GAMEPADS][SETTING_PAD_ID];
+	char Names[MAX_GAMEPADS][SETTING_NAME_LEN];
+	unsigned nPads = 0;
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		CString Id;
+		// el código del modelo; los mandos iguales, con su número (045e:028e#2)
+		unsigned nInstance = m_pGamePads[i] != 0 ? PadInstance (i) : 1;
+		if (nInstance > 1)
+		{
+			Id.Format ("%04x:%04x#%u", m_PadVID[i], m_PadPID[i], nInstance);
+		}
+		else
+		{
+			Id.Format ("%04x:%04x", m_PadVID[i], m_PadPID[i]);
+		}
+		strncpy (Ids[i], Id, SETTING_PAD_ID - 1);
+		Ids[i][SETTING_PAD_ID - 1] = '\0';
+	}
+
+	// el reparto (padassign.cpp, con su prueba en el PC)
+	const char *IdPtr[MAX_GAMEPADS];
+	boolean bConnected[MAX_GAMEPADS];
+	u8 Players[MAX_GAMEPADS];
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		IdPtr[i] = Ids[i];
+		bConnected[i] = m_pGamePads[i] != 0;
+	}
+	AssignPads (MAX_GAMEPADS, IdPtr, bConnected, pPad1, pPad2, pExtra, bPlayer2, Players);
+
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		if (m_pGamePads[i] == 0)
+		{
+			m_Keyboard.SetPadPlayer (i, 0);
+			continue;
+		}
+		u8 nPlayer = Players[i] == PAD_ASSIGN_MENU ? PAD_MENU_ONLY : Players[i];
+		m_Keyboard.SetPadPlayer (i, nPlayer);
+
+		// su perfil: el del joystick de su jugador (los de solo menús, el del 1)
+		TJoystickMode Mode = nPlayer == 1 ? m_Keyboard.GetJoystickMode2 () : m_Keyboard.GetJoystickMode ();
+		if (m_PadProfileMode[i] != (u8) Mode)
+		{
+			LoadPadProfile (i, Mode);
+		}
+
+		// la luz del jugador (1 o 2); apagada si solo sirve en los menús
+		u8 nLED = nPlayer == PAD_MENU_ONLY ? 0 : nPlayer + 1;
+		if ((m_GamePadProps[i] & GamePadPropertyHasLED) && nLED != m_PadLED[i])
+		{
+			m_pGamePads[i]->SetLEDMode (nLED == 0 ? GamePadLEDModeOff
+							     : (TGamePadLEDMode) (GamePadLEDModeOn1 + nLED - 1));
+			m_PadLED[i] = nLED;
+		}
+
+		if (nPads < MAX_GAMEPADS)
+		{
+			strcpy (Ids[nPads], Ids[i]);
+			CString Name (PadName (i));
+			strncpy (Names[nPads], Name, SETTING_NAME_LEN - 1);
+			Names[nPads][SETTING_NAME_LEN - 1] = '\0';
+			nPads++;
+		}
+	}
+	m_Settings.SetPads (nPads, Ids, Names);
 }
 
 void CKernel::ShowMessage (const char *pMessage)
@@ -1097,7 +1350,13 @@ void CKernel::UpdateStatusLines (void)
 		     m_nSpeed);
 	m_Menu.SetStatusLine (0, Line);
 
-	Line.Format (T ("Joystick: |%s%s|  |%u.%02u c/s|"), T (JoystickNames[m_Keyboard.GetJoystickMode ()]),
+	CString Joy (T (JoystickNames[m_Keyboard.GetJoystickMode ()]));
+	if (m_Keyboard.GetJoystickMode2 () != JoystickNone)
+	{
+		Joy.Append (" + ");			// el del jugador 2
+		Joy.Append (T (JoystickNames[m_Keyboard.GetJoystickMode2 ()]));
+	}
+	Line.Format (T ("Joystick: |%s%s|  |%u.%02u c/s|"), (const char *) Joy,
 		     m_Keyboard.IsMouseActive () ? T (" +ratón") : "", m_nFPSx100 / 100, m_nFPSx100 % 100);
 	m_Menu.SetStatusLine (1, Line);
 
@@ -1173,7 +1432,7 @@ void CKernel::UpdateStatusLines (void)
 
 	if (m_UpdateVersion[0] != '\0')
 	{
-		Line.Format (T ("Nueva versión: |%s| (Alt+F1, pág. 9)"), m_UpdateVersion);	// en lugar de la red
+		Line.Format (T ("Nueva versión: |%s| (Alt+F1, pág. 10)"), m_UpdateVersion);	// en lugar de la red
 	}
 	else
 	{
@@ -2056,7 +2315,7 @@ void CKernel::LoadSettings (void)
 	}
 	m_Settings.ClearDirty ();
 	m_Menu.SetSettings (&m_Settings);
-	UpdateRows ();				// lo que dicen las filas de la página 9
+	UpdateRows ();				// lo que dicen las filas de la página 10
 }
 
 // Valor de una opción en la primera línea de cmdline.txt (la última si se repite)
@@ -2148,6 +2407,11 @@ void CKernel::SyncSetting (const char *pKey)
 	{
 		static const char *Joy[] = {"none", "kempston", "fuller", "sinclair1", "sinclair2", "cursor", "qaop"};
 		pValue = Joy[m_Keyboard.GetJoystickMode () % JoystickModeCount];
+	}
+	else if (strcmp (pKey, "joystick2") == 0)
+	{
+		static const char *Joy[] = {"none", "kempston", "fuller", "sinclair1", "sinclair2", "cursor", "qaop"};
+		pValue = Joy[m_Keyboard.GetJoystickMode2 () % JoystickModeCount];
 	}
 	else if (strcmp (pKey, "spectranet") == 0)	pValue = m_pSpectrum->IsSpectranetEnabled () ? "1" : "0";
 	else if (strcmp (pKey, "divmmc") == 0)		pValue = m_pSpectrum->IsDivMMCActive () ? "esxdos" : "0";
@@ -2296,6 +2560,25 @@ void CKernel::ApplySetting (unsigned nIndex)
 				m_Keyboard.SetJoystickMode ((TJoystickMode) i);
 			}
 		}
+		CheckJoystickPair ();
+		UpdatePadPlayers ();
+	}
+	else if (strcmp (pKey, "joystick2") == 0)
+	{
+		static const char *Joy[] = {"none", "kempston", "fuller", "sinclair1", "sinclair2", "cursor", "qaop"};
+		for (unsigned i = 0; i < JoystickModeCount; i++)
+		{
+			if (strcmp (pValue, Joy[i]) == 0)
+			{
+				m_Keyboard.SetJoystickMode2 ((TJoystickMode) i);
+			}
+		}
+		CheckJoystickPair ();
+		UpdatePadPlayers ();
+	}
+	else if (strcmp (pKey, "pad1") == 0 || strcmp (pKey, "pad2") == 0 || strcmp (pKey, "padextra") == 0)
+	{
+		UpdatePadPlayers ();			// el valor ya está en m_Settings
 	}
 	else if (strcmp (pKey, "f5") == 0)
 	{
@@ -2305,6 +2588,11 @@ void CKernel::ApplySetting (unsigned nIndex)
 	{
 		m_Keyboard.SetCursorMode (strcmp (pValue, "keys") == 0 ? CursorKeysOnly
 					  : (strcmp (pValue, "joystick") == 0 ? CursorJoystickOnly : CursorBoth));
+	}
+	else if (strcmp (pKey, "kbdfire") == 0)
+	{
+		m_Keyboard.SetKbdFire (strcmp (pValue, "rctrl") == 0 ? KbdFireRightCtrl
+				       : (strcmp (pValue, "none") == 0 ? KbdFireNone : KbdFireWindows));
 	}
 	else if (strcmp (pKey, "recreated") == 0)
 	{
@@ -4264,7 +4552,12 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	if (m_Menu.IsOpen ())
 	{
 		TMenuResult Result = m_Menu.HandleKey (rEvent);
-		if (Result == MenuResultFileSelected)
+		if (PadEditMenuResult (Result))
+		{
+			// página 5: la pantalla de botones del mando (antes que nada: usa
+			// listas y la línea de texto, como otras pantallas)
+		}
+		else if (Result == MenuResultFileSelected)
 		{
 			int nUnit = m_Menu.TakeUnitTarget ();
 			if (nUnit >= 0)
@@ -4374,7 +4667,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		}
 		else if (UpdateMenuResult (Result))
 		{
-			// página 9 (actualización) y sus preguntas
+			// página 10 (actualización) y sus preguntas
 		}
 		else if (Result == MenuResultChoice && m_bRebootChoice)
 		{
@@ -4547,10 +4840,11 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		break;
 
 	case ActionJoystick:
-		m_Keyboard.SetJoystickMode ((TJoystickMode) ((m_Keyboard.GetJoystickMode () + 1) % JoystickModeCount));
-		Message.Format (T ("Joystick: %s"), T (JoystickNames[m_Keyboard.GetJoystickMode ()]));
-		ShowMessage (Message);
-		SyncSetting ("joystick");
+		NextJoystick (0);
+		break;
+
+	case ActionJoystick2:			// Select en un mando del jugador 2
+		NextJoystick (1);
 		break;
 
 	case ActionFiles:
@@ -4844,7 +5138,7 @@ void CKernel::HandleGPIOKeyboard (void)
 	{
 		m_bExtendedMode = !m_bExtendedMode;
 		m_bWaitRelease = TRUE;		// no pasar al Spectrum las teclas de la combinación
-		ShowMessage (m_bExtendedMode ? T ("Teclado: modo extendido (1-0 = F1-F10)")
+		ShowMessage (m_bExtendedMode ? T ("Modo extendido: 1-0, Q, W = F1-F12")
 					     : T ("Teclado: modo normal"));
 	}
 	m_bPrevButton = bButton;
@@ -4922,23 +5216,15 @@ void CKernel::HandleGPIOKeyboard (void)
 
 			u8 nModifiers = 0;
 
-			if (m_bExtendedMode && nHID >= 0x1E && nHID <= 0x27)
+			// Escribiendo en un campo de la configuración (una IP): SYMBOL
+			// SHIFT + M es el punto, como en el Spectrum (no Alt+M)
+			if (bSS && nHID == 0x10 && m_Menu.IsOpen () && m_Menu.IsEditing ())
 			{
-				nHID = HID_KEY_F1 + (nHID - 0x1E);	// 1-9 -> F1-F9, 0 -> F10
+				m_Keyboard.InjectKeyEvent (0x37, 0);	// '.'
+				continue;
 			}
-			else if (bCS)
-			{
-				switch (nHID)
-				{
-				case 0x22: nHID = HID_KEY_LEFT;		break;	// CS+5
-				case 0x23: nHID = HID_KEY_DOWN;		break;	// CS+6
-				case 0x24: nHID = HID_KEY_UP;		break;	// CS+7
-				case 0x25: nHID = HID_KEY_RIGHT;	break;	// CS+8
-				case 0x27: nHID = HID_KEY_BACKSPACE;	break;	// CS+0
-				case HID_KEY_SPACE: nHID = HID_KEY_ESC;	break;	// BREAK
-				default:				break;
-				}
-			}
+
+			nHID = CZXKeyboard::TranslateGPIOKey (nHID, bCS, m_bExtendedMode);
 
 			if (m_bExtendedMode && bSS)
 			{
@@ -4966,7 +5252,12 @@ void CKernel::DrawKeyDebug (TPixel *pScreen)
 	const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
 	int x0 = rVisible.x + 4, y0 = rVisible.y + 4;
 
-	m_Video.FillRect (pScreen, x0 - 2, y0 - 2, 34 * 8 + 4, 12 * 8 + 4, COLOR_UI_PANEL);
+	unsigned nPadLines = 0;				// una línea por mando, debajo
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		nPadLines += m_pGamePads[i] != 0;
+	}
+	m_Video.FillRect (pScreen, x0 - 2, y0 - 2, 34 * 8 + 4, (12 + nPadLines) * 8 + 4, COLOR_UI_PANEL);
 
 	CString Line;
 	Line.Format ("USB mod %02X teclas %02X %02X %02X %02X %02X %02X",
@@ -5004,6 +5295,49 @@ void CKernel::DrawKeyDebug (TPixel *pScreen)
 		Line.Format ("+3 R8-12: %03X %03X %03X %03X %03X",
 			     pRaw[8] >> 5, pRaw[9] >> 5, pRaw[10] >> 5, pRaw[11] >> 5, pRaw[12] >> 5);
 		m_Video.DrawText (pScreen, x0, y0 + 11 * 8, Line, COLOR_UI_DIM, COLOR_UI_PANEL);
+	}
+
+	// Mandos: a qué jugador van, los botones pulsados (su nombre o número,
+	// el mismo que en los perfiles) y el stick
+	unsigned nPadLine = 0;
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		if (m_pGamePads[i] == 0)
+		{
+			continue;
+		}
+		boolean bKnown = (m_GamePadProps[i] & GamePadPropertyIsKnown) != 0;
+		u8 nPlayer = m_Keyboard.GetPadPlayer (i);
+		const char *pPlayer = nPlayer == PAD_MENU_ONLY ? T ("menú") : (nPlayer == 1 ? "J2" : "J1");
+		if (m_PadAlias[i][0] != '\0')
+		{
+			Line.Format ("%u %s %s:", i + 1, (const char *) PadName (i), pPlayer);
+		}
+		else
+		{
+			Line.Format ("%u %04X:%04X %s:", i + 1, m_PadVID[i], m_PadPID[i], pPlayer);
+		}
+		unsigned nButtons = m_PrevPadButtons[i];
+		for (unsigned b = 0; b < 32; b++)
+		{
+			if (nButtons & (1U << b))
+			{
+				const char *pName = CPadProfile::ButtonName (b, bKnown);
+				CString Name;
+				Name.Format (" %s", pName != 0 ? pName : "?");
+				Line.Append (Name);
+			}
+		}
+		u8 nStick = m_PadStickJoy[i];
+		if (nStick != 0)
+		{
+			Line.Append (" stick ");
+			if (nStick & JOY_UP)	Line.Append ("^");
+			if (nStick & JOY_DOWN)	Line.Append ("v");
+			if (nStick & JOY_LEFT)	Line.Append ("<");
+			if (nStick & JOY_RIGHT)	Line.Append (">");
+		}
+		m_Video.DrawText (pScreen, x0, y0 + (12 + nPadLine++) * 8, Line, COLOR_UI_TEXT, COLOR_UI_PANEL, 34);
 	}
 
 	// Matriz del Spectrum (todas las fuentes juntas): pulsadas en vídeo inverso
@@ -5291,6 +5625,8 @@ TShutdownMode CKernel::Run (void)
 
 			if (m_Menu.IsOpen ())
 			{
+				PadEditPoll ();		// "Botones del mando": el botón pulsado (aquí,
+							// porque con el menú abierto el bucle no sigue)
 				UpdateStatusLines ();
 				memcpy (Overlay, m_pFrozen, nOverlayBytes);
 				m_Menu.Draw (Overlay);

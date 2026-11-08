@@ -80,7 +80,9 @@ static const TSymbolKey SymbolKeys[] =
 CZXKeyboard::CZXKeyboard (void)
 :	m_nKeyJoy (0),
 	m_JoystickMode (JoystickKempston),
+	m_JoystickMode2 (JoystickNone),
 	m_CursorMode (CursorBoth),
+	m_KbdFire (KbdFireWindows),
 	m_bBackspaceAsLeft (FALSE),
 	m_bCaptured (FALSE),
 	m_nEventIn (0),
@@ -96,6 +98,8 @@ CZXKeyboard::CZXKeyboard (void)
 	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
 	{
 		m_PadJoy[i] = 0;
+		m_PadPlayer[i] = 0;
+		memset ((void *) m_PadKeys[i], 0, sizeof m_PadKeys[i]);
 	}
 
 	m_bMousePresent = FALSE;
@@ -156,6 +160,52 @@ void CZXKeyboard::SetJoystickMode (TJoystickMode Mode)
 {
 	m_JoystickMode = Mode;
 	ReleaseAll ();
+}
+
+void CZXKeyboard::SetJoystickMode2 (TJoystickMode Mode)
+{
+	m_JoystickMode2 = Mode;
+	ReleaseAll ();
+}
+
+boolean CZXKeyboard::CanCombine (TJoystickMode Mode1, TJoystickMode Mode2)
+{
+	if (Mode1 == JoystickNone || Mode2 == JoystickNone)
+	{
+		return TRUE;
+	}
+	if (Mode1 == Mode2)
+	{
+		return FALSE;
+	}
+	// Cursor (5-8, 0) y Sinclair 1 (6-9, 0) comparten las teclas 6, 7, 8 y 0
+	if (   (Mode1 == JoystickCursor && Mode2 == JoystickSinclair1)
+	    || (Mode1 == JoystickSinclair1 && Mode2 == JoystickCursor))
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
+void CZXKeyboard::SetPadPlayer (unsigned nIndex, u8 nPlayer)
+{
+	if (nIndex < MAX_GAMEPADS)
+	{
+		m_PadPlayer[nIndex] = nPlayer;
+	}
+}
+
+unsigned CZXKeyboard::PlayerWithMode (TJoystickMode Mode) const
+{
+	if (m_JoystickMode == Mode)
+	{
+		return 0;
+	}
+	if (m_JoystickMode2 == Mode)
+	{
+		return 1;
+	}
+	return 2;
 }
 
 static inline void Press (u8 Matrix[8], u8 nPos)
@@ -274,13 +324,17 @@ void CZXKeyboard::UpdateFromReport (u8 nModifiers, const u8 RawKeys[6])
 	boolean bSuppressCS = FALSE;
 	boolean bJoystick = m_JoystickMode != JoystickNone;
 
-	// Joystick: cursores + Ctrl derecho (o 0 del teclado numérico) como disparo.
-	// El Ctrl derecho solo es el disparo cuando los cursores manejan el
-	// joystick (cursors=both o joystick); sin joystick o con cursors=keys es
+	// Joystick: cursores + la tecla de disparo (kbdfire=: las teclas Windows,
+	// por defecto, o el Ctrl derecho; además, el 0 del teclado numérico).
+	// La tecla solo es el disparo cuando los cursores manejan el joystick
+	// (cursors=both o joystick). El Ctrl derecho, cuando no es el disparo, es
 	// SYMBOL SHIFT, como el izquierdo.
-	boolean bRCtrlFire = bJoystick && m_CursorMode != CursorKeysOnly;
+	boolean bKbdJoystick = bJoystick && m_CursorMode != CursorKeysOnly;
+	boolean bRCtrlFire = bKbdJoystick && m_KbdFire == KbdFireRightCtrl;
+	u8 nFireMods = m_KbdFire == KbdFireWindows ? (HID_MOD_LGUI | HID_MOD_RGUI)
+		     : (m_KbdFire == KbdFireRightCtrl ? HID_MOD_RCTRL : 0);
 	u8 nJoyDirs = 0;	// bits JOY_*
-	if (bRCtrlFire && (nModifiers & HID_MOD_RCTRL))
+	if (bKbdJoystick && (nModifiers & nFireMods))
 	{
 		nJoyDirs |= 0x10;
 	}
@@ -415,6 +469,17 @@ void CZXKeyboard::SetGamePadState (unsigned nIndex, u8 nState)
 	}
 }
 
+void CZXKeyboard::SetPadKeys (unsigned nIndex, const u8 Matrix[8])
+{
+	if (nIndex < MAX_GAMEPADS)
+	{
+		for (unsigned i = 0; i < 8; i++)
+		{
+			m_PadKeys[nIndex][i] = Matrix[i];
+		}
+	}
+}
+
 void CZXKeyboard::SetMousePresent (boolean bPresent)
 {
 	m_bMousePresent = bPresent;
@@ -448,31 +513,33 @@ u8 CZXKeyboard::ReadMouseButtons (void) const
 	return nValue;
 }
 
-u8 CZXKeyboard::GetJoystickState (void) const
+u8 CZXKeyboard::GetJoystickState (unsigned nPlayer) const
 {
-	if (m_bCaptured)
+	if (m_bCaptured || nPlayer > 1)
 	{
 		return 0;
 	}
 
-	u8 nState = m_nKeyJoy;
+	u8 nState = nPlayer == 0 ? m_nKeyJoy : 0;	// los cursores, del jugador 1
 	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
 	{
-		nState |= m_PadJoy[i];
+		if (m_PadPlayer[i] == nPlayer)
+		{
+			nState |= m_PadJoy[i];
+		}
 	}
-
 	return nState;
 }
 
 u8 CZXKeyboard::ReadKempston (void) const
 {
-	return GetJoystickState () & 0x3F;
+	return GetJoystickState (PlayerWithMode (JoystickKempston)) & 0x3F;
 }
 
 u8 CZXKeyboard::ReadFuller (void) const
 {
 	// activo a nivel bajo: arriba 0, abajo 1, izquierda 2, derecha 3, disparo 7
-	u8 nJoy = GetJoystickState ();
+	u8 nJoy = GetJoystickState (PlayerWithMode (JoystickFuller));
 	u8 nValue = 0xFF;
 	if (nJoy & JOY_UP)			nValue &= ~0x01;
 	if (nJoy & JOY_DOWN)			nValue &= ~0x02;
@@ -494,8 +561,25 @@ u8 CZXKeyboard::ReadPort (u8 nHighByte) const
 		}
 	}
 
-	// Joysticks que se leen como teclas
-	u8 nJoy = GetJoystickState ();
+	// Teclas del Spectrum de los perfiles de los mandos (no los de solo menús)
+	if (!m_bCaptured)
+	{
+		for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+		{
+			if (m_PadPlayer[i] != PAD_MENU_ONLY)
+			{
+				for (unsigned nRow = 0; nRow < 8; nRow++)
+				{
+					Matrix[nRow] |= m_PadKeys[i][nRow];
+				}
+			}
+		}
+	}
+
+	// Joysticks que se leen como teclas, de los dos jugadores
+	for (unsigned nPlayer = 0; nPlayer < 2; nPlayer++)
+	{
+	u8 nJoy = GetJoystickState (nPlayer);
 	if (nJoy != 0)
 	{
 		// posición en la matriz para: derecha, izquierda, abajo, arriba, disparo, disparo 2
@@ -510,7 +594,7 @@ u8 CZXKeyboard::ReadPort (u8 nHighByte) const
 			{ZX_P, ZX_O, K(1,0), K(2,0), ZX_SPACE, ZX_M},	// QAOP, SPACE, M
 		};
 
-		const u8 *pKeys = JoyKeys[m_JoystickMode];
+		const u8 *pKeys = JoyKeys[nPlayer == 0 ? m_JoystickMode : m_JoystickMode2];
 		for (unsigned i = 0; i < 6; i++)
 		{
 			if (nJoy & (1 << i))
@@ -518,6 +602,7 @@ u8 CZXKeyboard::ReadPort (u8 nHighByte) const
 				Press (Matrix, pKeys[i]);
 			}
 		}
+	}
 	}
 
 	u8 nKeys = 0;
@@ -588,4 +673,44 @@ void CZXKeyboard::TickHeld (void)
 	{
 		m_nHeldFrames--;
 	}
+}
+
+u8 CZXKeyboard::TranslateGPIOKey (u8 nHID, boolean bCS, boolean bExtended)
+{
+	// CAPS SHIFT + número: primero, para que en modo extendido CS+3 sea
+	// RePág y no F3
+	if (bCS)
+	{
+		switch (nHID)
+		{
+		case 0x1E: return 0x4A;			// CS+1: Inicio
+		case 0x1F: return 0x4D;			// CS+2: Fin
+		case 0x20: return 0x4B;			// CS+3: RePág
+		case 0x21: return 0x4E;			// CS+4: AvPág
+		case 0x22: return HID_KEY_LEFT;		// CS+5
+		case 0x23: return HID_KEY_DOWN;		// CS+6
+		case 0x24: return HID_KEY_UP;		// CS+7
+		case 0x25: return HID_KEY_RIGHT;	// CS+8
+		case 0x26: return 0x4C;			// CS+9: Supr
+		case 0x27: return HID_KEY_BACKSPACE;	// CS+0
+		case HID_KEY_SPACE: return HID_KEY_ESC;	// BREAK
+		default: break;
+		}
+	}
+	if (bExtended)
+	{
+		if (nHID >= 0x1E && nHID <= 0x27)
+		{
+			return HID_KEY_F1 + (nHID - 0x1E);	// 1-9 -> F1-F9, 0 -> F10
+		}
+		if (nHID == 0x14)
+		{
+			return HID_KEY_F1 + 10;			// Q -> F11 (como ESPectrum)
+		}
+		if (nHID == 0x1A)
+		{
+			return HID_KEY_F1 + 11;			// W -> F12
+		}
+	}
+	return nHID;
 }

@@ -42,7 +42,7 @@ Correspondencia del teclado del PC con el del Spectrum:
 - Mayúsculas = CAPS SHIFT y Ctrl = SYMBOL SHIFT.
 - Tab = EXTENDED MODE, Esc = BREAK, Retroceso = DELETE y Bloq Mayús = CAPS LOCK.
 - La puntuación del teclado español (`, . - + ' < >` y sus variantes con mayúsculas) se traduce a su combinación con SYMBOL SHIFT.
-- **Cursores**: siempre son las teclas de cursor del Spectrum (CAPS SHIFT + 5/6/7/8). Con un joystick elegido, además mueven el joystick, y el Ctrl derecho (o el 0 del teclado numérico) es el disparo. Se puede cambiar con `cursors=`. Sin joystick, o con `cursors=keys`, el Ctrl derecho es SYMBOL SHIFT, como el izquierdo.
+- **Cursores**: siempre son las teclas de cursor del Spectrum (CAPS SHIFT + 5/6/7/8). Con un joystick elegido, además mueven el joystick, y **las teclas Windows** (o el 0 del teclado numérico) son el disparo; **los dos Ctrl son SYMBOL SHIFT**. Se puede cambiar con `cursors=` y, la tecla de disparo, con `kbdfire=` o en la página 5 de la configuración: teclas Windows, Ctrl derecho (como antes de la 1.08) o ninguna. Sin joystick, o con `cursors=keys`, la tecla de disparo no dispara.
 
 Para cargar una cinta: pulsa F1 y luego ENTER, elige el `.TAP`, `.TZX`, `.PZX` o `.CSW` y escribe `LOAD ""` (en el 128K/+2A, elige "Tape Loader" o "Loader" en el menú). La cinta arranca sola cuando la ROM o un cargador propio empiezan a leerla, y se para sola cuando el programa deja de leerla como un cargador durante 2 segundos. Lo que cuenta es leer como un cargador (el mismo IN una y otra vez, con un contador que avanza, como hace Fuse), no leer mucho: los menús que miran el teclado sin parar no arrancan la cinta ni la mantienen en marcha, y así las multicargas encuentran el siguiente bloque donde lo dejaron. En el modo rápido, el emulador va a toda velocidad mientras dura la carga.
 
@@ -76,7 +76,7 @@ El Recreated ZX Spectrum (Elite Systems, 2013) es una réplica del 48K de gomas 
   - mientras tanto, esas pulsaciones no llegan al Spectrum;
   - un teclado normal se reconoce como tal tras 8 pulsaciones, y hasta entonces cada tecla puede llegar con un retraso de hasta unos 50 ms.
 - Puede usarse solo o junto a un teclado USB normal y al teclado real por GPIO. Sus teclas se combinan con las del teclado GPIO.
-- **Modo extendido**: CAPS SHIFT + SYMBOL SHIFT + ENTER, igual que con el teclado GPIO y que en ZXBaremulator. En ese modo, 1–0 hacen de F1–F10 y SYMBOL SHIFT de Alt.
+- **Modo extendido**: CAPS SHIFT + SYMBOL SHIFT + ENTER, igual que con el teclado GPIO y que en ZXBaremulator. Las teclas que se consiguen en ese modo y con CAPS SHIFT son las mismas que con el teclado GPIO: ver la tabla en [03_gpio_es.md](03_gpio_es.md).
 - En Layer B (QWERTY), el Recreated funciona como un teclado normal.
 
 ## Ratón Kempston

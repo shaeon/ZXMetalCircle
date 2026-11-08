@@ -42,7 +42,7 @@ PC keyboard to Spectrum keyboard mapping:
 - Shift = CAPS SHIFT and Ctrl = SYMBOL SHIFT.
 - Tab = EXTENDED MODE, Esc = BREAK, Backspace = DELETE and Caps Lock = CAPS LOCK.
 - The punctuation of the Spanish keyboard (`, . - + ' < >` and their shifted variants) is translated to its SYMBOL SHIFT combination.
-- **Cursor keys**: they are always the Spectrum's cursor keys (CAPS SHIFT + 5/6/7/8). With a joystick selected, they also move the joystick, and right Ctrl (or keypad 0) is fire. This can be changed with `cursors=`. With no joystick, or with `cursors=keys`, right Ctrl is SYMBOL SHIFT, like the left one.
+- **Cursor keys**: they are always the Spectrum's cursor keys (CAPS SHIFT + 5/6/7/8). With a joystick selected, they also move the joystick, and **the Windows keys** (or keypad 0) are fire; **both Ctrl keys are SYMBOL SHIFT**. This can be changed with `cursors=` and, the fire key, with `kbdfire=` or on page 5 of the settings: Windows keys, right Ctrl (as before 1.08) or none. With no joystick, or with `cursors=keys`, the fire key does not fire.
 
 To load a tape: press F1 and then ENTER, choose the `.TAP`, `.TZX`, `.PZX` or `.CSW` and type `LOAD ""` (on the 128K/+2A, choose "Tape Loader" or "Loader" in the menu). The tape starts by itself when the ROM or a custom loader starts reading it, and stops by itself when the program stops reading it like a loader for 2 seconds. What counts is reading like a loader (the same IN over and over, with a counter that advances, as Fuse does), not reading a lot: menus that poll the keyboard non-stop neither start the tape nor keep it running, so multiloads find the next block where they left it. In fast mode, the emulator runs at full speed while loading.
 
@@ -76,7 +76,7 @@ The Recreated ZX Spectrum (Elite Systems, 2013) is a replica of the rubber-key 4
   - meanwhile, those key presses do not reach the Spectrum;
   - a normal keyboard is recognised as such after 8 key presses, and until then each key may arrive with a delay of up to about 50 ms.
 - It can be used alone or together with a normal USB keyboard and the real GPIO keyboard. Its keys are combined with those of the GPIO keyboard.
-- **Extended mode**: CAPS SHIFT + SYMBOL SHIFT + ENTER, as with the GPIO keyboard and in ZXBaremulator. In that mode, 1–0 act as F1–F10 and SYMBOL SHIFT as Alt.
+- **Extended mode**: CAPS SHIFT + SYMBOL SHIFT + ENTER, as with the GPIO keyboard and in ZXBaremulator. The keys available in that mode and with CAPS SHIFT are the same as with the GPIO keyboard: see the table in [03_gpio.md](03_gpio.md).
 - In Layer B (QWERTY), the Recreated works as a normal keyboard.
 
 ## Kempston mouse

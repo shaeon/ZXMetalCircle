@@ -24,6 +24,8 @@ enum TJoystickMode
 	JoystickModeCount
 };
 
+#define PAD_MENU_ONLY	0xFF	// SetPadPlayer: el mando solo sirve en los menús
+
 // Bits del estado de un joystick
 #define JOY_RIGHT	0x01
 #define JOY_LEFT	0x02
@@ -66,11 +68,21 @@ enum TCursorMode
 #define HID_MOD_RCTRL		0x10
 #define HID_MOD_RSHIFT		0x20
 #define HID_MOD_RALT		0x40
+#define HID_MOD_LGUI		0x08	// tecla Windows izquierda
+#define HID_MOD_RGUI		0x80	// tecla Windows derecha
 
 struct TKeyEvent
 {
 	u8 nKey;		// código HID
 	u8 nModifiers;
+};
+
+// Tecla del teclado que hace de disparo del joystick (kbdfire=)
+enum TKbdFire
+{
+	KbdFireWindows,		// las dos teclas Windows (por defecto); los dos Ctrl, SYMBOL SHIFT
+	KbdFireRightCtrl,	// el Ctrl derecho (como antes de la 1.08)
+	KbdFireNone		// ninguna (sigue el 0 del teclado numérico)
 };
 
 class CZXKeyboard
@@ -88,11 +100,14 @@ public:
 
 	// Estado de un mando USB (bits JOY_*); se combina con los cursores del teclado
 	void SetGamePadState (unsigned nIndex, u8 nState);
+	// Teclas del Spectrum que mantiene pulsadas un mando (su perfil), como la
+	// matriz (fila, bit); se suman a las demás mientras el mando juega
+	void SetPadKeys (unsigned nIndex, const u8 Matrix[8]);
 
 	// Ratón Kempston (activo si hay ratón y el joystick no es Kempston)
 	void SetMousePresent (boolean bPresent);
 	boolean IsMouseActive (void) const
-		{ return m_bMousePresent && m_JoystickMode != JoystickKempston; }
+		{ return m_bMousePresent && m_JoystickMode != JoystickKempston && m_JoystickMode2 != JoystickKempston; }
 	void MouseUpdate (unsigned nButtons, int nDX, int nDY, int nWheel);
 	u8 ReadMouseButtons (void) const;
 	u8 ReadMouseX (void) const	{ return m_nMouseX; }
@@ -100,11 +115,26 @@ public:
 
 	void SetJoystickMode (TJoystickMode Mode);
 	void SetCursorMode (TCursorMode Mode)	{ m_CursorMode = Mode; }
+	void SetKbdFire (TKbdFire Fire)		{ m_KbdFire = Fire; }
 
 	// La tecla de borrar del PC envía cursor izquierda en lugar de DELETE
 	// (lo activa el kernel mientras el CP/M de LEC está en marcha)
 	void SetBackspaceAsLeft (boolean bOn)	{ m_bBackspaceAsLeft = bOn; }
 	TJoystickMode GetJoystickMode (void) const	{ return m_JoystickMode; }
+
+	// Jugador 2: su propio joystick (JoystickNone = no hay jugador 2). Los
+	// cursores del teclado son siempre del jugador 1.
+	void SetJoystickMode2 (TJoystickMode Mode);
+	TJoystickMode GetJoystickMode2 (void) const	{ return m_JoystickMode2; }
+	// ¿Pueden ir juntos los joysticks de los dos jugadores? No el mismo dos
+	// veces, ni Cursor con Sinclair 1 (comparten las teclas 6, 7, 8 y 0).
+	// Con el jugador 2 en "ninguno", siempre.
+	static boolean CanCombine (TJoystickMode Mode1, TJoystickMode Mode2);
+
+	// A qué jugador va cada mando: 0 (jugador 1, por defecto), 1 (jugador 2)
+	// o PAD_MENU_ONLY (solo los menús: no mueve ningún joystick)
+	void SetPadPlayer (unsigned nIndex, u8 nPlayer);
+	u8 GetPadPlayer (unsigned nIndex) const	{ return nIndex < MAX_GAMEPADS ? m_PadPlayer[nIndex] : 0; }
 
 	// Si está activo, las teclas no llegan al Spectrum (menús del emulador)
 	void SetCaptured (boolean bCaptured)	{ m_bCaptured = bCaptured; }
@@ -117,6 +147,12 @@ public:
 	void InjectKeyEvent (u8 nKey, u8 nModifiers)	{ PushEvent (nKey, nModifiers); }
 
 	// Tecla HID equivalente a una tecla de la matriz (0 si no tiene: CS, SS)
+	// Teclado real (GPIO, Recreated ZX) en los menús o en modo extendido:
+	// la tecla HID de la matriz con CAPS SHIFT pulsado o en modo extendido.
+	// CAPS SHIFT + 1-4 = Inicio, Fin, RePág, AvPág; 5-8 = flechas; 9 = Supr;
+	// 0 = Retroceso; ESPACIO = ESC. En modo extendido, 1-0 = F1-F10 y
+	// Q, W = F11, F12 (como ESPectrum). Lo demás no cambia.
+	static u8 TranslateGPIOKey (u8 nHID, boolean bCS, boolean bExtended);
 	static u8 MatrixKeyToHID (unsigned nRow, unsigned nBit);
 
 	// Cola de pulsaciones (flancos de bajada) para el emulador
@@ -134,7 +170,8 @@ public:
 	boolean IsHolding (void) const		{ return m_nHeldFrames != 0; }
 
 private:
-	u8 GetJoystickState (void) const;
+	u8 GetJoystickState (unsigned nPlayer) const;	// 0 = jugador 1, 1 = jugador 2
+	unsigned PlayerWithMode (TJoystickMode Mode) const;	// el jugador con ese joystick, o 2
 	void PushEvent (u8 nKey, u8 nModifiers);
 
 private:
@@ -144,13 +181,17 @@ private:
 	volatile unsigned m_nHeldFrames;
 	volatile u8 m_nKeyJoy;			// joystick desde los cursores del teclado
 	volatile u8 m_PadJoy[MAX_GAMEPADS];	// joystick desde los mandos
+	volatile u8 m_PadPlayer[MAX_GAMEPADS];	// a qué jugador va cada mando
+	volatile u8 m_PadKeys[MAX_GAMEPADS][8];	// teclas del Spectrum de cada mando
 
 	volatile boolean m_bMousePresent;
 	volatile u8 m_nMouseX, m_nMouseY;
 	volatile u8 m_nMouseWheel;		// contador de 4 bits (Kempston Mouse Turbo)
 	volatile unsigned m_nMouseButtons;
 	TJoystickMode m_JoystickMode;
+	TJoystickMode m_JoystickMode2;		// jugador 2 (JoystickNone: no hay)
 	TCursorMode m_CursorMode;
+	TKbdFire m_KbdFire;
 	volatile boolean m_bBackspaceAsLeft;
 	volatile boolean m_bCaptured;
 

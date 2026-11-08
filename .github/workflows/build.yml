@@ -71,8 +71,18 @@ jobs:
           ./floatbus_test
           g++ -O2 -std=c++17 -I. -I$S -o joystick_test joystick_test.cpp $S/zxkeyboard.cpp
           ./joystick_test
+          g++ -O2 -std=c++17 -I. -I$S -o players_test players_test.cpp $S/zxkeyboard.cpp
+          ./players_test
+          g++ -O2 -std=c++17 -I. -I$S -o padassign_test padassign_test.cpp $S/padassign.cpp
+          ./padassign_test
+          g++ -O2 -std=c++17 -I. -I$S -o padsettings_test padsettings_test.cpp $S/settings.cpp t_stub.cpp
+          ./padsettings_test
+          g++ -O2 -std=c++17 -I. -I$S -o padprofile_test padprofile_test.cpp $S/padprofile.cpp
+          ./padprofile_test
           g++ -O2 -std=c++17 -I. -I$S -o keyboard_hold_test keyboard_hold_test.cpp $S/zxkeyboard.cpp
           ./keyboard_hold_test
+          g++ -O2 -std=c++17 -I. -I$S -o gpio_keys_test gpio_keys_test.cpp $S/zxkeyboard.cpp
+          ./gpio_keys_test
           g++ -O2 -std=c++17 -I. -I$S -o zip_test zip_test.cpp $S/zipfile.cpp $S/inflate.cpp
           ./zip_test
           g++ -O2 -std=c++17 -I. -I$S -o update_test update_test.cpp $S/updater.cpp $S/zipfile.cpp $S/inflate.cpp

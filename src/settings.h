@@ -31,6 +31,8 @@ struct TSettingDef
 #define SETTINGS_MAX		80
 #define SETTING_NAME_LEN	32
 #define SETTING_VALUE_LEN	96	// (rutas de hdd=)
+#define SETTING_PAD_ID		16	// "045e:028e" o, el segundo igual, "045e:028e#2"
+#define SETTING_MAX_PADS	4
 
 class CSettings
 {
@@ -61,6 +63,19 @@ public:
 	// se ejecutan con ENTER y nunca se escriben en cmdline.txt. Lo que se ve
 	// a la derecha lo pone el kernel con SetActionText.
 	static boolean IsAction (unsigned nIndex);
+	// Filas de mando (pValues = "*pad"): "auto" o el id (vid:pid) de un mando;
+	// las flechas pasan por los conectados, que pone el kernel con SetPads
+	static boolean IsPad (unsigned nIndex);
+
+	// Lista de valores de una opción (ENTER en las filas de muchos valores):
+	// cuántos hay, el nombre en pantalla de cada uno, si se puede elegir
+	// (joysticks: no el del otro jugador), cuál está puesto y elegir uno
+	static unsigned GetValueCount (unsigned nIndex);
+	static boolean GetValueItemName (unsigned nIndex, unsigned nItem, char *pName, unsigned nSize);
+	boolean IsValueAllowed (unsigned nIndex, unsigned nItem) const;
+	int GetValueItem (unsigned nIndex) const;
+	void ChooseValue (unsigned nIndex, unsigned nItem);
+	void SetPads (unsigned nCount, const char Ids[][SETTING_PAD_ID], const char Names[][SETTING_NAME_LEN]);
 	void SetActionText (const char *pKey, const char *pText);
 	static boolean IsValidIP (const char *p);
 
@@ -75,6 +90,9 @@ public:
 	void Merge (const char *pOld, char *pOut, unsigned nOutSize) const;
 
 private:
+	char m_PadId[SETTING_MAX_PADS][SETTING_PAD_ID];	// mandos conectados
+	char m_PadName[SETTING_MAX_PADS][SETTING_NAME_LEN];
+	unsigned m_nPads;
 	char m_Value[SETTINGS_MAX][SETTING_VALUE_LEN];
 	boolean m_bDirty;
 };

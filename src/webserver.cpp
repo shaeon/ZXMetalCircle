@@ -21,7 +21,8 @@
 #include <fatfs/ff.h>
 
 #define MAX_CONTENT_SIZE	(4 * 1024 * 1024)	// descargas de hasta 4 MB
-#define MAX_UPLOAD_SIZE		(8 * 1024 * 1024)	// subidas de hasta 8 MB
+#define MAX_UPLOAD_SIZE		(32 * 1024 * 1024)	// subidas de hasta 32 MB (como los ZIP); Circle
+							// reserva solo lo que se sube, y lo libera al acabar
 #define REQUEST_TIMEOUT		60			// segundos
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -903,8 +904,9 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 //------------------------------------------------------------------------------
 // Búsqueda y descarga de programas (ZXDB / Spectrum Computing, por HTTPS)
 
-#define DOWNLOAD_WORK_SIZE	(4 * 1024 * 1024)
-#define DOWNLOAD_MAX_FILE	(2 * 1024 * 1024)
+#define DOWNLOAD_WORK_SIZE	(16 * 1024 * 1024)	// lo que llega (el ZIP comprimido o el fichero)
+#define DOWNLOAD_MAX_FILE	(16 * 1024 * 1024)	// lo que se guarda (descomprimido); los dos
+							// búferes, solo mientras se descarga
 
 // Certificados raíz: SD:/certs/cacert.pem (se cargan la primera vez)
 static void EnsureCertificates (void)
