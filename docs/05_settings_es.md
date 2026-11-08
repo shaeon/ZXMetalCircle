@@ -42,7 +42,7 @@ Todas las opciones van en una sola línea:
 | `issue=` | `3` (Issue 3), `2` (Issue 2, solo afecta al 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |
 | `ulaplus=` | `1` (ULAplus disponible), `0` (desactivado) | `1` |
-| `lang=` | `es` (español), `en` (inglés), `pt` (portugués) o cualquier otro idioma de `locales/` | `es` |
+| `lang=` | `es` (español), `en` (inglés), `pt` (portugués de Brasil), `pt-pt` (portugués de Portugal) o cualquier otro idioma de `locales/` | `es` |
 | `net=` | `auto` (WiFi si hay `wpa_supplicant.conf`, si no cable), `wifi`, `eth`, `0` | `auto` |
 | `tz=` | diferencia horaria en minutos (60 = España peninsular, 0 = Canarias) | `60` |
 | `dst=` | `1` (horario de verano europeo automático), `0` | `1` |
@@ -65,7 +65,7 @@ Si falla el dispositivo de sonido elegido, el emulador prueba automáticamente e
 
 ## Idiomas
 
-El emulador está en **español** (el idioma principal, que va dentro del programa) e **inglés**. Se elige con `lang=en` en `cmdline.txt` o en la página 1 de la configuración (F1, C), donde el cambio se ve al momento y se guarda con G. También cambia la página web.
+El emulador está en **español** (el idioma principal, que va dentro del programa), **inglés** y **portugués**, de Brasil y de Portugal. Se elige con `lang=en` en `cmdline.txt` o en la página 1 de la configuración (F1, C), donde el cambio se ve al momento y se guarda con G. También cambia la página web.
 
 - Las traducciones están en la carpeta `locales/` de la SD (se ve en la web para poder bajarlas y subirlas): un fichero por idioma, `en.json`, con el texto en español como clave y su traducción como valor. Si falta una traducción (o está vacía, `""`), se ve el español.
 - `es.json` es solo de referencia: la lista completa de textos, para quien quiera traducir a otro idioma. Para añadir uno, copia `en.json` a, por ejemplo, `fr.json`, cambia `"_idioma"` por `"Français"` y traduce los valores: el emulador lo encuentra solo y aparece en la configuración.

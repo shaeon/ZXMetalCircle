@@ -3271,7 +3271,7 @@ void CKernel::LoadTKROMs (const char *pTKROM, const char *pTKLang, const char *p
 		const char *pLang = pTKLang;
 		if (strcasecmp (pLang, "auto") == 0)
 		{
-			pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strcasecmp (pMenu, "pt") == 0 ? "pt" : "es";
+			pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strncasecmp (pMenu, "pt", 2) == 0 ? "pt" : "es";	// pt y pt-pt
 		}
 		boolean bPT = strcasecmp (pLang, "pt") == 0;
 
@@ -3960,7 +3960,7 @@ boolean CKernel::InsertMicrodrive (const char *pPath, int nForceDrive)
 	}
 	if (nDrive >= MICRODRIVES)
 	{
-		ShowMessage (T ("Las 8 unidades están ocupadas (Alt+M las vacía)"));
+		ShowMessage (T ("8 unidades ocupadas (Alt+M las vacía)"));
 		return FALSE;
 	}
 

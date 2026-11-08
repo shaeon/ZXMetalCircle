@@ -172,7 +172,7 @@
 	"El Interface 1 no convive con la Spectranet": "El Interface 1 no convive con la Spectranet",
 	"Interface 1 desactivado (if1=0)": "Interface 1 desactivado (if1=0)",
 	"El +2A no admite el Interface 1": "El +2A no admite el Interface 1",
-	"Las 8 unidades están ocupadas (Alt+M las vacía)": "Las 8 unidades están ocupadas (Alt+M las vacía)",
+	"8 unidades ocupadas (Alt+M las vacía)": "8 unidades ocupadas (Alt+M las vacía)",
 	"Sin memoria": "Sin memoria",
 	"Microdrive %u: cartucho nuevo (FORMAT \"m\";%u;\"nombre\")": "Microdrive %u: cartucho nuevo (FORMAT \"m\";%u;\"nombre\")",
 	"Fichero .MDV no válido": "Fichero .MDV no válido",

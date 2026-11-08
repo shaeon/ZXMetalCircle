@@ -172,7 +172,7 @@
 	"El Interface 1 no convive con la Spectranet": "Interface 1 cannot be used with the Spectranet",
 	"Interface 1 desactivado (if1=0)": "Interface 1 disabled (if1=0)",
 	"El +2A no admite el Interface 1": "The +2A does not support the Interface 1",
-	"Las 8 unidades están ocupadas (Alt+M las vacía)": "All 8 drives are in use (Alt+M empties them)",
+	"8 unidades ocupadas (Alt+M las vacía)": "All 8 drives in use (Alt+M empties)",
 	"Sin memoria": "Out of memory",
 	"Microdrive %u: cartucho nuevo (FORMAT \"m\";%u;\"nombre\")": "Microdrive %u: new cartridge (FORMAT \"m\";%u;\"name\")",
 	"Fichero .MDV no válido": "Invalid .MDV file",

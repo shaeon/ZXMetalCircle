@@ -251,8 +251,8 @@ defecto.
  multicore=1      Pi 2, 3, 4 y Zero 2 W: la ampliacion de la imagen va en el
                   nucleo 1 (0 = todo en el nucleo 0)
 
- lang=es          Idioma de los menus y la web: es (espanol), en (ingles) o
-                  pt (portugues), o
+ lang=es          Idioma de los menus y la web: es (espanol), en (ingles),
+                  pt (portugues de Brasil), pt-pt (portugues de Portugal), o
                   cualquier otro que haya en la carpeta locales. Tambien se
                   cambia en la configuracion (F1 y luego C).
 

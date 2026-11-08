@@ -6,6 +6,11 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## Sin publicar
+
+- **Nuevo**: portugués de Portugal (`lang=pt-pt`, «Português (PT)»), junto al de Brasil (`lang=pt`, ahora «Português (BR)»). Hecho a partir del de Brasil con los términos de Portugal (ficheiro, guardar, comando, rato, ligar, ecrã, saltar, ejectar, «A descarregar…»), tomando como referencia la traducción de RetroArch; pendiente de revisión por un hablante nativo. Con el idioma automático, la ROM del TK sale en portugués con los dos.
+- **Corregido**: el aviso de las 8 unidades ocupadas no cabía en la barra; ahora es "8 unidades ocupadas (Alt+M las vacía)".
+
 ## 1.09
 
 - **Corregido**: el buscador de ZXDB de la web no funcionaba: la API v3 de ZXInfo dejó de funcionar (responde con un error 502). Ahora usa la v5, donde el texto va en la ruta (`/v5/search/<texto>`) y la respuesta tiene la misma forma; la descarga desde Spectrum Computing no cambia. El texto se codifica como trozo de ruta (también la `/`). Prueba en vivo `test/host/zxinfo_live.cpp` (necesita red; fuera de la Action): busca y descarga con el mismo código que el emulador.

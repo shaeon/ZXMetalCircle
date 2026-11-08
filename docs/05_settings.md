@@ -42,7 +42,7 @@ All the options go on a single line:
 | `issue=` | `3` (Issue 3), `2` (Issue 2, only affects the 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |
 | `ulaplus=` | `1` (ULAplus available), `0` (disabled) | `1` |
-| `lang=` | `es` (Spanish), `en` (English), `pt` (Portuguese) or any other language in `locales/` | `es` |
+| `lang=` | `es` (Spanish), `en` (English), `pt` (Brazilian Portuguese), `pt-pt` (European Portuguese) or any other language in `locales/` | `es` |
 | `net=` | `auto` (WiFi if there is a `wpa_supplicant.conf`, otherwise cable), `wifi`, `eth`, `0` | `auto` |
 | `tz=` | time offset in minutes (60 = mainland Spain, 0 = UK and Canary Islands) | `60` |
 | `dst=` | `1` (automatic European summer time), `0` | `1` |
@@ -65,7 +65,7 @@ If the chosen sound device fails, the emulator automatically tries the other one
 
 ## Languages
 
-The emulator is in **Spanish** (the main language, built into the program) and **English**. Choose it with `lang=en` in `cmdline.txt` or on page 1 of the settings (F1, C), where the change is seen at once and saved with G. The web page changes too.
+The emulator is in **Spanish** (the main language, built into the program), **English** and **Portuguese**, Brazilian and European. Choose it with `lang=en` in `cmdline.txt` or on page 1 of the settings (F1, C), where the change is seen at once and saved with G. The web page changes too.
 
 - The translations are in the `locales/` folder of the SD card (visible in the web page, so they can be downloaded and uploaded): one file per language, `en.json`, with the Spanish text as the key and its translation as the value. If a translation is missing (or empty, `""`), the Spanish text is shown.
 - `es.json` is only a reference: the full list of texts, for anyone who wants to translate into another language. To add one, copy `en.json` to, for example, `fr.json`, change `"_idioma"` to `"Français"` and translate the values: the emulator finds it by itself and it appears in the settings.
