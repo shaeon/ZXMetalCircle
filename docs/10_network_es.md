@@ -26,6 +26,8 @@ Al arrancar, la conexión se hace en segundo plano. Cuando está lista, aparece 
 - **sustituir** un fichero por otro que eliges en tu ordenador (pide confirmación);
 - **borrar** ficheros y carpetas vacías (pide confirmación) y **crear carpetas**.
 
+En el móvil, las acciones de cada fila salen al pulsar **⋮** (un toque fuera cierra el menú); en el ordenador, directamente en la fila.
+
 **Lo que no se puede tocar desde la web** (no se puede renombrar, mover, sustituir ni borrar):
 - **Lo que está usando el emulador**: un disco del +3 o un microdrive puesto, el disco duro montado (por defecto, `hdd/esxdos.img`) y la cinta puesta si los SAVE van a la SD. Sale como «en uso»: sácalo primero.
 - **Lo del sistema**, que sale como «protegido»: los ficheros del arranque de la raíz (kernels, firmware, `config.txt`, `cmdline.txt`…), las carpetas que usa el emulador (`roms`, `saves`, `snaps`, `descargas`, `joysticks`, `hdd`…, aunque su contenido sí se puede tocar, por ejemplo para añadir tus ROMs o borrar partidas) y todo lo de `overlays`, `firmware`, `certs`, `locales` y `update`. Si necesitas cambiar algo de eso desde la web (por ejemplo, subir un kernel), pon **«Ficheros del sistema» en «sin proteger»** en la página 9 de la configuración (o `webprotect=0`): entonces se puede, pero cada operación sobre algo del sistema pide confirmación. Esa opción solo se cambia en la propia Pi, no desde la web. Lo que está en uso sigue protegido siempre.

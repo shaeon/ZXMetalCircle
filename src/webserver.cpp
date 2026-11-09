@@ -236,14 +236,27 @@ static const char PageStyle[] =
 	"h1{color:#eeeb46;font-size:1.3em;margin:0 0 4px}"
 	"a{color:#7fd6ff}.st{color:#8a8ca0;font-size:.9em}"
 	".msg{background:#36efde;color:#000;padding:6px;margin:8px 0}"
-	"table{border-collapse:collapse;width:100%}td{padding:4px 6px;border-bottom:1px solid #2a2c5a}"
-	"td.s{text-align:right;color:#8a8ca0;white-space:nowrap}"
-	"form{margin:10px 0;padding:8px;background:#1c1f55}"
+	"table{border-collapse:collapse;width:100%}table.f{table-layout:fixed}"
+	"td{padding:6px;border-bottom:1px solid #2a2c5a;vertical-align:middle}"
+	"td.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+	"td.s{text-align:right;color:#8a8ca0;white-space:nowrap;width:5.5em}"
+	"form{margin:10px 0;padding:8px;background:#1c1f55;display:flex;flex-wrap:wrap;gap:6px;align-items:center}"
+	"form input[name=q],form input[name=n]{flex:1;min-width:8em}input[type=file]{max-width:100%}"
 	"form.i{display:inline;margin:0;padding:0;background:none}"
 	"form.i button,.cut a{background:none;border:0;color:#7fd6ff;padding:0;font:inherit;"
 	"text-decoration:underline;cursor:pointer}"
-	"td.a{white-space:nowrap}td.a>*{margin-right:.6em}.pr{color:#8a8ca0}"
-	".cut{background:#3a3d8a;padding:6px;margin:8px 0}"
+	".pr{color:#8a8ca0}.cut{background:#3a3d8a;padding:6px;margin:8px 0}"
+	"td.a{position:relative;width:2.2em;text-align:right}.t{display:none}"
+	"label.m{display:inline-block;padding:0 .5em;font-size:1.4em;line-height:1;color:#7fd6ff;cursor:pointer}"
+	".acts{display:none;position:absolute;right:4px;top:100%;z-index:5;background:#1c1f55;"
+	"border:1px solid #3a3d8a;min-width:11em;text-align:left;padding:4px 0}"
+	".t:checked~.acts{display:block}"
+	".acts>*,.acts>form.i{display:block;padding:9px 14px;white-space:nowrap}"
+	".acts a{text-decoration:none}.acts form.i button{text-decoration:none;padding:0;text-align:left}"
+	"@media(min-width:720px){td.s{width:6em}td.a{width:auto;white-space:nowrap;text-align:left}"
+	"label.m{display:none}.acts{display:inline;position:static;background:none;border:0;"
+	"min-width:0;padding:0}.acts>*,.acts>form.i{display:inline;padding:0;margin-right:.7em}"
+	".acts a,.acts form.i button{text-decoration:underline}}"
 	"</style></head><body>";
 
 static bool IsZipEntryLoadable (const char *pName)
@@ -1158,7 +1171,7 @@ THTTPStatus CZXWebServer::SendZip (const char *pDir, const char *pZip, u8 *pBuff
 	}
 	else
 	{
-		Html.Append ("<table>");
+		Html.Append ("<table class=\"f\">");
 		unsigned nShown = 0;
 		for (unsigned i = 0; i < Zip.GetCount (); i++)
 		{
@@ -1180,7 +1193,7 @@ THTTPStatus CZXWebServer::SendZip (const char *pDir, const char *pZip, u8 *pBuff
 			{
 				NameCell = Esc;
 			}
-			Line.Format ("<tr><td>%s</td><td class=\"s\">%u KB</td></tr>", (const char *) NameCell,
+			Line.Format ("<tr><td class=\"n\">%s</td><td class=\"s\">%u KB</td></tr>", (const char *) NameCell,
 				     (Zip.GetSize (i) + 1023) / 1024);
 			Html.Append (Line);
 			nShown++;
@@ -1346,7 +1359,7 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 		Html.Append (Line);
 	}
 
-	Html.Append ("<table>");
+	Html.Append ("<table class=\"f\">");
 	if (pDir[0] != '\0')
 	{
 		char Parent[HTTP_MAX_PATH + 1];
@@ -1506,19 +1519,31 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 			Actions.Append (Line);
 		}
 
-		if (bDir)
+		// el menú de acciones: en el móvil se despliega con el ⋮; en pantallas
+		// anchas, el CSS las pone en la fila
+		CString Menu;
+		if (Actions.GetLength () > 0)
 		{
-			Line.Format ("<tr><td>%s</td><td></td><td class=\"a\">%s</td></tr>",
-				     (const char *) Name, (const char *) Actions);
+			Menu.Format ("<input type=\"checkbox\" class=\"t\" id=\"m%u\">"
+				     "<label class=\"m\" for=\"m%u\" aria-label=\"%s\">&#8942;</label>"
+				     "<div class=\"acts\">%s</div>", i, i, T ("Acciones"), (const char *) Actions);
 		}
-		else
+		CString Size;
+		if (!bDir)
 		{
-			Line.Format ("<tr><td>%s</td><td class=\"s\">%u KB</td><td class=\"a\">%s</td></tr>",
-				     (const char *) Name, (pEntries[i].nSize + 1023) / 1024, (const char *) Actions);
+			Size.Format ("%u KB", (pEntries[i].nSize + 1023) / 1024);
 		}
+		Line.Format ("<tr><td class=\"n\">%s</td><td class=\"s\">%s</td><td class=\"a\">%s</td></tr>",
+			     (const char *) Name, (const char *) Size, (const char *) Menu);
 		Html.Append (Line);
 	}
-	Html.Append ("</table>");
+	Html.Append ("</table><script>"
+		     "document.addEventListener('change',function(e){var t=e.target;"
+		     "if(t.className=='t'&&t.checked)document.querySelectorAll('.t').forEach(function(c){"
+		     "if(c!=t)c.checked=false})});"
+		     "document.addEventListener('click',function(e){if(!e.target.closest('td.a'))"
+		     "document.querySelectorAll('.t').forEach(function(c){c.checked=false})});"
+		     "</script>");
 
 	HTMLEscape (pDir, &Esc);
 	if (!bReadOnly)

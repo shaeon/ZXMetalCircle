@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Web en el móvil**: cada fila muestra el nombre (cortado con «…» si no cabe), el tamaño y un **⋮** que despliega las acciones; en pantallas anchas siguen en la fila. Los formularios de arriba se ajustan al ancho del móvil. Funciona sin JavaScript; con él, solo queda un menú abierto y un toque fuera lo cierra.
 - **Corregido**: el artefacto que deja la Action (el que se descarga desde la pestaña *Actions*) era un zip dentro de otro zip. Ahora se sube la carpeta de la tarjeta, y GitHub la descarga en un solo zip. El paquete de las releases ya estaba bien y no cambia.
 - **Corregido**: los puertos de ULAplus (0xBF3B y 0xFF3B) tienen ahora la contención de los de la ULA, aunque sean impares, porque los atiende la propia ULA (aviso de José Luis Sánchez). Un `OUT` a 0xFF3B en la zona contenida tarda como uno a 0xFE, no como uno a cualquier puerto impar. Con ULAplus desactivado no cambia nada. Comprobado en `ulaplus_ports_test`.
 - **Web, ZIP**: pulsar el nombre de un ZIP muestra su contenido, y pulsar un fichero de dentro lo carga directamente, sin elegirlo en la pantalla de la Pi (el emulador acepta `SD:/ruta/pack.zip|dentro/juego.tap`). Los ficheros de más de 4 MB, que el servidor web no puede enviar, muestran «más de 4 MB» en lugar de «descargar».

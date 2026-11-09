@@ -26,6 +26,8 @@ At boot, the connection is made in the background. When it is ready, a message w
 - **replace** a file with another one you choose on your computer (it asks for confirmation);
 - **delete** files and empty folders (it asks for confirmation) and **create folders**.
 
+On a phone, each row's actions appear when you tap **⋮** (tapping elsewhere closes the menu); on a computer, they are shown in the row.
+
 **What cannot be touched from the web page** (it cannot be renamed, moved, replaced or deleted):
 - **What the emulator is using**: a +3 disk or a microdrive cartridge that is inserted, the mounted hard disk (by default, `hdd/esxdos.img`) and the inserted tape if SAVEs go to the SD card. It is shown as "in use": eject it first.
 - **System files**, shown as "protected": the boot files in the root (kernels, firmware, `config.txt`, `cmdline.txt`...), the folders the emulator uses (`roms`, `saves`, `snaps`, `descargas`, `joysticks`, `hdd`..., although their contents can be changed, for example to add your ROMs or delete saved games) and everything in `overlays`, `firmware`, `certs`, `locales` and `update`. If you need to change any of that from the web page (for example, to upload a kernel), set **"System files" to "unprotected"** on page 9 of the settings (or `webprotect=0`): then you can, but every operation on a system file asks for confirmation. That option can only be changed on the Pi itself, not from the web page. What is in use stays protected anyway.
