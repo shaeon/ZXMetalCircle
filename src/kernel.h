@@ -205,6 +205,8 @@ private:
 	void ShowMessage (const char *pMessage);
 	void DrawMessage (TPixel *pScreen);
 	void DrawMessageText (TPixel *pScreen);	// solo el aviso, sin los indicadores
+	void MessageRows (int *pFirst, int *pEnd);	// líneas que ocupa el aviso
+	void KeyDebugRows (int *pFirst, int *pEnd);	// y el panel de Alt+D
 	void UpdateStatusLines (void);
 	void OutputAudio (void);
 	void WaitFrame (void);

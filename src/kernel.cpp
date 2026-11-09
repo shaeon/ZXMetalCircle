@@ -1299,6 +1299,27 @@ void CKernel::ShowMessage (const char *pMessage)
 	m_nMessageFrames = MESSAGE_FRAMES;
 }
 
+// Las líneas de la imagen que ocupa el aviso de abajo: [*pFirst, *pEnd)
+void CKernel::MessageRows (int *pFirst, int *pEnd)
+{
+	const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
+	*pFirst = rVisible.y + rVisible.nHeight - 20 - 3;
+	*pEnd = *pFirst + 14;
+}
+
+// Las del panel de Alt+D (12 líneas de texto y una por mando)
+void CKernel::KeyDebugRows (int *pFirst, int *pEnd)
+{
+	const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
+	unsigned nPadLines = 0;
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		nPadLines += m_pGamePads[i] != 0;
+	}
+	*pFirst = rVisible.y + 4 - 2;
+	*pEnd = *pFirst + (12 + nPadLines) * 8 + 4;
+}
+
 void CKernel::DrawMessage (TPixel *pScreen)
 {
 	DrawIndicators (pScreen);
@@ -1323,7 +1344,9 @@ void CKernel::DrawMessageText (TPixel *pScreen)
 		nLen = nMaxLen;
 	}
 	int x = rVisible.x + (rVisible.nWidth - nLen * 8) / 2;
-	int y = rVisible.y + rVisible.nHeight - 20;
+	int nFirst, nEnd;
+	MessageRows (&nFirst, &nEnd);
+	int y = nFirst + 3;
 
 	m_Video.FillRect (pScreen, x - 4, y - 3, nLen * 8 + 8, 14, COLOR_UI_PANEL);
 	m_Video.DrawText (pScreen, x, y, pText, COLOR_UI_TITLE, COLOR_UI_PANEL, nLen);
@@ -5337,12 +5360,9 @@ void CKernel::DrawKeyDebug (TPixel *pScreen)
 	const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
 	int x0 = rVisible.x + 4, y0 = rVisible.y + 4;
 
-	unsigned nPadLines = 0;				// una línea por mando, debajo
-	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
-	{
-		nPadLines += m_pGamePads[i] != 0;
-	}
-	m_Video.FillRect (pScreen, x0 - 2, y0 - 2, 34 * 8 + 4, (12 + nPadLines) * 8 + 4, COLOR_UI_PANEL);
+	int nFirst, nEnd;				// una línea por mando, debajo
+	KeyDebugRows (&nFirst, &nEnd);
+	m_Video.FillRect (pScreen, x0 - 2, nFirst, 34 * 8 + 4, nEnd - nFirst, COLOR_UI_PANEL);
 
 	CString Line;
 	Line.Format ("USB mod %02X teclas %02X %02X %02X %02X %02X %02X",
@@ -5930,25 +5950,50 @@ TShutdownMode CKernel::Run (void)
 		else if (!bAccelerating || (m_nFrames % ACCEL_PRESENT_EVERY) == 0)
 		{
 			m_nSkippedFrames = 0;
-			// El aviso y el panel de Alt+D, sobre una copia: si se pintaran en
-			// la imagen del Spectrum, al abrir el menú (o una operación larga)
-			// quedarían en la imagen congelada que hace de fondo, y un aviso
-			// más corto dejaría a la derecha los restos del anterior. Los
-			// indicadores (pequeños) siguen en la imagen, como siempre
+			// El aviso y el panel de Alt+D no deben quedarse en la imagen del
+			// Spectrum: al abrir el menú (o una operación larga) esa imagen se
+			// congela como fondo, y un aviso más corto dejaría a la derecha los
+			// restos del anterior. Se guardan las líneas que van a ocupar, se
+			// pinta, se muestra (ShowFrame la copia o la escala al momento) y
+			// se reponen: solo esas líneas, no la imagen entera. Los indicadores
+			// (pequeños) siguen en la imagen, como siempre
 			TPixel *pScreen = m_pSpectrum->GetScreenBuffer ();
 			DrawIndicators (pScreen);
-			TPixel *pShow = pScreen;
-			if (m_nMessageFrames > 0 || m_bKeyDebug)
+			int Band[2][2];
+			unsigned nBands = 0;
+			if (m_nMessageFrames > 0)
 			{
-				memcpy (m_pOverlay, pScreen, SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
-				pShow = m_pOverlay;
-				DrawMessageText (pShow);
-				if (m_bKeyDebug)
-				{
-					DrawKeyDebug (pShow);
-				}
+				MessageRows (&Band[nBands][0], &Band[nBands][1]);
+				nBands++;
 			}
-			ShowFrame (pShow);
+			if (m_bKeyDebug)
+			{
+				KeyDebugRows (&Band[nBands][0], &Band[nBands][1]);
+				nBands++;
+			}
+			TPixel *pSave = m_pOverlay;		// libre mientras se emula
+			for (unsigned i = 0; i < nBands; i++)
+			{
+				if (Band[i][0] < 0) Band[i][0] = 0;
+				if (Band[i][1] > SCREEN_HEIGHT) Band[i][1] = SCREEN_HEIGHT;
+				if (Band[i][1] < Band[i][0]) Band[i][1] = Band[i][0];
+				unsigned nPixels = (Band[i][1] - Band[i][0]) * SCREEN_WIDTH;
+				memcpy (pSave, pScreen + Band[i][0] * SCREEN_WIDTH, nPixels * sizeof (TPixel));
+				pSave += nPixels;
+			}
+			DrawMessageText (pScreen);
+			if (m_bKeyDebug)
+			{
+				DrawKeyDebug (pScreen);
+			}
+			ShowFrame (pScreen);
+			pSave = m_pOverlay;			// en el mismo orden en que se guardaron
+			for (unsigned i = 0; i < nBands; i++)
+			{
+				unsigned nPixels = (Band[i][1] - Band[i][0]) * SCREEN_WIDTH;
+				memcpy (pScreen + Band[i][0] * SCREEN_WIDTH, pSave, nPixels * sizeof (TPixel));
+				pSave += nPixels;
+			}
 		}
 
 		if (!bAccelerating)
