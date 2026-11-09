@@ -241,7 +241,7 @@ static const char PageStyle[] =
 	"td.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
 	"td.s{text-align:right;color:#8a8ca0;white-space:nowrap;width:5.5em}"
 	"form{margin:10px 0;padding:8px;background:#1c1f55;display:flex;flex-wrap:wrap;gap:6px;align-items:center}"
-	"form input[name=q],form input[name=n]{flex:1;min-width:8em}input[type=file]{max-width:100%}"
+	"form input[name=q],form input[name=n]{flex:1;min-width:8em;max-width:20em}input[type=file]{max-width:100%}"
 	"form.i{display:inline;margin:0;padding:0;background:none}"
 	"form.i button,.cut a{background:none;border:0;color:#7fd6ff;padding:0;font:inherit;"
 	"text-decoration:underline;cursor:pointer}"
