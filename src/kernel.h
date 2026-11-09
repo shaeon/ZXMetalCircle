@@ -204,6 +204,7 @@ private:
 	boolean WriteFile (const char *pPath, const u8 *pData, unsigned nSize, boolean bAppend);
 	void ShowMessage (const char *pMessage);
 	void DrawMessage (TPixel *pScreen);
+	void DrawMessageText (TPixel *pScreen);	// solo el aviso, sin los indicadores
 	void UpdateStatusLines (void);
 	void OutputAudio (void);
 	void WaitFrame (void);

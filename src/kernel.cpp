@@ -1302,7 +1302,12 @@ void CKernel::ShowMessage (const char *pMessage)
 void CKernel::DrawMessage (TPixel *pScreen)
 {
 	DrawIndicators (pScreen);
+	DrawMessageText (pScreen);
+}
 
+// Solo el aviso de abajo (sin los indicadores)
+void CKernel::DrawMessageText (TPixel *pScreen)
+{
 	if (m_nMessageFrames == 0 && !m_bPaused)
 	{
 		return;
@@ -5925,13 +5930,25 @@ TShutdownMode CKernel::Run (void)
 		else if (!bAccelerating || (m_nFrames % ACCEL_PRESENT_EVERY) == 0)
 		{
 			m_nSkippedFrames = 0;
+			// El aviso y el panel de Alt+D, sobre una copia: si se pintaran en
+			// la imagen del Spectrum, al abrir el menú (o una operación larga)
+			// quedarían en la imagen congelada que hace de fondo, y un aviso
+			// más corto dejaría a la derecha los restos del anterior. Los
+			// indicadores (pequeños) siguen en la imagen, como siempre
 			TPixel *pScreen = m_pSpectrum->GetScreenBuffer ();
-			DrawMessage (pScreen);	// la emulación redibuja todo en el cuadro siguiente
-			if (m_bKeyDebug)
+			DrawIndicators (pScreen);
+			TPixel *pShow = pScreen;
+			if (m_nMessageFrames > 0 || m_bKeyDebug)
 			{
-				DrawKeyDebug (pScreen);
+				memcpy (m_pOverlay, pScreen, SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+				pShow = m_pOverlay;
+				DrawMessageText (pShow);
+				if (m_bKeyDebug)
+				{
+					DrawKeyDebug (pShow);
+				}
 			}
-			ShowFrame (pScreen);
+			ShowFrame (pShow);
 		}
 
 		if (!bAccelerating)
