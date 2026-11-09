@@ -114,11 +114,14 @@ jobs:
           cd sdcard
           zip -qr -X "../ZXMetalCircle-${{ steps.version.outputs.version }}-sd.zip" .
 
-      - name: Subir el zip (Artifacts)
+      # El artefacto, con la carpeta de la tarjeta: GitHub mete los artefactos en
+      # un zip al descargarlos, así que subir el zip ya hecho daba un zip dentro
+      # de otro. La release sí lleva el zip (abajo).
+      - name: Subir la tarjeta (Artifacts)
         uses: actions/upload-artifact@v4
         with:
           name: ZXMetalCircle-${{ steps.version.outputs.version }}-sd
-          path: ZXMetalCircle-${{ steps.version.outputs.version }}-sd.zip
+          path: sdcard/
 
       - name: Borrador de release (solo con etiquetas vX.YY)
         if: startsWith(github.ref, 'refs/tags/v')
