@@ -35,7 +35,9 @@ La Spectranet (Alt+T), la divMMC con esxDOS (Alt+X), la memoria LEC (Alt+L) y el
 
 ULAplus es una ampliación moderna de la ULA que añade una paleta de 64 colores, elegidos entre 256. Muchos juegos y demos recientes la aprovechan, y los programas antiguos no se ven afectados.
 
-- **Puertos**: 0xBF3B (registro) y 0xFF3B (datos), decodificados como en JSpeccy.
+- **Puertos**: 0xBF3B (registro) y 0xFF3B (datos). Se miran A15, A14 y A7-A0, no A13-A8, como en el núcleo FPGA ToK'ra de Rodolfo Guerra: los programas cargan la paleta con OTIR, que va bajando la parte alta del puerto. Los puertos del reloj de esxDOS (0x7C3B, 0x7D3B) no son de ULAplus.
+- **Contención**: en los modelos de Sinclair, sus puertos tienen la de los de la ULA, aunque sean impares.
+- **En los TK90X y TK95**, ULAplus es una extensión: funciona en el núcleo FPGA ToK'ra de Rodolfo Guerra, pero no existe en un TK de la época, y su contención en un TK real aún no está comprobada, así que sus puertos se tratan como cualquier otro puerto impar.
 - **Paleta**: los registros 0–63 son las entradas de la paleta, en formato GGGRRRBB. El registro 64 (grupo de modo) activa o desactiva la paleta.
 - **Con el modo activo**, los bits FLASH y BRIGHT de cada atributo eligen una de las 4 subpaletas de 16 colores (8 de tinta y 8 de papel), así que deja de haber parpadeo. El borde usa los colores de papel de la primera subpaleta.
 - Los cambios de paleta en mitad del cuadro se respetan: la imagen se genera directamente en color (RGB565), y lo dibujado antes del cambio conserva sus colores.

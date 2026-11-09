@@ -52,6 +52,27 @@ int main (void)
 	s->outPort (0xFF3B, 0x01);
 	chk ("con ULAplus desactivado, sus puertos no hacen nada", !s->IsULAplusActive ());
 
+	// La paleta, como la cargan los programas con OTIR: el registro por 0xBF3B y
+	// el dato por un puerto cuya parte alta va bajando (0xFF3B, 0xFE3B... 0xC03B).
+	// Con la decodificación exacta solo llegaba la primera entrada
+	s->SetULAplusEnabled (TRUE);
+	for (unsigned i = 0; i < 64; i++)
+	{
+		s->outPort (0xBF3B, i);
+		s->outPort ((uint16_t) (((0xFF - i) << 8) | 0x3B), (u8) (i * 3 + 1));
+	}
+	bool bAll = true;
+	for (unsigned i = 0; i < 64; i++)
+	{
+		bAll = bAll && s->m_ULAplusPalette[i] == (u8) (i * 3 + 1);
+	}
+	chk ("las 64 entradas de la paleta, con la parte alta del puerto bajando (OTIR)", bAll);
+	s->outPort (0xA03B, 5);					// registro por un espejo (A15=1, A14=0)
+	chk ("el registro por un espejo (0xA03B) y el dato leído por otro (0xC23B)", s->inPort (0xC23B) == 5 * 3 + 1);
+	s->outPort (0xBF3B, 0x40);
+	s->outPort (0x7C3B, 0x01);				// el reloj de esxDOS: A15 = 0
+	chk ("0x7C3B (A15 = 0) no escribe en ULAplus", !s->IsULAplusActive ());
+
 	// Contención: los puertos de ULAplus, como los de la ULA aunque sean impares.
 	// Tres Spectrum iguales llevados al mismo T-state, dentro del papel (donde la
 	// ULA hace esperar), y un OUT a un puerto distinto en cada uno

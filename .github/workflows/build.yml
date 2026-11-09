@@ -69,6 +69,8 @@ jobs:
           ./palette_test
           g++ $FLAGS -o ulaplus_ports_test ulaplus_ports_test.cpp $CORE roms_host.S
           ./ulaplus_ports_test
+          g++ $FLAGS -o border_test border_test.cpp $CORE roms_host.S
+          ./border_test
           g++ $FLAGS -o floatbus_test plus3/floatbus_test.cpp $CORE roms_host.S
           ./floatbus_test
           g++ -O2 -std=c++17 -I. -I$S -o joystick_test joystick_test.cpp $S/zxkeyboard.cpp
