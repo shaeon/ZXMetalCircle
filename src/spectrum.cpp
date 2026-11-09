@@ -1036,6 +1036,7 @@ bool CSpectrum::isActiveINT (void)
 //                 No              |   1   | N:1, N:3
 //                 Sí              |   0   | C:1, C:3
 //                 Sí              |   1   | C:1, C:1, C:1, C:1
+// Los de ULAplus, como los de la ULA (bit 0 = 0) aunque sean impares.
 void CSpectrum::PreIO (uint16_t nPort)
 {
 	if (m_bContendedIO[nPort >> 14])
@@ -1059,7 +1060,12 @@ void CSpectrum::PostIO (uint16_t nPort)
 		return;
 	}
 
-	if (nPort & 0x0001)
+	// Los puertos de ULAplus (0xBF3B y 0xFF3B) los atiende la propia ULA: tienen
+	// su contención aunque sean impares (José Luis Sánchez, JSpeccy)
+	boolean bULAPort =    !(nPort & 0x0001)
+			   || (m_bULAplusEnabled && (nPort == 0xBF3B || nPort == 0xFF3B));
+
+	if (!bULAPort)
 	{
 		if (m_bContendedIO[nPort >> 14])
 		{

@@ -1,7 +1,9 @@
 // ULAplus: solo sus puertos (0xBF3B registro, 0xFF3B datos). Antes respondía
 // también a los de la divMMC (0xE3, 0xEB) y a los del reloj de esxDOS (0x7C3B,
 // 0x7D3B), y esxDOS dejaba el modo ULAplus encendido al salir de la NMI.
+#define private public		// para poner el contador de T-states (como floatbus_test)
 #include "spectrum.h"
+#undef private
 #include <stdio.h>
 
 static int fails = 0;
@@ -49,6 +51,36 @@ int main (void)
 	s->outPort (0xBF3B, 0x40);
 	s->outPort (0xFF3B, 0x01);
 	chk ("con ULAplus desactivado, sus puertos no hacen nada", !s->IsULAplusActive ());
+
+	// Contención: los puertos de ULAplus, como los de la ULA aunque sean impares.
+	// Tres Spectrum iguales llevados al mismo T-state, dentro del papel (donde la
+	// ULA hace esperar), y un OUT a un puerto distinto en cada uno
+	unsigned Cost[3];
+	const uint16_t Ports[3] = {0xFFFE, 0xFF3B, 0xFF3D};	// ULA, ULAplus, impar cualquiera
+	for (unsigned n = 0; n < 3; n++)
+	{
+		CSpectrum *t = new CSpectrum (&Keyboard, &Tape);
+		t->SetULAplusEnabled (TRUE);
+		t->m_nTstates = 14336 + 224 * 8 + 2;		// 48K: línea 8 del papel, en la zona contenida
+		int nStart = t->m_nTstates;
+		t->outPort (Ports[n], 0);
+		Cost[n] = (unsigned) (t->m_nTstates - nStart);
+		delete t;
+	}
+	printf ("        OUT a 0xFFFE: %u, a 0xFF3B: %u, a 0xFF3D: %u t-states\n", Cost[0], Cost[1], Cost[2]);
+	chk ("un OUT a 0xFF3B (ULAplus) tarda como uno a la ULA (0xFFFE)", Cost[1] == Cost[0]);
+	chk ("y más que a un puerto impar cualquiera (0xFF3D)", Cost[1] > Cost[2]);
+
+	// Con ULAplus desactivado, 0xFF3B es un puerto impar más
+	{
+		CSpectrum *t = new CSpectrum (&Keyboard, &Tape);
+		t->SetULAplusEnabled (FALSE);
+		t->m_nTstates = 14336 + 224 * 8 + 2;
+		int nStart = t->m_nTstates;
+		t->outPort (0xFF3B, 0);
+		unsigned nCost = (unsigned) (t->m_nTstates - nStart);
+		chk ("con ULAplus desactivado, 0xFF3B tarda como un impar cualquiera", nCost == Cost[2]);
+	}
 
 	printf (fails ? "%d fallos\n" : "todo OK\n", fails);
 	return fails ? 1 : 0;
