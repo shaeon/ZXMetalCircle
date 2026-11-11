@@ -4,6 +4,7 @@ This guide explains how to set up a computer to build the emulator and generate 
 
 - **Linux:** builds directly (tested on Ubuntu and Debian).
 - **Windows:** builds inside **WSL** (the Linux built into Windows 10 and 11). The steps inside WSL are the same as on Linux.
+- **Shortcut, on either:** if you have **Docker**, you can skip steps 1 to 3 and build with the same image the Action uses (see "Building with Docker", below).
 
 You need about **3 GB of disk space** and an internet connection: the first build downloads Circle and the Raspberry Pi firmware.
 
@@ -192,6 +193,23 @@ qemu-system-aarch64 -M raspi3b -kernel qemu/kernel8.img -drive file=sd.img,if=sd
 QEMU does not emulate sound or networking, and it is much slower than a real Pi; it is useful for checking menus, file loading and booting.
 
 ---
+
+## Building with Docker
+
+The GitHub Action builds inside a Docker image with everything already installed (the tools and the compiler). The same image works at home: you only need Docker (on Windows, **Docker Desktop**).
+
+1. Get the code **without converting line endings** (otherwise the script fails with `$'\r': command not found`):
+   ```
+   git clone -c core.autocrlf=false https://github.com/shaeon/ZXMetalCircle.git
+   cd ZXMetalCircle
+   ```
+2. Build, from that folder. On Linux, or on Windows with PowerShell:
+   ```
+   docker run --rm -v "${PWD}:/src" ghcr.io/shaeon/zxmetalcircle-build:1 ./build.sh
+   ```
+   As in step 5, you can build a single model (for example, `./build.sh 4-64`).
+
+The result ends up in the `sdcard` folder, as when building without Docker. The first time, Docker downloads the image, which takes about 2 GB of disk space.
 
 ## If something fails
 

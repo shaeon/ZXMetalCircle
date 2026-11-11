@@ -16,43 +16,22 @@ on:
 
 permissions:
   contents: write   # para crear el borrador de release con las etiquetas
-
-env:
-  ARM_TOOLCHAIN: "14.2.rel1"
+  packages: read    # para bajar la imagen del entorno de GHCR
 
 jobs:
   build:
     runs-on: ubuntu-24.04
+    # Todo el entorno (paquetes y Arm GNU Toolchain 14.2) viene en la imagen
+    # (docker/Dockerfile, la sube la Action «Docker»): ya no se instala nada en
+    # cada ejecución, y no depende de los servidores de Ubuntu ni de los de Arm.
+    # Al cambiar el entorno, súbase el número aquí y en docker/VERSION
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/zxmetalcircle-build:1
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Paquetes
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends mtools dosfstools zip
-
-      - name: Arm GNU Toolchain (caché)
-        id: toolchain
-        uses: actions/cache@v4
-        with:
-          path: ~/arm-toolchain
-          key: arm-gnu-toolchain-${{ env.ARM_TOOLCHAIN }}
-
-      - name: Descargar el Arm GNU Toolchain
-        if: steps.toolchain.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/arm-toolchain
-          cd ~/arm-toolchain
-          base="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_TOOLCHAIN}/binrel"
-          for t in arm-none-eabi aarch64-none-elf; do
-            wget -q "$base/arm-gnu-toolchain-${ARM_TOOLCHAIN}-x86_64-$t.tar.xz"
-            tar xf "arm-gnu-toolchain-${ARM_TOOLCHAIN}-x86_64-$t.tar.xz"
-            rm "arm-gnu-toolchain-${ARM_TOOLCHAIN}-x86_64-$t.tar.xz"
-          done
-
-      - name: Añadir el toolchain al PATH
-        run: |
-          for d in ~/arm-toolchain/*/bin; do echo "$d" >> "$GITHUB_PATH"; done
 
       - name: Pruebas en el PC
         working-directory: test/host
