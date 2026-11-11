@@ -30,7 +30,7 @@ The licence and the credits can also be seen in the emulator itself: F1 and then
 - **Interface 1 ZX Net network**: a translation of SpectRusty's (© 2020-2022 Rafal Michalski, LGPL 3 or later). **RS232**: based on Fuse's (Gergely Szász, GPL 2 or later).
 - **Beeper speaker model**: from Fuse (Fredrick Meunier: `ula_filter.c`, `speaker_filter.c`, `tv_filter.c`, GPL 2 or later).
 - **Loader acceleration**: adapted from Fuse (Philip Kendall and others: `loader.c`, `loader_detector.c`, GPL 2 or later).
-- **Instant loading and tapes**: the LD-BYTES trap and the registers it leaves follow Fuse (`tape_traps.c`); the polarity of TZX blocks follows libspectrum; the PZX format follows the pzxtools specification (Patrik Rak).
+- **Instant loading and tapes**: the LD-BYTES trap and the registers it leaves follow Fuse (`tape_traps.c`); the polarity of TZX blocks follows libspectrum, and the TZX format its specification (<https://worldofspectrum.net/TZXformat.html>); the PZX format follows the pzxtools specification (Patrik Rak).
 - **Protected disks**: the weak area of the +3 Speedlock follows SAMdisk (Simon Owen, MIT, `IsSpectrumSpeedlockTrack`); CRC errors in the header and the weak stretch of sectors with several copies follow Fuse (`disk.c`).
 - **Spectranet** © Dylan Smith (https://spectrum.alioth.net), firmware under the MIT licence; the card emulation is based on Fuse's (Philip Kendall and others, GPL v2 or later).
 - **esxDOS 0.8.9** © 2005-2021 Papaya Dezign (https://esxdos.org): ROM and system files, unmodified, for non-commercial use.
@@ -90,7 +90,10 @@ Done:
   - signal blocks: 0x10 (standard), 0x11 (turbo), 0x12 (tone), 0x13 (pulses), 0x14 (pure data), 0x15 (direct recording), 0x18 (CSW, uncompressed or Z-RLE) and 0x19 (generalised data);
   - control blocks: 0x20 (pause/stop), 0x23 (jump), 0x24/0x25 (loops), 0x26/0x27 (call sequence and return), 0x28 (select), 0x2A (stop if 48K), 0x2B (level) and the informative ones;
   - with a **0x28** block (tapes with several parts or versions), the tape stops and a list appears to choose what to load: cursor keys and ENTER, or the option's number; ESC carries on with the next block;
-  - non-standard blocks are always loaded by pulses, even if instant loading is selected.
+  - non-standard blocks are always loaded by pulses, even if instant loading is selected;
+  - a block with no pause followed by a stop, or at the end of the tape, ends with its final edge and 1 ms, so the loader can read the last bit (*Shadow of the Beast*, *Astro Marine Corps*);
+  - the deprecated blocks 0x34 (emulation info) and 0x40 (snapshot), from format revisions up to 1.13, are recognised and skipped;
+  - format specification (revision 1.20): <https://worldofspectrum.net/TZXformat.html>.
 - Standalone .CSW files (versions 1 and 2, RLE and Z-RLE).
 - .PZX files (Perfect ZX Tape): pulses (PULS), data with its initial level (DATA), pauses (PAUS), texts (BRWS) and stops (STOP). They keep the real polarity of the signal, which TZX does not: some loaders need it (Forbidden Planet). Data blocks with ROM timings also load instantly.
 - **Polarity**: in the block browser (F3), the **P** key inverts the tape signal. It is for TZX files that have it the wrong way round (with Forbidden Planet's, the loader slips half a bit and never finishes). It goes back to normal when another tape is inserted.

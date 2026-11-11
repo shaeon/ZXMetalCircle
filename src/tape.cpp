@@ -410,6 +410,12 @@ unsigned CTape::TZXBlockSize (unsigned nOffset) const
 	case 0x33: NEED (2);  nSize = 2 + 3 * p[1];		break;
 	case 0x35: NEED (21); nSize = 21 + DWord (p + 17);	break;
 	case 0x5A: nSize = 10;					break;
+	// Obsoletos (hasta la revisión 1.13 del formato) que no siguen la regla
+	// de extensión de abajo: el 34 mide siempre 8 bytes, sin longitud, y el
+	// 40 lleva un byte de tipo y la longitud en 3 bytes. Con la regla de
+	// extensión se medían mal y todo lo de detrás se perdía
+	case 0x34: nSize = 9;					break;
+	case 0x40: NEED (5);  nSize = 5 + Word24 (p + 2);	break;
 	default:
 		// Bloques de extensión: ID + longitud de 32 bits + datos
 		NEED (5);
@@ -442,6 +448,7 @@ boolean CTape::IndexTZX (void)
 		case 0x26: case 0x27: case 0x28:
 		case 0x2A: case 0x2B: case 0x30: case 0x31: case 0x32: case 0x33:
 		case 0x35: case 0x5A:
+		case 0x34: case 0x40:	// obsoletos: se saltan
 			break;
 
 		default:		// desconocidos
@@ -896,6 +903,7 @@ const u8 *CTape::GetStandardBlock (unsigned *pLength)
 		// bloques sin señal que se pueden saltar
 		case 0x20: case 0x21: case 0x22: case 0x2B: case 0x30: case 0x31:
 		case 0x32: case 0x33: case 0x35: case 0x5A:
+		case 0x34: case 0x40:	// obsoletos
 			m_nBlock++;
 			break;
 
