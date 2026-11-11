@@ -28,9 +28,7 @@ jobs:
 
       - name: Paquetes
         run: |
-          sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
-          sudo rm -rf /var/lib/apt/lists/*
-          sudo echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4
+          sudo sed -i 's%http://\(archive\|security\).ubuntu.com/%http://azure.archive.ubuntu.com/%g' /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends mtools dosfstools zip
 
