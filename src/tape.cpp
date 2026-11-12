@@ -410,6 +410,12 @@ unsigned CTape::TZXBlockSize (unsigned nOffset) const
 	case 0x33: NEED (2);  nSize = 2 + 3 * p[1];		break;
 	case 0x35: NEED (21); nSize = 21 + DWord (p + 17);	break;
 	case 0x5A: nSize = 10;					break;
+	// Obsoletos (hasta la revisión 1.13 del formato) que no siguen la regla
+	// de extensión de abajo: el 34 mide siempre 8 bytes, sin longitud, y el
+	// 40 lleva un byte de tipo y la longitud en 3 bytes. Con la regla de
+	// extensión se medían mal y todo lo de detrás se perdía
+	case 0x34: nSize = 9;					break;
+	case 0x40: NEED (5);  nSize = 5 + Word24 (p + 2);	break;
 	default:
 		// Bloques de extensión: ID + longitud de 32 bits + datos
 		NEED (5);
@@ -442,6 +448,7 @@ boolean CTape::IndexTZX (void)
 		case 0x26: case 0x27: case 0x28:
 		case 0x2A: case 0x2B: case 0x30: case 0x31: case 0x32: case 0x33:
 		case 0x35: case 0x5A:
+		case 0x34: case 0x40:	// obsoletos: se saltan
 			break;
 
 		default:		// desconocidos
@@ -896,6 +903,7 @@ const u8 *CTape::GetStandardBlock (unsigned *pLength)
 		// bloques sin señal que se pueden saltar
 		case 0x20: case 0x21: case 0x22: case 0x2B: case 0x30: case 0x31:
 		case 0x32: case 0x33: case 0x35: case 0x5A:
+		case 0x34: case 0x40:	// obsoletos
 			m_nBlock++;
 			break;
 
@@ -1151,6 +1159,28 @@ boolean CTape::PrepareBlock (void)
 
 	m_State = StateEnd;
 	return FALSE;
+}
+
+// ¿Lo siguiente con señal tras el bloque nBlock para la cinta? (bloque 0x20
+// con pausa 0, 0x2A en 48K, 0x28 de selección, o el final de la cinta). Los
+// bloques informativos de en medio no cuentan.
+boolean CTape::StopsAfter (unsigned nBlock) const
+{
+	for (unsigned i = nBlock + 1; i < m_nBlocks; i++)
+	{
+		const u8 *p = m_pData + m_BlockOffset[i];
+		switch (p[0])
+		{
+		case 0x20:	return Word (p + 1) == 0;
+		case 0x2A:	return m_b48K;
+		case 0x28:	return GetSelectCountAt (p) != 0;
+		case 0x21: case 0x22: case 0x30: case 0x31: case 0x32: case 0x33:
+		case 0x35: case 0x5A:
+			continue;
+		default:	return FALSE;
+		}
+	}
+	return TRUE;
 }
 
 // Salto relativo a un bloque (0 o fuera de la cinta: siguiente / final)
@@ -1731,14 +1761,16 @@ unsigned CTape::Step (void)
 		case StatePause:
 			if (m_nPauseMs == 0)
 			{
-				if (m_nBlock + 1 < m_nBlocks)
+				if (m_nBlock + 1 < m_nBlocks && !StopsAfter (m_nBlock))
 				{
 					m_nBlock++;
 					m_State = StateNextBlock;
 					continue;
 				}
 
-				// Último bloque de la cinta sin pausa: sin el flanco final, el
+				// Último bloque de la cinta sin pausa, o detrás viene una parada
+				// (Shadow of the Beast de Gremlin: bloque con pausa 0 y luego
+				// "Pausa 0" = parar): sin el flanco final, el
 				// último pulso no se cerraba nunca y el cargador no terminaba
 				// de leer el último bit. Como JSpeccy y Fuse, flanco y 1 ms.
 				// Astro Marine Corps (Dinamic) en 128K: su último bloque tiene

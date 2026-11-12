@@ -16,43 +16,22 @@ on:
 
 permissions:
   contents: write   # para crear el borrador de release con las etiquetas
-
-env:
-  ARM_TOOLCHAIN: "14.2.rel1"
+  packages: read    # para bajar la imagen del entorno de GHCR
 
 jobs:
   build:
     runs-on: ubuntu-24.04
+    # Todo el entorno (paquetes y Arm GNU Toolchain 14.2) viene en la imagen
+    # (docker/Dockerfile, la sube la Action «Docker»): ya no se instala nada en
+    # cada ejecución, y no depende de los servidores de Ubuntu ni de los de Arm.
+    # Al cambiar el entorno, súbase el número aquí y en docker/VERSION
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/zxmetalcircle-build:1
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Paquetes
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends mtools dosfstools zip
-
-      - name: Arm GNU Toolchain (caché)
-        id: toolchain
-        uses: actions/cache@v4
-        with:
-          path: ~/arm-toolchain
-          key: arm-gnu-toolchain-${{ env.ARM_TOOLCHAIN }}
-
-      - name: Descargar el Arm GNU Toolchain
-        if: steps.toolchain.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/arm-toolchain
-          cd ~/arm-toolchain
-          base="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_TOOLCHAIN}/binrel"
-          for t in arm-none-eabi aarch64-none-elf; do
-            wget -q "$base/arm-gnu-toolchain-${ARM_TOOLCHAIN}-x86_64-$t.tar.xz"
-            tar xf "arm-gnu-toolchain-${ARM_TOOLCHAIN}-x86_64-$t.tar.xz"
-            rm "arm-gnu-toolchain-${ARM_TOOLCHAIN}-x86_64-$t.tar.xz"
-          done
-
-      - name: Añadir el toolchain al PATH
-        run: |
-          for d in ~/arm-toolchain/*/bin; do echo "$d" >> "$GITHUB_PATH"; done
 
       - name: Pruebas en el PC
         working-directory: test/host
@@ -69,6 +48,12 @@ jobs:
           ./palette_test
           g++ $FLAGS -o ulaplus_ports_test ulaplus_ports_test.cpp $CORE roms_host.S
           ./ulaplus_ports_test
+          g++ $FLAGS -o border_test border_test.cpp $CORE roms_host.S
+          ./border_test
+          g++ $FLAGS -o tape_stop_test tape_stop_test.cpp $CORE roms_host.S
+          ./tape_stop_test
+          g++ $FLAGS -o tzx_blocks_test tzx_blocks_test.cpp $CORE roms_host.S
+          ./tzx_blocks_test
           g++ $FLAGS -o floatbus_test plus3/floatbus_test.cpp $CORE roms_host.S
           ./floatbus_test
           g++ -O2 -std=c++17 -I. -I$S -o joystick_test joystick_test.cpp $S/zxkeyboard.cpp
@@ -79,6 +64,8 @@ jobs:
           ./padassign_test
           g++ -O2 -std=c++17 -I. -I$S -o padsettings_test padsettings_test.cpp $S/settings.cpp t_stub.cpp
           ./padsettings_test
+          g++ -O2 -std=c++17 -I. -I$S -o webfiles_test webfiles_test.cpp $S/webfiles.cpp
+          ./webfiles_test
           g++ -O2 -std=c++17 -I. -I$S -o padprofile_test padprofile_test.cpp $S/padprofile.cpp
           ./padprofile_test
           g++ -O2 -std=c++17 -I. -I$S -o keyboard_hold_test keyboard_hold_test.cpp $S/zxkeyboard.cpp
@@ -112,11 +99,14 @@ jobs:
           cd sdcard
           zip -qr -X "../ZXMetalCircle-${{ steps.version.outputs.version }}-sd.zip" .
 
-      - name: Subir el zip (Artifacts)
+      # El artefacto, con la carpeta de la tarjeta: GitHub mete los artefactos en
+      # un zip al descargarlos, así que subir el zip ya hecho daba un zip dentro
+      # de otro. La release sí lleva el zip (abajo).
+      - name: Subir la tarjeta (Artifacts)
         uses: actions/upload-artifact@v4
         with:
           name: ZXMetalCircle-${{ steps.version.outputs.version }}-sd
-          path: ZXMetalCircle-${{ steps.version.outputs.version }}-sd.zip
+          path: sdcard/
 
       - name: Borrador de release (solo con etiquetas vX.YY)
         if: startsWith(github.ref, 'refs/tags/v')

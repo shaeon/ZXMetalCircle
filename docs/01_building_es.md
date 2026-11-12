@@ -4,6 +4,7 @@ Esta guía explica cómo preparar un ordenador para compilar el emulador y gener
 
 - **Linux:** se compila directamente (probado en Ubuntu y Debian).
 - **Windows:** se compila dentro de **WSL** (el Linux integrado en Windows 10 y 11). Los pasos dentro de WSL son los mismos que en Linux.
+- **Atajo, en cualquiera de los dos:** si tienes **Docker**, puedes saltarte los pasos 1 a 3 y compilar con la misma imagen que usa la Action (ver «Compilar con Docker», más abajo).
 
 Se necesitan unos **3 GB de disco** y conexión a internet: la primera compilación descarga Circle y el firmware de la Raspberry Pi.
 
@@ -191,6 +192,23 @@ qemu-system-aarch64 -M raspi3b -kernel qemu/kernel8.img -drive file=sd.img,if=sd
  QEMU no emula el sonido ni la red, y es mucho más lento que una Pi real; sirve para comprobar menús, carga de ficheros y arranque.
 
 ---
+
+## Compilar con Docker
+
+La Action de GitHub compila dentro de una imagen Docker con todo ya instalado (las herramientas y el compilador). La misma imagen sirve en casa: no hace falta instalar nada más que Docker (en Windows, **Docker Desktop**).
+
+1. Descarga el código **sin convertir los finales de línea** (si no, el script falla con `$'\r': command not found`):
+   ```
+   git clone -c core.autocrlf=false https://github.com/shaeon/ZXMetalCircle.git
+   cd ZXMetalCircle
+   ```
+2. Compila, desde esa carpeta. En Linux, o en Windows con PowerShell:
+   ```
+   docker run --rm -v "${PWD}:/src" ghcr.io/shaeon/zxmetalcircle-build:1 ./build.sh
+   ```
+   Igual que en el paso 5, puedes indicar un solo modelo (por ejemplo, `./build.sh 4-64`).
+
+El resultado queda en la carpeta `sdcard`, como al compilar sin Docker. La primera vez, Docker descarga la imagen, que ocupa unos 2 GB en el disco.
 
 ## Si algo falla
 

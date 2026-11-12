@@ -7,6 +7,8 @@
 // (at your option) any later version.
 //
 #include "kernel.h"
+#include "webserver.h"
+#include "webfiles.h"
 #include "snapshot.h"
 #include <circle/sound/pwmsoundbasedevice.h>
 #include <circle/sound/hdmisoundbasedevice.h>
@@ -219,6 +221,10 @@ CKernel::CKernel (void)
 	m_ZipEntryPath[0] = '\0';
 	m_nZipChoices = 0;
 	m_bZipChoice = FALSE;
+	m_bZXDBInput = FALSE;
+	m_bZXDBChoice = FALSE;
+	m_nZXDBResults = 0;
+	m_ZXDBQuery[0] = '\0';
 	m_bZipOverwriteChoice = FALSE;
 	m_nZipPending = 0;
 	m_nFPSStart = 0;
@@ -1297,10 +1303,36 @@ void CKernel::ShowMessage (const char *pMessage)
 	m_nMessageFrames = MESSAGE_FRAMES;
 }
 
+// Las líneas de la imagen que ocupa el aviso de abajo: [*pFirst, *pEnd)
+void CKernel::MessageRows (int *pFirst, int *pEnd)
+{
+	const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
+	*pFirst = rVisible.y + rVisible.nHeight - 20 - 3;
+	*pEnd = *pFirst + 14;
+}
+
+// Las del panel de Alt+D (12 líneas de texto y una por mando)
+void CKernel::KeyDebugRows (int *pFirst, int *pEnd)
+{
+	const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
+	unsigned nPadLines = 0;
+	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
+	{
+		nPadLines += m_pGamePads[i] != 0;
+	}
+	*pFirst = rVisible.y + 4 - 2;
+	*pEnd = *pFirst + (12 + nPadLines) * 8 + 4;
+}
+
 void CKernel::DrawMessage (TPixel *pScreen)
 {
 	DrawIndicators (pScreen);
+	DrawMessageText (pScreen);
+}
 
+// Solo el aviso de abajo (sin los indicadores)
+void CKernel::DrawMessageText (TPixel *pScreen)
+{
 	if (m_nMessageFrames == 0 && !m_bPaused)
 	{
 		return;
@@ -1316,7 +1348,9 @@ void CKernel::DrawMessage (TPixel *pScreen)
 		nLen = nMaxLen;
 	}
 	int x = rVisible.x + (rVisible.nWidth - nLen * 8) / 2;
-	int y = rVisible.y + rVisible.nHeight - 20;
+	int nFirst, nEnd;
+	MessageRows (&nFirst, &nEnd);
+	int y = nFirst + 3;
 
 	m_Video.FillRect (pScreen, x - 4, y - 3, nLen * 8 + 8, 14, COLOR_UI_PANEL);
 	m_Video.DrawText (pScreen, x, y, pText, COLOR_UI_TITLE, COLOR_UI_PANEL, nLen);
@@ -1789,8 +1823,10 @@ void CKernel::StartNetwork (void)
 	m_Network.SetTLSVerify (m_Options.GetAppOptionDecimal ("tlsverify", 1) != 0);
 	// web=1 (completa), ro (solo lectura) o 0 (apagada); webpass= contraseña
 	const char *pWeb = m_Options.GetAppOptionString ("web", "1");
+	WebSetInUseCheck (WebInUse, this);
 	m_Network.SetWebOptions (strcmp (pWeb, "0") == 0 ? 0 : (strcasecmp (pWeb, "ro") == 0 ? 2 : 1),
 				 m_Options.GetAppOptionString ("webpass", ""));
+	m_Network.SetWebProtect (strcmp (m_Options.GetAppOptionString ("webprotect", "1"), "0") != 0);
 	m_Network.Start (Mode, "zxmetalcircle", nTimeZone, bDST,
 			 bStatic ? IP : 0, Mask, Gateway, DNS);
 
@@ -1803,8 +1839,61 @@ void CKernel::StartNetwork (void)
 }
 
 // Carga cualquier fichero según su extensión (selector y web)
+// Para la web: si el emulador usa pPath o algo dentro de ella (si es una
+// carpeta). En uso es lo que se escribirá en su sitio: los discos del +3, los
+// microdrives, el disco duro montado y la cinta si los SAVE van a la SD
+bool CKernel::IsPathInUse (const char *pPath)
+{
+	auto Used = [&] (const char *pUsed)
+	{
+		return pUsed[0] != '\0' && strncmp (pUsed, "ZIP:", 4) != 0 && WebPathIsUnder (pUsed, pPath);
+	};
+	for (unsigned i = 0; i < 2; i++)
+	{
+		if (Used (m_DSKPath[i]))
+		{
+			return true;
+		}
+	}
+	for (unsigned i = 0; i < MICRODRIVES; i++)
+	{
+		if (Used (m_MDRPath[i]))
+		{
+			return true;
+		}
+	}
+	if (Used (m_HDDPath))
+	{
+		return true;
+	}
+	int nSave = m_Settings.Find ("savetrap");
+	return    m_Tape.IsInserted () && nSave >= 0 && strcmp (m_Settings.GetValue (nSave), "1") == 0
+	       && Used (m_TapePath);
+}
+
+bool CKernel::WebInUse (const char *pPath, void *pParam)
+{
+	return static_cast<CKernel *> (pParam)->IsPathInUse (pPath);
+}
+
 void CKernel::LoadAnyFile (const char *pPath)
 {
+	// "SD:/carpeta/pack.zip|dentro/juego.tap" (desde la web): ese fichero del ZIP
+	for (const char *p = pPath; *p != '\0'; p++)
+	{
+		if (*p == '|' && p - pPath > 4 && strncasecmp (p - 4, ".zip", 4) == 0)
+		{
+			CString Zip;
+			for (const char *q = pPath; q < p; q++)
+			{
+				char c[2] = {*q, '\0'};
+				Zip.Append (c);
+			}
+			OpenZip (Zip, p + 1);
+			return;
+		}
+	}
+
 	if (strncmp (pPath, "NET:", 4) == 0)
 	{
 		DownloadAndLoad (pPath);
@@ -1914,7 +2003,7 @@ boolean CKernel::ReadSource (const char *pPath, u8 *pBuffer, unsigned nSize)
 	return bOK;
 }
 
-void CKernel::OpenZip (const char *pPath)
+void CKernel::OpenZip (const char *pPath, const char *pEntry)
 {
 	FIL File;
 	if (f_open (&File, pPath, FA_READ | FA_OPEN_EXISTING) != FR_OK)
@@ -1938,6 +2027,25 @@ void CKernel::OpenZip (const char *pPath)
 	if (!bOK || !m_Zip.Open (m_pZipData, nSize))
 	{
 		ShowMessage (T ("ZIP no válido"));
+		return;
+	}
+
+	// uno concreto (lo ha elegido la web): por su nombre completo dentro del ZIP
+	if (pEntry != 0)
+	{
+		for (unsigned i = 0; i < m_Zip.GetCount (); i++)
+		{
+			if (!m_Zip.IsDirectory (i) && strcmp (m_Zip.GetName (i), pEntry) == 0)
+			{
+				if (!ZipLoadable (m_Zip.GetBaseName (i), 0))
+				{
+					break;
+				}
+				LoadZipEntry (i);
+				return;
+			}
+		}
+		ShowMessage (T ("No está en el ZIP"));
 		return;
 	}
 
@@ -1979,6 +2087,93 @@ void CKernel::OpenZip (const char *pPath)
 	{
 		m_Menu.SetChoiceItem (i, m_Zip.GetBaseName (m_ZipChoice[i]));
 	}
+}
+
+// Búsqueda en ZXDB desde el navegador de ficheros (la línea «Buscar en
+// internet (ZXDB)» de la raíz, o F3): la misma búsqueda y descarga que la web
+// (ZXInfo y Spectrum Computing), en su tarea de red. ZXInfo encuentra los
+// títulos aunque se escriban en mayúsculas y con espacios («R TYPE»), así que
+// basta la línea de texto del menú (letras, números y espacio)
+void CKernel::ZXDBAsk (void)
+{
+	m_bZXDBInput = TRUE;
+	m_Menu.OpenInput (T ("Buscar en internet (ZXDB)"), T ("Escribe el título, o una parte"),
+			  T ("(letras, números y espacios)"), T ("ENTER buscar  BORRAR corregir  ESC salir"));
+}
+
+void CKernel::ZXDBSearchTitle (const char *pQuery)
+{
+	strncpy (m_ZXDBQuery, pQuery, sizeof m_ZXDBQuery - 1);
+	m_ZXDBQuery[sizeof m_ZXDBQuery - 1] = '\0';
+
+	CString Error;
+	int nCount = ZXDBSearch (m_ZXDBQuery, m_ZXDBResults, ZXINFO_MAX_RESULTS, &Error);
+	if (nCount < 0)
+	{
+		ShowMessage (Error);
+		ZXDBAsk ();
+		return;
+	}
+	if (nCount == 0)
+	{
+		ShowMessage (T ("ZXDB: no se ha encontrado nada"));
+		ZXDBAsk ();
+		return;
+	}
+	m_nZXDBResults = nCount;
+	ZXDBShowResults ();
+}
+
+void CKernel::ZXDBShowResults (unsigned nSelected)
+{
+	m_bZXDBChoice = TRUE;
+	CString Title;
+	Title.Format (T ("ZXDB: %s"), m_ZXDBQuery);
+	m_Menu.OpenChoice (Title);
+	for (unsigned i = 0; i < m_nZXDBResults; i++)
+	{
+		const TZXInfoResult &R = m_ZXDBResults[i];
+		CString Item, Year;
+		if (R.nYear != 0)
+		{
+			Year.Format ("%u, ", R.nYear);
+		}
+		if (R.Path[0] != '\0')
+		{
+			Item.Format ("%s (%s%s) %s", R.Title, (const char *) Year, R.Publisher, R.Format);
+		}
+		else
+		{
+			Item.Format ("%s (%s%s) - %s", R.Title, (const char *) Year, R.Publisher, T ("sin fichero"));
+		}
+		m_Menu.SetChoiceItem (i, Item);
+	}
+	m_Menu.SetChoiceSelected (nSelected);		// al volver tras un aviso, en la misma
+}
+
+void CKernel::ZXDBChoose (unsigned nResult)
+{
+	if (nResult >= m_nZXDBResults)
+	{
+		return;
+	}
+	const TZXInfoResult &R = m_ZXDBResults[nResult];
+	if (R.Path[0] == '\0')
+	{
+		ShowMessage (T ("Ese programa no tiene fichero en ZXDB"));
+		ZXDBShowResults (nResult);
+		return;
+	}
+
+	CString SDPath, Message;
+	if (!ZXDBDownload (R.Path, &SDPath, &Message))
+	{
+		ShowMessage (Message);
+		ZXDBShowResults (nResult);
+		return;
+	}
+	m_Menu.Close ();
+	LoadAnyFile (SDPath);			// queda en SD:/descargas para la próxima vez
 }
 
 void CKernel::LoadZipEntry (unsigned nEntry)
@@ -2449,7 +2644,11 @@ void CKernel::ApplySetting (unsigned nIndex)
 		return;
 	}
 
-	if (strcmp (pKey, "lang") == 0)
+	if (strcmp (pKey, "webprotect") == 0)
+	{
+		m_Network.SetWebProtect (strcmp (pValue, "0") != 0);
+	}
+	else if (strcmp (pKey, "lang") == 0)
 	{
 		m_I18n.SetLanguage (pValue);
 		SetupHardDiskList ();		// ("ninguno" en el idioma nuevo)
@@ -3271,7 +3470,7 @@ void CKernel::LoadTKROMs (const char *pTKROM, const char *pTKLang, const char *p
 		const char *pLang = pTKLang;
 		if (strcasecmp (pLang, "auto") == 0)
 		{
-			pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strcasecmp (pMenu, "pt") == 0 ? "pt" : "es";
+			pLang = strcasecmp (pMenu, "en") == 0 ? "en" : strncasecmp (pMenu, "pt", 2) == 0 ? "pt" : "es";	// pt y pt-br
 		}
 		boolean bPT = strcasecmp (pLang, "pt") == 0;
 
@@ -3960,7 +4159,7 @@ boolean CKernel::InsertMicrodrive (const char *pPath, int nForceDrive)
 	}
 	if (nDrive >= MICRODRIVES)
 	{
-		ShowMessage (T ("Las 8 unidades están ocupadas (Alt+M las vacía)"));
+		ShowMessage (T ("8 unidades ocupadas (Alt+M las vacía)"));
 		return FALSE;
 	}
 
@@ -4592,6 +4791,34 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			EjectUnit (m_Menu.GetSelectedUnit ());
 			UpdateUnitLines ();
+		}
+		else if (Result == MenuResultZXDBSearch)
+		{
+			ZXDBAsk ();
+		}
+		else if ((Result == MenuResultInput || Result == MenuResultInputCancel) && m_bZXDBInput)
+		{
+			m_bZXDBInput = FALSE;
+			if (Result == MenuResultInput && m_Menu.GetInput ()[0] != '\0')
+			{
+				ZXDBSearchTitle (m_Menu.GetInput ());
+			}
+			else
+			{
+				m_Menu.OpenBrowser ();		// ESC (o nada escrito): al navegador
+			}
+		}
+		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bZXDBChoice)
+		{
+			m_bZXDBChoice = FALSE;
+			if (Result == MenuResultChoice)
+			{
+				ZXDBChoose (m_Menu.GetChoice ());
+			}
+			else
+			{
+				ZXDBAsk ();			// ESC: otra búsqueda
+			}
 		}
 		else if (Result == MenuResultInput)
 		{
@@ -5252,12 +5479,9 @@ void CKernel::DrawKeyDebug (TPixel *pScreen)
 	const TVisibleRect &rVisible = m_Video.GetVisibleRect ();
 	int x0 = rVisible.x + 4, y0 = rVisible.y + 4;
 
-	unsigned nPadLines = 0;				// una línea por mando, debajo
-	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
-	{
-		nPadLines += m_pGamePads[i] != 0;
-	}
-	m_Video.FillRect (pScreen, x0 - 2, y0 - 2, 34 * 8 + 4, (12 + nPadLines) * 8 + 4, COLOR_UI_PANEL);
+	int nFirst, nEnd;				// una línea por mando, debajo
+	KeyDebugRows (&nFirst, &nEnd);
+	m_Video.FillRect (pScreen, x0 - 2, nFirst, 34 * 8 + 4, nEnd - nFirst, COLOR_UI_PANEL);
 
 	CString Line;
 	Line.Format ("USB mod %02X teclas %02X %02X %02X %02X %02X %02X",
@@ -5845,13 +6069,50 @@ TShutdownMode CKernel::Run (void)
 		else if (!bAccelerating || (m_nFrames % ACCEL_PRESENT_EVERY) == 0)
 		{
 			m_nSkippedFrames = 0;
+			// El aviso y el panel de Alt+D no deben quedarse en la imagen del
+			// Spectrum: al abrir el menú (o una operación larga) esa imagen se
+			// congela como fondo, y un aviso más corto dejaría a la derecha los
+			// restos del anterior. Se guardan las líneas que van a ocupar, se
+			// pinta, se muestra (ShowFrame la copia o la escala al momento) y
+			// se reponen: solo esas líneas, no la imagen entera. Los indicadores
+			// (pequeños) siguen en la imagen, como siempre
 			TPixel *pScreen = m_pSpectrum->GetScreenBuffer ();
-			DrawMessage (pScreen);	// la emulación redibuja todo en el cuadro siguiente
+			DrawIndicators (pScreen);
+			int Band[2][2];
+			unsigned nBands = 0;
+			if (m_nMessageFrames > 0)
+			{
+				MessageRows (&Band[nBands][0], &Band[nBands][1]);
+				nBands++;
+			}
+			if (m_bKeyDebug)
+			{
+				KeyDebugRows (&Band[nBands][0], &Band[nBands][1]);
+				nBands++;
+			}
+			TPixel *pSave = m_pOverlay;		// libre mientras se emula
+			for (unsigned i = 0; i < nBands; i++)
+			{
+				if (Band[i][0] < 0) Band[i][0] = 0;
+				if (Band[i][1] > SCREEN_HEIGHT) Band[i][1] = SCREEN_HEIGHT;
+				if (Band[i][1] < Band[i][0]) Band[i][1] = Band[i][0];
+				unsigned nPixels = (Band[i][1] - Band[i][0]) * SCREEN_WIDTH;
+				memcpy (pSave, pScreen + Band[i][0] * SCREEN_WIDTH, nPixels * sizeof (TPixel));
+				pSave += nPixels;
+			}
+			DrawMessageText (pScreen);
 			if (m_bKeyDebug)
 			{
 				DrawKeyDebug (pScreen);
 			}
 			ShowFrame (pScreen);
+			pSave = m_pOverlay;			// en el mismo orden en que se guardaron
+			for (unsigned i = 0; i < nBands; i++)
+			{
+				unsigned nPixels = (Band[i][1] - Band[i][0]) * SCREEN_WIDTH;
+				memcpy (pScreen + Band[i][0] * SCREEN_WIDTH, pSave, nPixels * sizeof (TPixel));
+				pSave += nPixels;
+			}
 		}
 
 		if (!bAccelerating)

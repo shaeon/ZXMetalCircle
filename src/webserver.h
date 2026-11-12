@@ -19,7 +19,13 @@ void WebRequestLoad (const char *pPath);	// pide cargar un fichero en el Spectru
 boolean WebTLSVerify (void);			// comprobar certificados (tlsverify=1)
 unsigned WebMode (void);			// 1 = completo, 2 = solo lectura
 const char *WebPassword (void);		// "" = sin contraseña
+bool WebProtect (void);			// lo del sistema, protegido (webprotect=1)
 void WebBusy (const char *pText);		// aviso en pantalla: red en uso (operación larga)
+
+// Lo registra el kernel: si el emulador usa esa ruta (un disco, un microdrive,
+// el disco duro, la cinta en la que se graba) o algo dentro de ella
+typedef bool (*TWebInUse) (const char *pPath, void *pParam);
+void WebSetInUseCheck (TWebInUse pFunc, void *pParam);
 
 // Servidor web: navegador de la SD con subida, descarga, borrado y carga
 class CZXWebServer : public CHTTPDaemon
@@ -40,12 +46,20 @@ private:
 			      const char **ppContentType);
 	THTTPStatus SendDirectory (const char *pDir, const char *pMessage,
 				   u8 *pBuffer, unsigned *pLength);
-	CString Upload (const char *pDir);
+	CString Upload (const char *pDir, const char *pParams);
+	CString Rename (const char *pParams);
+	CString Move (const char *pParams);
 	THTTPStatus SendSearch (const char *pQuery, u8 *pBuffer, unsigned *pLength);
+	THTTPStatus SendZip (const char *pDir, const char *pZip, u8 *pBuffer, unsigned *pLength);
 	CString Download (const char *pPath);
 	THTTPStatus SendLogin (const char *pMessage, u8 *pBuffer, unsigned *pLength);
 	void AddToken (CString *pHtml);		// la clave de sesión en enlaces y formularios
 	char m_Token[24];			// clave de esta petición ("" = sin contraseña)
 };
+
+// ZXDB desde el menú de la Pi (ver webserver.cpp): esperan a que termine
+#include "download/zxinfo.h"
+int ZXDBSearch (const char *pQuery, TZXInfoResult *pResults, unsigned nMaxResults, CString *pError);
+boolean ZXDBDownload (const char *pPath, CString *pSDPath, CString *pMessage);
 
 #endif

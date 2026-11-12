@@ -1,0 +1,48 @@
+# Construye la imagen del entorno de compilación (docker/Dockerfile) y la sube
+# al registro de paquetes de GitHub (GHCR), como
+# ghcr.io/<dueño>/zxmetalcircle-build:<docker/VERSION> y :latest.
+#
+# Se ejecuta sola cuando cambia algo de la carpeta docker/ en main o dev, y a
+# mano (Actions > Docker > Run workflow). La Action «Build» compila dentro de
+# esa imagen.
+name: Docker
+
+on:
+  push:
+    branches: [main, dev]
+    paths: ['docker/**', '.github/workflows/docker.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write   # para subir la imagen a GHCR
+
+jobs:
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versión de la imagen
+        id: version
+        run: |
+          v=$(tr -d '[:space:]' < docker/VERSION)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/zxmetalcircle-build" >> "$GITHUB_OUTPUT"
+          echo "Imagen ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/zxmetalcircle-build:$v"
+
+      - name: Entrar en GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construir y subir la imagen
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          push: true
+          tags: |
+            ${{ steps.version.outputs.image }}:${{ steps.version.outputs.version }}
+            ${{ steps.version.outputs.image }}:latest

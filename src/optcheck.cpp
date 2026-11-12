@@ -76,6 +76,7 @@ static const TOptionDef Options[] =
 	{"esxdir",	0},
 	{"web",		0},
 	{"webpass",	0},
+	{"webprotect",	0},
 	{"romsnet",	0},
 	{"ear",		"0|gpio|usb"},
 	{"earpin",	0},

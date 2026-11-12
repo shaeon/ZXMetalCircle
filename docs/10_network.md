@@ -17,16 +17,28 @@ At boot, the connection is made in the background. When it is ready, a message w
 
 **Web server**: open that address in the PC's or phone's browser. From there you can:
 - browse the folders of the SD card;
+- **load** a file into the Spectrum **by clicking its name**: it does the same as choosing it in the Pi's file browser (tape, snapshot, cartridge, microdrive, +3 disk or hard disk). Files the emulator cannot load are shown without a link. A hard disk (`.hdf`, `.img`, `.vhd`, `.raw`) asks for confirmation, because mounting it restarts the Spectrum;
+- **see what is inside a ZIP** by clicking its name, and **load** the file you want from it by clicking its name (without choosing it on the Pi's screen). Disks and microdrive cartridges from a ZIP are extracted to `tmp`, as from the Pi; if one is already there, the Pi's screen asks whether to use it or overwrite it;
+- **download** any file up to 4 MB, for example your saved games, snapshots or microdrive cartridges. Bigger ones show "over 4 MB": copy them by taking the card out;
 - **upload** several files at once to the current folder (up to 32 MB in total, like the ZIP files the emulator opens);
-- **download** any file (up to 4 MB), for example your saved games, snapshots or microdrive cartridges;
-- **load** a tape, snapshot, cartridge or microdrive straight into the Spectrum;
-- **delete** files (it asks for confirmation) and **create folders**.
+- **rename** files and folders;
+- **move** files and folders: "move" marks it, you go to the destination folder and click "Paste here" (or "Cancel"). It is instant, because nothing is copied: it just changes folder;
+- **replace** a file with another one you choose on your computer (it asks for confirmation);
+- **delete** files and empty folders (it asks for confirmation) and **create folders**.
+
+On a phone, each row's actions appear when you tap **⋮** (tapping elsewhere closes the menu); on a computer, they are shown in the row.
+
+**What cannot be touched from the web page** (it cannot be renamed, moved, replaced or deleted):
+- **What the emulator is using**: a +3 disk or a microdrive cartridge that is inserted, the mounted hard disk (by default, `hdd/esxdos.img`) and the inserted tape if SAVEs go to the SD card. It is shown as "in use": eject it first.
+- **System files**, shown as "protected": the boot files in the root (kernels, firmware, `config.txt`, `cmdline.txt`...), the folders the emulator uses (`roms`, `saves`, `snaps`, `descargas`, `joysticks`, `hdd`..., although their contents can be changed, for example to add your ROMs or delete saved games) and everything in `overlays`, `firmware`, `certs`, `locales` and `update`. If you need to change any of that from the web page (for example, to upload a kernel), set **"System files" to "unprotected"** on page 9 of the settings (or `webprotect=0`): then you can, but every operation on a system file asks for confirmation. That option can only be changed on the Pi itself, not from the web page. What is in use stays protected anyway.
+
+Uploads are first written to a temporary file, and only replace the existing one when they finish: if something fails halfway, the original is not lost. And everything that changes something carries a security code that only the page itself knows, so that another web page cannot do it through a hidden link: if you ever see "Request expired", reload the page (it happens, for example, after restarting the Pi).
 
 It also announces itself on the local network (mDNS) as the "ZXMetalCircle" web service.
 
 **Protecting the page** (F1, C, page 9, or in `cmdline.txt`):
 - `web=0` turns it off completely (the server is not even started); in F1 the network line says "(web off)".
-- `web=ro` makes it **read-only**: you can browse the SD card, download files, search ZXDB and load a game, but not upload, delete, create folders or download from ZXDB to the SD card (those options do not even appear).
+- `web=ro` makes it **read-only**: you can browse the SD card, download files, search ZXDB and load a game, but not upload, delete, rename, move, replace, create folders or download from ZXDB to the SD card (those options do not even appear).
 - `webpass=` sets a **password** (in the settings it is typed with lowercase letters and numbers, and shown as `********`). The page asks for it once and then creates a random session key that goes into the links and forms (Circle's web server gives no access to cookies or to the browser's password). The keys are lost when the Pi is switched off; after 5 failed attempts you have to wait 30 s. It is not encrypted (HTTP): it protects you from curious people on your network, not from someone eavesdropping.
 
 **Time**: taken from `pool.ntp.org`. The files you save (SAVE, snapshots, microdrives) carry the real date and time. The zone is set with `tz=` and European summer time is applied automatically (`dst=1`).
@@ -39,6 +51,11 @@ The emulator's web page has a search box: you type a title and it searches **ZXD
 - Only Spectrum programs are shown: no ZX81, SAM Coupé, etc.
 - For each one the best available file is chosen, in this order: TZX, TAP, Z80, SNA, SZX, DSK, CSW…
 - With "**download and load**", the emulator fetches it from spectrumcomputing.co.uk, unzips it if it comes as a ZIP, saves it in the **`descargas`** (downloads) folder of the SD card and loads it into the Spectrum. If needed, it changes model, for example to the +3 for a `.DSK`.
+
+**Also from the emulator itself**, without the web page: in the file browser (F1 and ENTER), with a network, the line **"Search the internet (ZXDB)"** appears at the top of the SD card's root, and **F3** goes straight to it from any folder.
+1. Type the title, or part of it, with letters, numbers and spaces: no hyphens or dots are needed (for *R-Type*, `R TYPE` is enough).
+2. A list with the results appears: title, year, publisher and file format. Those without a file in ZXDB say so.
+3. Choosing one downloads and loads it, as with "download and load" on the web page, and it stays in the `descargas` folder for next time. ESC in the list starts another search; ESC while typing goes back to the browser.
 
 **How it works**:
 - `src/download/httpsclient.cpp` is an HTTP/1.1 client with redirects and chunked responses.

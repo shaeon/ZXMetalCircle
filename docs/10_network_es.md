@@ -17,16 +17,28 @@ Al arrancar, la conexión se hace en segundo plano. Cuando está lista, aparece 
 
 **Servidor web**: abre esa dirección en el navegador del PC o del móvil. Desde ahí puedes:
 - recorrer las carpetas de la SD;
+- **cargar** un fichero en el Spectrum **pulsando su nombre**: hace lo mismo que elegirlo en el navegador de ficheros de la Pi (cinta, snapshot, cartucho, microdrive, disco del +3 o disco duro). Los ficheros que el emulador no sabe cargar salen sin enlace. Con un disco duro (`.hdf`, `.img`, `.vhd`, `.raw`) se pide confirmación, porque montarlo reinicia el Spectrum;
+- **ver el contenido de un ZIP** pulsando su nombre, y **cargar** el fichero de dentro que quieras pulsando el suyo (sin tener que elegirlo en la pantalla de la Pi). Los discos y microdrives de un ZIP se sacan a `tmp`, como desde la Pi; si ya estaba ahí, se pregunta en la pantalla de la Pi si usar el que hay o sobrescribirlo;
+- **descargar** cualquier fichero de hasta 4 MB, por ejemplo tus partidas, snapshots o cartuchos de microdrive. Los más grandes muestran «más de 4 MB»: cópialos sacando la tarjeta;
 - **subir** varios ficheros a la vez a la carpeta en la que estés (hasta 32 MB en total, como los ZIP que abre el emulador);
-- **descargar** cualquier fichero (hasta 4 MB), por ejemplo tus partidas, snapshots o cartuchos de microdrive;
-- **cargar** una cinta, snapshot, cartucho o microdrive directamente en el Spectrum;
-- **borrar** ficheros (pide confirmación) y **crear carpetas**.
+- **renombrar** ficheros y carpetas;
+- **mover** ficheros y carpetas: «mover» lo marca, vas a la carpeta de destino y pulsas «Pegar aquí» (o «Cancelar»). Es inmediato, porque no se copia: solo cambia de carpeta;
+- **sustituir** un fichero por otro que eliges en tu ordenador (pide confirmación);
+- **borrar** ficheros y carpetas vacías (pide confirmación) y **crear carpetas**.
+
+En el móvil, las acciones de cada fila salen al pulsar **⋮** (un toque fuera cierra el menú); en el ordenador, directamente en la fila.
+
+**Lo que no se puede tocar desde la web** (no se puede renombrar, mover, sustituir ni borrar):
+- **Lo que está usando el emulador**: un disco del +3 o un microdrive puesto, el disco duro montado (por defecto, `hdd/esxdos.img`) y la cinta puesta si los SAVE van a la SD. Sale como «en uso»: sácalo primero.
+- **Lo del sistema**, que sale como «protegido»: los ficheros del arranque de la raíz (kernels, firmware, `config.txt`, `cmdline.txt`…), las carpetas que usa el emulador (`roms`, `saves`, `snaps`, `descargas`, `joysticks`, `hdd`…, aunque su contenido sí se puede tocar, por ejemplo para añadir tus ROMs o borrar partidas) y todo lo de `overlays`, `firmware`, `certs`, `locales` y `update`. Si necesitas cambiar algo de eso desde la web (por ejemplo, subir un kernel), pon **«Ficheros del sistema» en «sin proteger»** en la página 9 de la configuración (o `webprotect=0`): entonces se puede, pero cada operación sobre algo del sistema pide confirmación. Esa opción solo se cambia en la propia Pi, no desde la web. Lo que está en uso sigue protegido siempre.
+
+Las subidas se escriben primero en un fichero temporal, y solo al terminar sustituyen al que había: si algo falla a mitad, no se pierde el original. Y todo lo que cambia algo lleva un código de seguridad que solo conoce la propia página, para que una página de fuera no pueda hacerlo con un enlace escondido: si alguna vez sale «Petición caducada», vuelve a cargar la página (pasa, por ejemplo, tras reiniciar la Pi).
 
 Además, se anuncia en la red local (mDNS) como servicio web "ZXMetalCircle".
 
 **Proteger la página** (F1, C, página 9, o en `cmdline.txt`):
 - `web=0` la apaga del todo (ni siquiera se arranca el servidor); en F1 la línea de la red dice "(web apagada)".
-- `web=ro` la deja en **solo lectura**: se puede ver la SD, bajar ficheros, buscar en ZXDB y mandar cargar un juego, pero no subir, borrar, crear carpetas ni descargar de ZXDB a la SD (esas opciones ni aparecen).
+- `web=ro` la deja en **solo lectura**: se puede ver la SD, bajar ficheros, buscar en ZXDB y mandar cargar un juego, pero no subir, borrar, renombrar, mover, sustituir, crear carpetas ni descargar de ZXDB a la SD (esas opciones ni aparecen).
 - `webpass=` pone una **contraseña** (en la configuración se escribe con letras minúsculas y números, y se ve como `********`). La página la pide una vez y entonces crea una clave de sesión al azar que va en los enlaces y formularios (el servidor web de Circle no da acceso a cookies ni a la contraseña del navegador). Las claves se pierden al apagar la Pi; tras 5 intentos fallidos hay que esperar 30 s. Va sin cifrar (HTTP): protege de curiosos de tu red, no de alguien que la espíe.
 
 **Hora**: se toma de `pool.ntp.org`. Los ficheros que grabes (SAVE, snapshots, microdrives) llevan fecha y hora reales. La zona se ajusta con `tz=` y el horario de verano europeo se aplica solo (`dst=1`).
@@ -39,6 +51,11 @@ En la página web del emulador hay un buscador: escribes un título y busca en *
 - Solo salen programas de Spectrum: ni ZX81, ni SAM Coupé, etc.
 - Para cada uno se elige el mejor fichero disponible, por este orden: TZX, TAP, Z80, SNA, SZX, DSK, CSW…
 - Con "**descargar y cargar**", el emulador lo baja de spectrumcomputing.co.uk, lo descomprime si viene en ZIP, lo guarda en la carpeta **`descargas`** de la SD y lo carga en el Spectrum. Si hace falta, cambia de modelo, por ejemplo al +3 para un `.DSK`.
+
+**También desde el propio emulador**, sin la página web: en el navegador de ficheros (F1 y ENTER), con red, la línea **«Buscar en internet (ZXDB)»** aparece al principio de la raíz de la SD, y **F3** lleva directo a ella desde cualquier carpeta.
+1. Escribe el título, o una parte, con letras, números y espacios: no hacen falta guiones ni puntos (para *R-Type* basta con `R TYPE`).
+2. Sale una lista con los resultados: título, año, editora y el formato del fichero. Los que no tienen fichero en ZXDB lo indican.
+3. Al elegir uno, se descarga y se carga, igual que con «descargar y cargar» en la web, y queda en la carpeta `descargas` para la próxima vez. ESC en la lista hace otra búsqueda; ESC al escribir vuelve al navegador.
 
 **Cómo funciona**:
 - `src/download/httpsclient.cpp` es un cliente HTTP/1.1 con redirecciones y respuestas "chunked".

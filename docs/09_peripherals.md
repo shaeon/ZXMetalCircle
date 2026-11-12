@@ -35,7 +35,9 @@ The Spectranet (Alt+T), the divMMC with esxDOS (Alt+X), the LEC memory (Alt+L) a
 
 ULAplus is a modern extension of the ULA that adds a palette of 64 colours, chosen from 256. Many recent games and demos use it, and old programs are not affected.
 
-- **Ports**: 0xBF3B (register) and 0xFF3B (data), decoded as in JSpeccy.
+- **Ports**: 0xBF3B (register) and 0xFF3B (data). A15, A14 and A7-A0 are checked, not A13-A8, as in Rodolfo Guerra's ToK'ra FPGA core: programs load the palette with OTIR, which keeps lowering the high byte of the port. The esxDOS clock ports (0x7C3B, 0x7D3B) are not ULAplus ports.
+- **Contention**: on Sinclair models, its ports have the same contention as the ULA ones, even though they are odd.
+- **On the TK90X and TK95**, ULAplus is an extension: it works in Rodolfo Guerra's ToK'ra FPGA core, but a period TK did not have it, and its contention on a real TK is not verified yet, so its ports are treated like any other odd port.
 - **Palette**: registers 0–63 are the palette entries, in GGGRRRBB format. Register 64 (mode group) turns the palette on or off.
 - **With the mode on**, the FLASH and BRIGHT bits of each attribute choose one of the 4 sub-palettes of 16 colours (8 ink and 8 paper), so there is no more flashing. The border uses the paper colours of the first sub-palette.
 - Palette changes in mid-frame are respected: the image is generated directly in colour (RGB565), and what was drawn before the change keeps its colours.

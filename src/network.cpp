@@ -50,6 +50,7 @@ CNetworkManager::CNetworkManager (void)
 	m_pBusyParam (0)
 {
 	m_WebPassword[0] = '\0';
+	m_bWebProtect = true;
 	s_pThis = this;
 	m_IPAddress[0] = '\0';
 }
@@ -349,6 +350,12 @@ unsigned WebMode (void)
 {
 	CNetworkManager *p = CNetworkManager::Get ();
 	return p != 0 ? p->GetWebMode () : 1;
+}
+
+bool WebProtect (void)
+{
+	CNetworkManager *p = CNetworkManager::Get ();
+	return p == 0 || p->GetWebProtect ();
 }
 
 const char *WebPassword (void)

@@ -617,6 +617,17 @@ void CSpectrum::SetULAplusColor (unsigned nIndex, u8 nColor)
 	m_ULAplusColor[nIndex] = RGB565 (ULAplusToRGB (nColor));
 }
 
+// Los puertos de ULAplus: A7-A0 = 0x3B, A15 = 1 y A14 = 0 (registro, 0xBF3B)
+// o 1 (datos, 0xFF3B). A13-A8 no se miran, como en el núcleo ToK'ra de Rodolfo
+// Guerra: los programas cargan la paleta con OTIR, que va bajando la parte alta
+// del puerto (0xFF3B, 0xFE3B, 0xFD3B...). Los del reloj de esxDOS (0x7C3B,
+// 0x7D3B) tienen A15 = 0: no son de ULAplus.
+static inline boolean IsULAplusPort (uint16_t nPort)
+{
+	u16 nMasked = nPort & 0xC0FF;
+	return nMasked == 0x803B || nMasked == 0xC03B;
+}
+
 void CSpectrum::ULAplusWrite (uint16_t nPort, u8 nValue)
 {
 	if ((nPort & 0x4000) == 0)
@@ -1036,6 +1047,7 @@ bool CSpectrum::isActiveINT (void)
 //                 No              |   1   | N:1, N:3
 //                 Sí              |   0   | C:1, C:3
 //                 Sí              |   1   | C:1, C:1, C:1, C:1
+// Los de ULAplus, como los de la ULA (bit 0 = 0) aunque sean impares.
 void CSpectrum::PreIO (uint16_t nPort)
 {
 	if (m_bContendedIO[nPort >> 14])
@@ -1059,7 +1071,11 @@ void CSpectrum::PostIO (uint16_t nPort)
 		return;
 	}
 
-	if (nPort & 0x0001)
+	// Los puertos de ULAplus los atiende la propia ULA: tienen su contención
+	// aunque sean impares (José Luis Sánchez, JSpeccy)
+	boolean bULAPort = !(nPort & 0x0001) || (m_bULAplusEnabled && IsULAplusPort (nPort));
+
+	if (!bULAPort)
 	{
 		if (m_bContendedIO[nPort >> 14])
 		{
@@ -1382,7 +1398,7 @@ uint8_t CSpectrum::inPort (uint16_t port)
 		return nValue;
 	}
 
-	if (m_bULAplusEnabled && (port & 0x4004) == 0x4000)
+	if (m_bULAplusEnabled && IsULAplusPort (port) && (port & 0x4000))	// datos (0xFF3B)
 	{
 		return m_nULAplusRegister == 0x40 ? (m_bULAplusActive ? 0x01 : 0x00)
 						  : m_ULAplusPalette[m_nULAplusRegister];
@@ -1549,12 +1565,11 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 		m_nPortFE = value;
 	}
 
-	// ULAplus: solo 0xBF3B (registro) y 0xFF3B (datos), como Fuse. Mirando solo
-	// A2 (como JSpeccy) respondía también a los de la divMMC (0xE3, 0xEB) y a
-	// los del reloj de esxDOS (0x7C3B, 0x7D3B): esxDOS, al abrir y cerrar el
-	// navegador de la NMI, escribe en el reloj después de apagar ULAplus, y eso
-	// lo volvía a encender con la paleta sin preparar (pantalla en negro)
-	if (m_bULAplusEnabled && (port == 0xBF3B || port == 0xFF3B))
+	// ULAplus: 0xBF3B (registro) y 0xFF3B (datos), con sus espejos (ver
+	// IsULAplusPort). Antes respondía a cualquier puerto con A2 = 0 (como
+	// JSpeccy), también a los de la divMMC (0xE3, 0xEB) y a los del reloj de
+	// esxDOS (0x7C3B, 0x7D3B), que dejaban ULAplus encendido al salir de la NMI
+	if (m_bULAplusEnabled && IsULAplusPort (port))
 	{
 		ULAplusWrite (port, value);
 	}
@@ -1629,8 +1644,10 @@ int CSpectrum::TstatesToBorderPix (int nTstates)
 	// relativo al principio del papel en su línea (nPaperCol: 0 salvo en
 	// la ULA de Microdigital de los TK). Un tiempo negativo es el final de
 	// la línea anterior a la primera (el borde izquierdo de la línea 0 en el
-	// TK a 60 Hz), no el final del cuadro.
-	nTstates %= T->nTstatesFrame;
+	// TK a 60 Hz), no el final del cuadro. Y uno posterior al final del cuadro
+	// sigue en la última línea: en los TK, con el papel desplazado, el borde
+	// derecho de la última línea cae ahí (antes se le daba la vuelta al cuadro
+	// y esa esquina, abajo a la derecha, no se pintaba nunca: una raya negra)
 	nTstates -= T->nPaperCol;
 	int nRow = nTstates >= 0 ? nTstates / T->nTstatesLine : -1;
 	int nCol = nTstates - nRow * T->nTstatesLine;

@@ -29,7 +29,7 @@ La licencia y los créditos también se ven en el propio emulador: F1 y luego **
 
 - **Modelo del altavoz del beeper**: de Fuse (Fredrick Meunier: `ula_filter.c`, `speaker_filter.c`, `tv_filter.c`, GPL 2 o posterior).
 - **Aceleración de cargadores**: adaptada de Fuse (Philip Kendall y otros: `loader.c`, `loader_detector.c`, GPL 2 o posterior).
-- **Carga instantánea y cintas**: la trampa de LD-BYTES y los registros que deja siguen a Fuse (`tape_traps.c`); la polaridad de los bloques TZX, a libspectrum; el formato PZX, a la especificación de pzxtools (Patrik Rak).
+- **Carga instantánea y cintas**: la trampa de LD-BYTES y los registros que deja siguen a Fuse (`tape_traps.c`); la polaridad de los bloques TZX, a libspectrum, y el formato TZX, a su especificación (<https://worldofspectrum.net/TZXformat.html>); el formato PZX, a la especificación de pzxtools (Patrik Rak).
 - **Discos con protección**: la zona débil del Speedlock del +3 sigue a SAMdisk (Simon Owen, MIT, `IsSpectrumSpeedlockTrack`); los errores de CRC en la cabecera y el tramo débil de los sectores con varias copias, a Fuse (`disk.c`).
 
 - **Spectranet** © Dylan Smith (https://spectrum.alioth.net), firmware con licencia MIT; la emulación de la tarjeta se basa en la de Fuse (Philip Kendall y otros, GPL v2 o posterior).
@@ -70,7 +70,7 @@ Este proyecto se ofrece **"tal cual", sin garantía de ningún tipo**, expresa o
 
 ZX Spectrum y Sinclair son marcas de sus respectivos propietarios; Raspberry Pi es una marca de Raspberry Pi Ltd. Este proyecto no está afiliado a ellos ni cuenta con su respaldo.
 
-## Estado (versión 1.09)
+## Estado (versión 1.10)
 
 Hecho:
 
@@ -96,7 +96,10 @@ Hecho:
   - bloques de señal: 0x10 (estándar), 0x11 (turbo), 0x12 (tono), 0x13 (pulsos), 0x14 (datos puros), 0x15 (grabación directa), 0x18 (CSW, sin comprimir o Z-RLE) y 0x19 (datos generalizados);
   - bloques de control: 0x20 (pausa/parada), 0x23 (salto), 0x24/0x25 (bucles), 0x26/0x27 (llamada a secuencias y vuelta), 0x28 (selección), 0x2A (parar si 48K), 0x2B (nivel) y los informativos;
   - con un bloque **0x28** (cintas con varias partes o versiones), la cinta se para y sale una lista para elegir qué cargar: cursores y ENTER, o el número de la opción; ESC sigue con el bloque siguiente;
-  - los bloques no estándar se cargan siempre por pulsos, aunque esté elegida la carga instantánea.
+  - los bloques no estándar se cargan siempre por pulsos, aunque esté elegida la carga instantánea;
+  - un bloque sin pausa seguido de una parada, o al final de la cinta, termina con su flanco final y 1 ms, para que el cargador pueda leer el último bit (*Shadow of the Beast*, *Astro Marine Corps*);
+  - los bloques obsoletos 0x34 (información de emulación) y 0x40 (instantánea), de las revisiones del formato hasta la 1.13, se reconocen y se saltan;
+  - especificación del formato (revisión 1.20): <https://worldofspectrum.net/TZXformat.html>.
 - Ficheros .CSW sueltos (versiones 1 y 2, RLE y Z-RLE).
 - Ficheros .PZX (Perfect ZX Tape): pulsos (PULS), datos con su nivel inicial (DATA), pausas (PAUS), textos (BRWS) y paradas (STOP). Guardan la polaridad real de la señal, que el TZX no guarda: hay cargadores que la necesitan (Forbidden Planet). Los bloques de datos con los tiempos de la ROM se cargan también al instante.
 - **Polaridad**: en el navegador de bloques (F3), la tecla **P** invierte la señal de la cinta. Sirve para los TZX que la tienen al revés (con el de Forbidden Planet, el cargador desajusta medio bit y no termina nunca). Vuelve a la normal al poner otra cinta.
@@ -111,7 +114,7 @@ Hecho:
 - divMMC con esxDOS 0.8.9: su tarjeta es una imagen (`hdd/esxdos.img`) y lo que se deja en la carpeta `esxdos_i` se copia a ella; puertos divMMC en el +3e.
 - Tarjeta de red Spectranet, con el firmware oficial.
 - ROMs propias para cualquier máquina (carpeta `roms` de la SD).
-- Red por WiFi o cable: servidor web para gestionar la SD desde el navegador (se puede apagar, dejar en solo lectura o proteger con contraseña), hora por NTP y búsqueda y descarga de programas de ZXDB por HTTPS.
+- Red por WiFi o cable: servidor web para gestionar la SD desde el navegador (se puede apagar, dejar en solo lectura o proteger con contraseña), hora por NTP y búsqueda y descarga de programas de ZXDB por HTTPS, desde la web o desde el navegador de ficheros del propio emulador (F3).
 - Configuración desde el emulador (F1, C), con guardado en `cmdline.txt` y reinicio de la Pi.
 - Menús y página web en español e inglés (se pueden añadir más idiomas sin recompilar).
 - En las Pi de 4 núcleos, la ampliación de la imagen va en el núcleo 1.

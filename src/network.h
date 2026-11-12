@@ -93,6 +93,8 @@ public:
 	void SetTLSVerify (boolean bVerify)	{ m_bTLSVerify = bVerify; }
 	// Servidor web: 0 = apagado, 1 = completo, 2 = solo lectura; contraseña ("" = sin)
 	void SetWebOptions (unsigned nMode, const char *pPassword);
+	void SetWebProtect (bool bProtect)	{ m_bWebProtect = bProtect; }
+	bool GetWebProtect (void) const		{ return m_bWebProtect; }
 	unsigned GetWebMode (void) const	{ return m_nWebMode; }
 	const char *GetWebPassword (void) const	{ return m_WebPassword; }
 	boolean GetTLSVerify (void) const	{ return m_bTLSVerify; }
@@ -122,6 +124,7 @@ private:
 	boolean m_bTLSVerify;
 	unsigned m_nWebMode;
 	char m_WebPassword[33];
+	bool m_bWebProtect;			// lo del sistema, protegido en la web
 	TBusyHandler *m_pBusyHandler;
 	void *m_pBusyParam;
 	CString m_LoadPath;

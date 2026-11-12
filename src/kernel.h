@@ -26,6 +26,7 @@
 #include <fatfs/ff.h>
 #include <circle/types.h>
 
+#include "download/zxinfo.h"	// TZXInfoResult (búsqueda en ZXDB)
 #include "video.h"
 #include "zxkeyboard.h"
 #include "padprofile.h"
@@ -93,7 +94,7 @@ private:
 	boolean LoadSnapshot (const char *pPath);
 	// ZIP: cintas y snapshots al vuelo, discos y Microdrive a SD:/tmp
 	void LoadTKROMs (const char *pTKROM, const char *pTKLang, const char *pMenu, boolean bReset);
-	void OpenZip (const char *pPath);
+	void OpenZip (const char *pPath, const char *pEntry = 0);	// pEntry: cargar ese, sin preguntar
 	void LoadZipEntry (unsigned nEntry);
 	void ExtractZipToTmp (unsigned nEntry, boolean bOverwrite);
 	int SourceSize (const char *pPath);		// SD o "ZIP:nombre"
@@ -103,9 +104,16 @@ private:
 	void ToggleRecording (boolean bEarInput = FALSE);
 	void StartEarInput (void);
 	void LoadAnyFile (const char *pPath);
+	// Búsqueda en ZXDB desde el navegador (la línea de la raíz o F3)
+	void ZXDBAsk (void);				// pide el título
+	void ZXDBSearchTitle (const char *pQuery);	// busca y enseña los resultados
+	void ZXDBShowResults (unsigned nSelected = 0);
+	void ZXDBChoose (unsigned nResult);		// descarga y carga
 	void InsertDisk (const char *pPath, int nForceUnit = -1);	// 0: disco nuevo en la primera unidad libre
 	void EjectDisks (void);
 	void MountHardDisk (const char *pPath);
+	bool IsPathInUse (const char *pPath);		// la web: ¿se usa esta ruta o algo dentro?
+	static bool WebInUse (const char *pPath, void *pParam);
 	void DownloadAndLoad (const char *pNetPath);
 	static void BusyHandler (const char *pText, void *pParam);
 	static void NetBusyHandler (const char *pText, void *pParam);
@@ -202,6 +210,9 @@ private:
 	boolean WriteFile (const char *pPath, const u8 *pData, unsigned nSize, boolean bAppend);
 	void ShowMessage (const char *pMessage);
 	void DrawMessage (TPixel *pScreen);
+	void DrawMessageText (TPixel *pScreen);	// solo el aviso, sin los indicadores
+	void MessageRows (int *pFirst, int *pEnd);	// líneas que ocupa el aviso
+	void KeyDebugRows (int *pFirst, int *pEnd);	// y el panel de Alt+D
 	void UpdateStatusLines (void);
 	void OutputAudio (void);
 	void WaitFrame (void);
@@ -392,6 +403,11 @@ private:
 	boolean			m_bUpdateBootRunning;	// la tarea de al arrancar está buscando
 	TUpdateBootResult	m_UpdateBootResult;
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
+	boolean			m_bZXDBInput;		// la línea de texto es el título para ZXDB
+	boolean			m_bZXDBChoice;		// la lista es la de los resultados de ZXDB
+	TZXInfoResult		m_ZXDBResults[ZXINFO_MAX_RESULTS];
+	unsigned		m_nZXDBResults;
+	char			m_ZXDBQuery[32];
 	boolean			m_bZipOverwriteChoice;	// pregunta: usar el de tmp o sobrescribir
 	unsigned		m_nZipPending;
 	boolean			m_bIndicators;		// indicators=1: D, H, M1-M8 y grabación

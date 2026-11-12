@@ -7,6 +7,7 @@
 // (at your option) any later version.
 //
 #include "menu.h"
+#include "network.h"		// CNetworkManager::IsNetRunning (la búsqueda en ZXDB)
 #include <circle/string.h>
 #include "exclusions.h"
 #include "version.h"
@@ -578,6 +579,7 @@ void CMenu::OnEntry (const char *pName, boolean bDir)
 	pEntry->Name[MENU_NAME_LEN - 1] = '\0';
 	pEntry->bDir = bDir;
 	pEntry->bRemoteRoot = FALSE;
+	pEntry->bZXDB = FALSE;
 }
 
 // "NET:" = lista de servidores; "NET:servidor/ruta" = carpeta remota
@@ -592,6 +594,7 @@ boolean CMenu::ReadRemoteDirectory (void)
 	strcpy (m_pEntries[0].Name, "..");
 	m_pEntries[0].bDir = TRUE;
 	m_pEntries[0].bRemoteRoot = FALSE;
+	m_pEntries[0].bZXDB = FALSE;
 	m_nEntries = 1;
 
 	if (strcmp (m_CurrentDir, NET_ROOT) == 0)
@@ -647,6 +650,8 @@ boolean CMenu::ReadDirectory (void)
 	{
 		strcpy (m_pEntries[0].Name, "..");
 		m_pEntries[0].bDir = TRUE;
+		m_pEntries[0].bRemoteRoot = FALSE;
+		m_pEntries[0].bZXDB = FALSE;
 		m_nEntries = 1;
 	}
 
@@ -681,6 +686,7 @@ boolean CMenu::ReadDirectory (void)
 		pEntry->Name[MENU_NAME_LEN - 1] = '\0';
 		pEntry->bDir = bDir;
 		pEntry->bRemoteRoot = FALSE;
+	pEntry->bZXDB = FALSE;
 	}
 
 	f_closedir (&Directory);
@@ -694,16 +700,33 @@ boolean CMenu::ReadDirectory (void)
 		strcpy (pEntry->Name, "Internet (TNFS)");
 		pEntry->bDir = TRUE;
 		pEntry->bRemoteRoot = TRUE;
+		pEntry->bZXDB = FALSE;
+	}
+	boolean bZXDB =    m_nUnitTarget < 0 && strcmp (m_CurrentDir, ROOT_DIR) == 0
+			 && CNetworkManager::IsNetRunning () && m_nEntries < MENU_MAX_ENTRIES;
+	if (bZXDB)
+	{
+		TEntry *pEntry = &m_pEntries[m_nEntries++];
+		strncpy (pEntry->Name, T ("Buscar en internet (ZXDB)"), MENU_NAME_LEN - 1);
+		pEntry->Name[MENU_NAME_LEN - 1] = '\0';
+		pEntry->bDir = TRUE;
+		pEntry->bRemoteRoot = FALSE;
+		pEntry->bZXDB = TRUE;
 	}
 
 	SortEntries ();
 
-	// la entrada de Internet va la primera
-	if (bRemote)
+	// las entradas de internet van las primeras: TNFS y la búsqueda en ZXDB
+	for (unsigned nPass = 0; nPass < 2; nPass++)
 	{
+		if (!(nPass == 0 ? bZXDB : bRemote))
+		{
+			continue;
+		}
 		for (unsigned i = 0; i < m_nEntries; i++)
 		{
-			if (m_pEntries[m_Order[i]].bRemoteRoot)
+			const TEntry &E = m_pEntries[m_Order[i]];
+			if (nPass == 0 ? E.bZXDB : E.bRemoteRoot)
 			{
 				u16 nIndex = m_Order[i];
 				for (unsigned j = i; j > 0; j--)
@@ -857,6 +880,12 @@ void CMenu::EnterSelected (TMenuResult *pResult)
 	}
 
 	const TEntry *pEntry = &m_pEntries[m_Order[m_nSelected]];
+
+	if (pEntry->bZXDB)
+	{
+		*pResult = MenuResultZXDBSearch;	// el kernel pide el título
+		return;
+	}
 
 	if (pEntry->bDir)
 	{
@@ -1460,6 +1489,13 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 
 	case HID_KEY_BACKSPACE:
 		GoParent ();
+		break;
+
+	case HID_KEY_F1 + 2:		// F3: buscar en ZXDB (con red, no al elegir para una unidad)
+		if (m_nUnitTarget < 0 && CNetworkManager::IsNetRunning ())
+		{
+			Result = MenuResultZXDBSearch;
+		}
 		break;
 
 	default:
@@ -2126,6 +2162,9 @@ void CMenu::Draw (TPixel *pScreen)
 
 	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 3), T ("ENTER cargar  ESC salir  BORRAR subir"),
 			    COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
-	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("Letra: saltar  RePág/AvPág: páginas"),
+	// con red, la tecla de la búsqueda en ZXDB (F3)
+	boolean bZXDBKey = m_nUnitTarget < 0 && CNetworkManager::IsNetRunning ();
+	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2),
+			    bZXDBKey ? T ("Letra: saltar  RePág/AvPág  F3: ZXDB") : T ("Letra: saltar  RePág/AvPág: páginas"),
 			    COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
 }

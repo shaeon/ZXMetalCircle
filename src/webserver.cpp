@@ -8,6 +8,9 @@
 // (at your option) any later version.
 //
 #include "webserver.h"
+#include "webfiles.h"
+#include "zipfile.h"
+#include <circle/bcmrandom.h>
 #include "i18n.h"
 #include "exclusions.h"
 #include "version.h"
@@ -139,6 +142,47 @@ static void HTMLEscape (const char *pIn, CString *pOut)
 }
 
 // Ruta relativa a la SD, sin ".." ni barras invertidas; devuelve "" si no vale
+// Lo que usa el emulador (lo registra el kernel)
+static TWebInUse s_pInUse = 0;
+static void *s_pInUseParam = 0;
+
+void WebSetInUseCheck (TWebInUse pFunc, void *pParam)
+{
+	s_pInUse = pFunc;
+	s_pInUseParam = pParam;
+}
+
+static bool InUse (const char *pPath)
+{
+	return s_pInUse != 0 && (*s_pInUse) (pPath, s_pInUseParam);
+}
+
+// Lo del sistema, mientras esté protegido (webprotect=1, en la configuración
+// de la Pi: desde la web no se puede cambiar)
+static bool Protected (const char *pPath)
+{
+	return WebProtect () && WebIsSystem (pPath);
+}
+
+static bool ProtectedFolder (const char *pDir)
+{
+	return WebProtect () && WebIsSystemFolder (pDir);
+}
+
+// Código de seguridad: va en todos los enlaces y formularios de la página, y
+// se exige en lo que cambia algo. Una página de fuera no lo conoce, así que no
+// puede hacer que el navegador borre o cargue algo con un enlace escondido
+static char s_CSRF[20] = "";
+
+// Lo que se está moviendo: "mover" lo marca, se navega a la carpeta de destino
+// y "Pegar aquí" lo mueve. Una sola cosa a la vez (la web es para una persona)
+static char s_Cut[HTTP_MAX_PATH + 1] = "";
+
+static bool IsHardDisk (const char *pName);
+static const char *BaseOf (const char *pPath);
+
+static bool ValidCSRF (const char *pParams, const char *pFormData);
+
 static boolean CleanPath (const char *pIn, char *pOut, unsigned nOutSize)
 {
 	if (strstr (pIn, "..") != 0 || strchr (pIn, '\\') != 0 || strchr (pIn, ':') != 0)
@@ -185,6 +229,67 @@ static boolean IsLoadable (const char *pName)
 	return FALSE;
 }
 
+static const char PageStyle[] =
+	"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+	"<title>ZXMetalCircle</title><style>"
+	"body{font-family:sans-serif;background:#10123a;color:#e8e8e8;margin:0;padding:12px}"
+	"h1{color:#eeeb46;font-size:1.3em;margin:0 0 4px}"
+	"a{color:#7fd6ff}.st{color:#8a8ca0;font-size:.9em}"
+	".msg{background:#36efde;color:#000;padding:6px;margin:8px 0}"
+	"table{border-collapse:collapse;width:100%}table.f{table-layout:fixed}"
+	"td{padding:6px;border-bottom:1px solid #2a2c5a;vertical-align:middle}"
+	"td.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+	"td.s{text-align:right;color:#8a8ca0;white-space:nowrap;width:5.5em}"
+	"form{margin:10px 0;padding:8px;background:#1c1f55;display:flex;flex-wrap:wrap;gap:6px;align-items:center}"
+	"form input[name=q],form input[name=n]{flex:1;min-width:8em;max-width:20em}input[type=file]{max-width:100%}"
+	"form.i{display:inline;margin:0;padding:0;background:none}"
+	"form.i button,.cut a{background:none;border:0;color:#7fd6ff;padding:0;font:inherit;"
+	"text-decoration:underline;cursor:pointer}"
+	".pr{color:#8a8ca0}.cut{background:#3a3d8a;padding:6px;margin:8px 0}"
+	"td.a{position:relative;width:2.2em;text-align:right}.t{display:none}"
+	"label.m{display:inline-block;padding:0 .5em;font-size:1.4em;line-height:1;color:#7fd6ff;cursor:pointer}"
+	".acts{display:none;position:absolute;right:4px;top:100%;z-index:5;background:#1c1f55;"
+	"border:1px solid #3a3d8a;min-width:11em;text-align:left;padding:4px 0}"
+	".t:checked~.acts{display:block}"
+	".acts>*,.acts>form.i{display:block;padding:9px 14px;white-space:nowrap}"
+	".acts a{text-decoration:none}.acts form.i button{text-decoration:none;padding:0;text-align:left}"
+	"@media(min-width:720px){td.s{width:6em}td.a{width:auto;white-space:nowrap;text-align:left}"
+	"label.m{display:none}.acts{display:inline;position:static;background:none;border:0;"
+	"min-width:0;padding:0}.acts>*,.acts>form.i{display:inline;padding:0;margin-right:.7em}"
+	".acts a,.acts form.i button{text-decoration:underline}}"
+	"</style></head><body>";
+
+static bool IsZipEntryLoadable (const char *pName)
+{
+	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx", ".rom",
+				    ".dsk", ".mdr", ".mdv"};
+	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
+	{
+		if (HasExtension (pName, Ext[i]))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+static bool IsHardDisk (const char *pName)
+{
+	return    HasExtension (pName, ".vhd") || HasExtension (pName, ".img")
+	       || HasExtension (pName, ".raw") || HasExtension (pName, ".hdf");
+}
+
+// Texto para JavaScript entre comillas simples: sin comillas simples ni '\'
+static void JSText (const char *pText, CString *pOut)
+{
+	*pOut = "";
+	for (const char *p = pText; *p != '\0'; p++)
+	{
+		char c[2] = {*p == '\'' || *p == '\\' ? ' ' : *p, '\0'};
+		pOut->Append (c);
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Servidor web
 
@@ -193,6 +298,13 @@ CZXWebServer::CZXWebServer (CNetSubSystem *pNetSubSystem, CSocket *pSocket)
 		     REQUEST_TIMEOUT)
 {
 	m_Token[0] = '\0';
+	if (s_CSRF[0] == '\0')
+	{
+		CBcmRandomNumberGenerator Random;
+		CString Code;
+		Code.Format ("%08x%08x", Random.GetNumber (), Random.GetNumber ());
+		strncpy (s_CSRF, Code, sizeof s_CSRF - 1);
+	}
 }
 
 CHTTPDaemon *CZXWebServer::CreateWorker (CNetSubSystem *pNetSubSystem, CSocket *pSocket)
@@ -274,19 +386,26 @@ static const char *NewSession (void)
 // un CString lo copia entero cada vez y una carpeta grande tardaría mucho.
 void CZXWebServer::AddToken (CString *pHtml)
 {
-	if (m_Token[0] == '\0')
-	{
-		return;
-	}
-
 	const char *pIn = *pHtml;
 	unsigned nInLen = strlen (pIn);
 
-	CString HiddenText;
-	HiddenText.Format ("<input type=\"hidden\" name=\"k\" value=\"%s\">", m_Token);
+	// lo que se añade: el código de seguridad y, con contraseña, la clave
+	CString QueryText, HiddenText;
+	if (m_Token[0] != '\0')
+	{
+		QueryText.Format ("k=%s&t=%s", m_Token, s_CSRF);
+		HiddenText.Format ("<input type=\"hidden\" name=\"k\" value=\"%s\">"
+				   "<input type=\"hidden\" name=\"t\" value=\"%s\">", m_Token, s_CSRF);
+	}
+	else
+	{
+		QueryText.Format ("t=%s", s_CSRF);
+		HiddenText.Format ("<input type=\"hidden\" name=\"t\" value=\"%s\">", s_CSRF);
+	}
 	const char *Hidden = HiddenText;
 	unsigned nHidden = strlen (Hidden);
-	unsigned nToken = strlen (m_Token);
+	const char *pQuery = QueryText;
+	unsigned nToken = strlen (pQuery);
 
 	// cuántos sitios: cada uno añade como mucho la clave o el campo oculto
 	unsigned nPlaces = 0;
@@ -343,8 +462,8 @@ void CZXWebServer::AddToken (CString *pHtml)
 					bQuery |= *q == '?';
 				}
 				Put (p, pEnd - p);
-				Put (bQuery ? "&k=" : "?k=", 3);
-				Put (m_Token, nToken);
+				Put (bQuery ? "&" : "?", 1);
+				Put (pQuery, nToken);
 				p = pEnd;
 				continue;
 			}
@@ -467,15 +586,50 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 
 	CString Message;
 
-	if (   bReadOnly
-	    && (   strcmp (pPath, "/up") == 0 || strcmp (pPath, "/del") == 0
-		|| strcmp (pPath, "/mkdir") == 0 || strcmp (pPath, "/bajar") == 0))
+	boolean bChanges =    strcmp (pPath, "/up") == 0 || strcmp (pPath, "/del") == 0
+			   || strcmp (pPath, "/mkdir") == 0 || strcmp (pPath, "/bajar") == 0
+			   || strcmp (pPath, "/ren") == 0 || strcmp (pPath, "/mv") == 0;
+	if ((bChanges || strcmp (pPath, "/load") == 0) && !ValidCSRF (pParams, pFormData))
+	{
+		Message = T ("Petición caducada: vuelve a cargar la página");
+	}
+	else if (bReadOnly && bChanges)
 	{
 		Message = T ("La web está en modo solo lectura");
 	}
+	else if (strcmp (pPath, "/ren") == 0)
+	{
+		Message = Rename (pParams);
+	}
+	else if (strcmp (pPath, "/mv") == 0)
+	{
+		Message = Move (pParams);
+	}
+	else if (strcmp (pPath, "/zip") == 0)
+	{
+		char File[HTTP_MAX_PATH + 1], CleanFile[HTTP_MAX_PATH + 1];
+		if (   GetParam (pParams, "f", File, sizeof File) && CleanPath (File, CleanFile, sizeof CleanFile)
+		    && HasExtension (CleanFile, ".zip"))
+		{
+			return SendZip (Clean, CleanFile, pBuffer, pLength);
+		}
+	}
+	else if (strcmp (pPath, "/cut") == 0)
+	{
+		char File[HTTP_MAX_PATH + 1], CleanFile[HTTP_MAX_PATH + 1];
+		if (   GetParam (pParams, "f", File, sizeof File) && CleanPath (File, CleanFile, sizeof CleanFile)
+		    && CleanFile[0] != '\0')
+		{
+			strcpy (s_Cut, CleanFile);
+		}
+	}
+	else if (strcmp (pPath, "/nocut") == 0)
+	{
+		s_Cut[0] = '\0';
+	}
 	else if (strcmp (pPath, "/up") == 0)
 	{
-		Message = Upload (Clean);
+		Message = Upload (Clean, pParams);
 	}
 	else if (strcmp (pPath, "/del") == 0 || strcmp (pPath, "/load") == 0)
 	{
@@ -488,13 +642,42 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 
 			if (pPath[1] == 'd')
 			{
-				Message.Format (f_unlink (SDPath) == FR_OK ? T ("Borrado: %s") : T ("No se pudo borrar %s"),
-						CleanFile);
+				FILINFO Info;
+				boolean bDir = f_stat (SDPath, &Info) == FR_OK && (Info.fattrib & AM_DIR);
+				FRESULT Result;
+				if (Protected (CleanFile))
+				{
+					Message.Format (T ("Protegido: %s"), CleanFile);
+				}
+				else if (InUse (CleanFile))
+				{
+					Message.Format (T ("En uso: %s (sácalo antes)"), CleanFile);
+				}
+				else if ((Result = f_unlink (SDPath)) == FR_OK)
+				{
+					Message.Format (T ("Borrado: %s"), CleanFile);
+				}
+				else
+				{
+					Message.Format (bDir && Result == FR_DENIED ? T ("La carpeta no está vacía: %s")
+										  : T ("No se pudo borrar %s"), CleanFile);
+				}
 			}
 			else
 			{
-				WebRequestLoad (SDPath);
-				Message.Format (T ("Cargando en el Spectrum: %s"), CleanFile);
+				char Entry[HTTP_MAX_PATH + 1];
+				if (GetParam (pParams, "e", Entry, sizeof Entry) && Entry[0] != '\0')
+				{
+					CString ZipEntry;		// un fichero de dentro del ZIP
+					ZipEntry.Format ("%s|%s", (const char *) SDPath, Entry);
+					WebRequestLoad (ZipEntry);
+					Message.Format (T ("Cargando en el Spectrum: %s"), BaseOf (Entry));
+				}
+				else
+				{
+					WebRequestLoad (SDPath);
+					Message.Format (T ("Cargando en el Spectrum: %s"), CleanFile);
+				}
 			}
 		}
 	}
@@ -515,8 +698,15 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 	{
 		char Name[HTTP_MAX_PATH + 1];
 		GetParam (pParams, "n", Name, sizeof Name);
-		if (   Name[0] != '\0' && strchr (Name, '/') == 0 && strchr (Name, '\\') == 0
-		    && strstr (Name, "..") == 0 && strchr (Name, ':') == 0)
+		if (ProtectedFolder (Clean))
+		{
+			Message = T ("Protegido: aquí no se puede crear nada");
+		}
+		else if (!WebValidName (Name))
+		{
+			Message = T ("Nombre no válido");
+		}
+		else
 		{
 			CString SDPath;
 			SDPath.Format (Clean[0] != '\0' ? "SD:/%s/%s" : "SD:/%s%s", Clean, Name);
@@ -530,6 +720,188 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 	}
 
 	return SendDirectory (Clean, Message, pBuffer, pLength);
+}
+
+static bool ValidCSRF (const char *pParams, const char *pFormData)
+{
+	char Code[sizeof s_CSRF];
+	if (   !GetParam (pParams, "t", Code, sizeof Code)
+	    && (pFormData == 0 || !GetParam (pFormData, "t", Code, sizeof Code)))
+	{
+		return false;
+	}
+	return s_CSRF[0] != '\0' && strcmp (Code, s_CSRF) == 0;
+}
+
+// La última '/' de una ruta (Circle no tiene strrchr)
+static const char *LastSlash (const char *pPath)
+{
+	const char *pLast = 0;
+	for (const char *p = pPath; *p != '\0'; p++)
+	{
+		if (*p == '/')
+		{
+			pLast = p;
+		}
+	}
+	return pLast;
+}
+
+// La carpeta de una ruta ("juegos/a.tap" -> "juegos"; "a.tap" -> "")
+static void ParentOf (const char *pPath, char *pOut, unsigned nSize)
+{
+	strncpy (pOut, pPath, nSize - 1);
+	pOut[nSize - 1] = '\0';
+	const char *pSlash = LastSlash (pOut);
+	if (pSlash != 0)
+	{
+		pOut[pSlash - pOut] = '\0';
+	}
+	else
+	{
+		pOut[0] = '\0';
+	}
+}
+
+static const char *BaseOf (const char *pPath)
+{
+	const char *pSlash = LastSlash (pPath);
+	return pSlash != 0 ? pSlash + 1 : pPath;
+}
+
+static void SDPathOf (const char *pDir, const char *pName, CString *pOut)
+{
+	pOut->Format (pDir[0] != '\0' ? "SD:/%s/%s" : "SD:/%s%s", pDir, pName);
+}
+
+// Lo que se comprueba antes de quitar algo de su sitio (renombrar o mover)
+static const char *CheckSource (const char *pPath)
+{
+	FILINFO Info;
+	CString SDPath;
+	SDPath.Format ("SD:/%s", pPath);
+	if (pPath[0] == '\0' || f_stat (SDPath, &Info) != FR_OK)
+	{
+		return T ("No existe: %s");
+	}
+	if (Protected (pPath))
+	{
+		return T ("Protegido: %s");
+	}
+	if (InUse (pPath))
+	{
+		return T ("En uso: %s (sácalo antes)");
+	}
+	return 0;
+}
+
+// /ren?f=<ruta>&n=<nombre nuevo>: en la misma carpeta
+CString CZXWebServer::Rename (const char *pParams)
+{
+	CString Message;
+	char Arg[HTTP_MAX_PATH + 1], Path[HTTP_MAX_PATH + 1], Name[HTTP_MAX_PATH + 1];
+	if (   !GetParam (pParams, "f", Arg, sizeof Arg) || !CleanPath (Arg, Path, sizeof Path)
+	    || !GetParam (pParams, "n", Name, sizeof Name))
+	{
+		return CString (T ("Petición no válida"));
+	}
+	const char *pError = CheckSource (Path);
+	if (pError != 0)
+	{
+		Message.Format (pError, Path);
+		return Message;
+	}
+	if (!WebValidName (Name))
+	{
+		return CString (T ("Nombre no válido"));
+	}
+	char Dir[HTTP_MAX_PATH + 1];
+	ParentOf (Path, Dir, sizeof Dir);
+	CString From, To, NewRel;
+	From.Format ("SD:/%s", Path);
+	SDPathOf (Dir, Name, &To);
+	NewRel.Format (Dir[0] != '\0' ? "%s/%s" : "%s%s", Dir, Name);
+	FILINFO Info;
+	if (Protected (NewRel))
+	{
+		Message.Format (T ("Protegido: %s"), Name);
+	}
+	else if (strcasecmp (BaseOf (Path), Name) != 0 && f_stat (To, &Info) == FR_OK)
+	{
+		Message.Format (T ("Ya existe %s"), Name);
+	}
+	else if (f_rename (From, To) == FR_OK)
+	{
+		Message.Format (T ("Renombrado: %s"), Name);
+	}
+	else
+	{
+		Message.Format (T ("No se pudo renombrar %s"), BaseOf (Path));
+	}
+	return Message;
+}
+
+// /mv?f=<ruta>&to=<carpeta>: a otra carpeta de la SD (no se copia: es inmediato)
+CString CZXWebServer::Move (const char *pParams)
+{
+	CString Message;
+	char Arg[HTTP_MAX_PATH + 1], Path[HTTP_MAX_PATH + 1], Dest[HTTP_MAX_PATH + 1];
+	if (   !GetParam (pParams, "f", Arg, sizeof Arg) || !CleanPath (Arg, Path, sizeof Path))
+	{
+		return CString (T ("Petición no válida"));
+	}
+	if (!GetParam (pParams, "to", Arg, sizeof Arg) || !CleanPath (Arg, Dest, sizeof Dest))
+	{
+		Dest[0] = '\0';		// la raíz
+	}
+	const char *pError = CheckSource (Path);
+	if (pError != 0)
+	{
+		Message.Format (pError, Path);
+		return Message;
+	}
+	FILINFO Info;
+	CString DestSD;
+	DestSD.Format ("SD:/%s", Dest);
+	if (Dest[0] != '\0' && (f_stat (DestSD, &Info) != FR_OK || !(Info.fattrib & AM_DIR)))
+	{
+		Message.Format (T ("No existe: %s"), Dest);
+		return Message;
+	}
+	if (ProtectedFolder (Dest))
+	{
+		return CString (T ("Protegido: aquí no se puede crear nada"));
+	}
+	if (WebPathIsUnder (Dest, Path))
+	{
+		return CString (T ("No se puede mover una carpeta dentro de sí misma"));
+	}
+	const char *pName = BaseOf (Path);
+	CString From, To, NewRel;
+	From.Format ("SD:/%s", Path);
+	SDPathOf (Dest, pName, &To);
+	NewRel.Format (Dest[0] != '\0' ? "%s/%s" : "%s%s", Dest, pName);
+	if (Protected (NewRel))
+	{
+		Message.Format (T ("Protegido: %s"), pName);
+	}
+	else if (f_stat (To, &Info) == FR_OK)
+	{
+		Message.Format (T ("Ya existe %s"), pName);
+	}
+	else if (f_rename (From, To) == FR_OK)
+	{
+		Message.Format (T ("Movido: %s"), pName);
+		if (strcmp (s_Cut, Path) == 0)
+		{
+			s_Cut[0] = '\0';
+		}
+	}
+	else
+	{
+		Message.Format (T ("No se pudo mover %s"), pName);
+	}
+	return Message;
 }
 
 // Aviso en pantalla para las operaciones largas con ficheros (desde 32 KB):
@@ -590,8 +962,20 @@ THTTPStatus CZXWebServer::SendFile (const char *pRelPath, u8 *pBuffer, unsigned 
 	return HTTPOK;
 }
 
-CString CZXWebServer::Upload (const char *pDir)
+// Sube uno o varios ficheros a pDir. Con r=<nombre>, el primero sustituye a
+// ese fichero (que tiene que existir). Se escribe en un temporal y solo al
+// terminar se pone en su sitio: si algo falla, el que había no se pierde
+CString CZXWebServer::Upload (const char *pDir, const char *pParams)
 {
+	char Replace[HTTP_MAX_PATH + 1];
+	if (!GetParam (pParams, "r", Replace, sizeof Replace))
+	{
+		Replace[0] = '\0';
+	}
+	if (ProtectedFolder (pDir))
+	{
+		return CString (T ("Protegido: aquí no se puede crear nada"));
+	}
 	unsigned nSaved = 0;
 	CString Message;
 
@@ -636,17 +1020,66 @@ CString CZXWebServer::Upload (const char *pDir)
 			continue;
 		}
 
-		CString SDPath;
+		if (Replace[0] != '\0')
+		{
+			if (nSaved > 0)
+			{
+				break;			// al sustituir, solo el primero
+			}
+			pBase = Replace;
+		}
+		if (!WebValidName (pBase))
+		{
+			Message.Format (T ("Nombre no válido: %s"), pBase);
+			return Message;
+		}
+		CString SDPath, Rel, Temp;
 		SDPath.Format (pDir[0] != '\0' ? "SD:/%s/%s" : "SD:/%s%s", pDir, pBase);
+		Rel.Format (pDir[0] != '\0' ? "%s/%s" : "%s%s", pDir, pBase);
+		Temp.Format ("%s.~subida", (const char *) SDPath);
+		FILINFO Info;
+		boolean bExists = f_stat (SDPath, &Info) == FR_OK;
+		if (Protected (Rel))
+		{
+			Message.Format (T ("Protegido: %s"), pBase);
+			return Message;
+		}
+		if (InUse (Rel))
+		{
+			Message.Format (T ("En uso: %s (sácalo antes)"), pBase);
+			return Message;
+		}
+		if (Replace[0] != '\0' && !bExists)
+		{
+			Message.Format (T ("No existe: %s"), pBase);
+			return Message;
+		}
+		if (bExists && (Info.fattrib & AM_DIR))
+		{
+			Message.Format (T ("Ya existe %s"), pBase);
+			return Message;
+		}
 
 		BusyFile (T ("Red: guardando %s (%u KB)"), pBase, nLength);
 
 		FIL File;
 		unsigned nWritten = 0;
-		boolean bOK =    f_open (&File, SDPath, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK
+		boolean bOK =    f_open (&File, Temp, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK
 			      && f_write (&File, pData, nLength, &nWritten) == FR_OK
 			      && nWritten == nLength;
-		f_close (&File);
+		bOK = f_close (&File) == FR_OK && bOK;
+		if (bOK && bExists)
+		{
+			bOK = f_unlink (SDPath) == FR_OK;
+		}
+		if (bOK)
+		{
+			bOK = f_rename (Temp, SDPath) == FR_OK;
+		}
+		if (!bOK)
+		{
+			f_unlink (Temp);
+		}
 
 		if (bOK)
 		{
@@ -685,6 +1118,106 @@ static int CompareEntries (const TDirEntry *a, const TDirEntry *b)
 		return a->bDir ? -1 : 1;
 	}
 	return strcasecmp (a->Name, b->Name);
+}
+
+// El contenido de un ZIP: los ficheros que se pueden cargar llevan enlace (se
+// carga ese, sin preguntar en la pantalla de la Pi); el resto, solo el nombre
+#define WEB_ZIP_MAX_SIZE	(32 * 1024 * 1024)		// como los que abre el emulador
+
+THTTPStatus CZXWebServer::SendZip (const char *pDir, const char *pZip, u8 *pBuffer, unsigned *pLength)
+{
+	CString Html, Line, Esc, Enc, Message;
+	Html.Format ("<!DOCTYPE html><html lang=\"%s\"><head><meta charset=\"utf-8\">", CI18n::Get ()->GetLanguage ());
+	Html.Append (PageStyle);
+
+	CString DirEnc;
+	URLEncode (pDir, &DirEnc);
+	CString ZipEnc;
+	URLEncode (pZip, &ZipEnc);
+	HTMLEscape (pZip, &Esc);
+	Line.Format ("<h1>ZXMetalCircle %s</h1><p><a href=\"/?d=%s\">%s</a></p><p><b>%s</b></p>", ZXCIRCLE_VERSION,
+		     (const char *) DirEnc, T ("Volver a la carpeta"), (const char *) Esc);
+	Html.Append (Line);
+
+	// el ZIP entero a memoria (el directorio central apunta a todo el fichero)
+	CString SDPath;
+	SDPath.Format ("SD:/%s", pZip);
+	FIL File;
+	u8 *pData = 0;
+	unsigned nSize = 0;
+	if (f_open (&File, SDPath, FA_READ | FA_OPEN_EXISTING) == FR_OK)
+	{
+		nSize = f_size (&File);
+		if (nSize > 0 && nSize <= WEB_ZIP_MAX_SIZE)
+		{
+			BusyFile (T ("Red: leyendo %s (%u KB)"), pZip, nSize);
+			pData = new u8[nSize];
+			unsigned nRead = 0;
+			if (pData != 0 && (f_read (&File, pData, nSize, &nRead) != FR_OK || nRead != nSize))
+			{
+				delete [] pData;
+				pData = 0;
+			}
+		}
+		f_close (&File);
+	}
+
+	CZipFile Zip;
+	if (pData == 0 || !Zip.Open (pData, nSize))
+	{
+		Line.Format ("<div class=\"msg\">%s</div>", nSize > WEB_ZIP_MAX_SIZE ? T ("ZIP demasiado grande")
+										       : T ("ZIP no válido"));
+		Html.Append (Line);
+	}
+	else
+	{
+		Html.Append ("<table class=\"f\">");
+		unsigned nShown = 0;
+		for (unsigned i = 0; i < Zip.GetCount (); i++)
+		{
+			const char *pName = Zip.GetName (i);
+			const char *pBase = Zip.GetBaseName (i);
+			if (Zip.IsDirectory (i) || strncmp (pName, "__MACOSX", 8) == 0 || pBase[0] == '.')
+			{
+				continue;
+			}
+			HTMLEscape (pName, &Esc);
+			CString NameCell;
+			if (IsZipEntryLoadable (pBase))
+			{
+				URLEncode (pName, &Enc);
+				NameCell.Format ("<a href=\"/load?d=%s&f=%s&e=%s\">%s</a>", (const char *) DirEnc,
+						 (const char *) ZipEnc, (const char *) Enc, (const char *) Esc);
+			}
+			else
+			{
+				NameCell = Esc;
+			}
+			Line.Format ("<tr><td class=\"n\">%s</td><td class=\"s\">%u KB</td></tr>", (const char *) NameCell,
+				     (Zip.GetSize (i) + 1023) / 1024);
+			Html.Append (Line);
+			nShown++;
+		}
+		Html.Append ("</table>");
+		if (nShown == 0)
+		{
+			Line.Format ("<p class=\"st\">%s</p>", T ("El ZIP está vacío"));
+			Html.Append (Line);
+		}
+	}
+	delete [] pData;
+
+	Html.Append ("</body></html>");
+	AddToken (&Html);
+
+	unsigned nLen = Html.GetLength ();
+	if (nLen > *pLength)
+	{
+		return HTTPInternalServerError;
+	}
+	memcpy (pBuffer, (const char *) Html, nLen);
+	*pLength = nLen;
+	return HTTPOK;
 }
 
 THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
@@ -743,16 +1276,7 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 	CString Esc, Enc, Line;
 
 	Html.Format ("<!DOCTYPE html><html lang=\"%s\"><head><meta charset=\"utf-8\">", CI18n::Get ()->GetLanguage ());
-	Html.Append ("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-	       "<title>ZXMetalCircle</title><style>"
-	       "body{font-family:sans-serif;background:#10123a;color:#e8e8e8;margin:0;padding:12px}"
-	       "h1{color:#eeeb46;font-size:1.3em;margin:0 0 4px}"
-	       "a{color:#7fd6ff}.st{color:#8a8ca0;font-size:.9em}"
-	       ".msg{background:#36efde;color:#000;padding:6px;margin:8px 0}"
-	       "table{border-collapse:collapse;width:100%}td{padding:4px 6px;border-bottom:1px solid #2a2c5a}"
-	       "td.s{text-align:right;color:#8a8ca0;white-space:nowrap}"
-	       "form{margin:10px 0;padding:8px;background:#1c1f55}"
-	       "</style></head><body>");
+	Html.Append (PageStyle);
 
 	Line.Format ("<h1>ZXMetalCircle %s</h1><div class=\"st\">", ZXCIRCLE_VERSION);
 	Html.Append (Line);
@@ -796,18 +1320,46 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 
 	URLEncode (pDir, &Enc);
 	CString DirEnc = Enc;
+	CString DirEsc;
+	HTMLEscape (pDir, &DirEsc);
 
 	boolean bReadOnly = WebMode () == 2;
+
+	// sin protección, en la raíz o en una carpeta del sistema se avisa antes de
+	// poner algo (subir o pegar), porque puede sustituir algo del sistema
+	CString PutWarn;
+	if (!WebProtect () && (pDir[0] == '\0' || WebIsSystemFolder (pDir)))
+	{
+		CString WarnJS, WarnAttr;
+		JSText (T ("Aquí hay ficheros del sistema: si sustituyes alguno por error, la Pi puede no arrancar. ¿Seguro?"),
+			&WarnJS);
+		HTMLEscape (WarnJS, &WarnAttr);
+		PutWarn.Format (" onsubmit=\"return confirm('%s')\"", (const char *) WarnAttr);
+	}
+
+	if (s_Cut[0] != '\0' && !bReadOnly)
+	{
+		CString CutEsc;
+		HTMLEscape (s_Cut, &CutEsc);
+		Line.Format ("<div class=\"cut\">%s <b>%s</b> "
+			     "<form class=\"i\" action=\"/mv\"%s><input type=\"hidden\" name=\"d\" value=\"%s\">"
+			     "<input type=\"hidden\" name=\"f\" value=\"%s\">"
+			     "<input type=\"hidden\" name=\"to\" value=\"%s\"><button>%s</button></form> "
+			     "<a href=\"/nocut?d=%s\">%s</a></div>",
+			     T ("Moviendo:"), (const char *) CutEsc, (const char *) PutWarn, (const char *) DirEsc, (const char *) CutEsc,
+			     (const char *) DirEsc, T ("Pegar aquí"), (const char *) DirEnc, T ("Cancelar"));
+		Html.Append (Line);
+	}
 	if (!bReadOnly)
 	{
-		Line.Format ("<form method=\"post\" enctype=\"multipart/form-data\" action=\"/up?d=%s\">"
+		Line.Format ("<form method=\"post\" enctype=\"multipart/form-data\" action=\"/up?d=%s\"%s>"
 			     "%s <input type=\"file\" name=\"f\" multiple> "
-			     "<input type=\"submit\" value=\"%s\"></form>", (const char *) DirEnc,
+			     "<input type=\"submit\" value=\"%s\"></form>", (const char *) DirEnc, (const char *) PutWarn,
 			     T ("Subir a esta carpeta:"), T ("Subir"));
 		Html.Append (Line);
 	}
 
-	Html.Append ("<table>");
+	Html.Append ("<table class=\"f\">");
 	if (pDir[0] != '\0')
 	{
 		char Parent[HTTP_MAX_PATH + 1];
@@ -834,44 +1386,164 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 		Rel.Format (pDir[0] != '\0' ? "%s/%s" : "%s%s", pDir, pEntries[i].Name);
 		URLEncode (Rel, &Enc);
 		HTMLEscape (pEntries[i].Name, &Esc);
+		CString RelEsc;
+		HTMLEscape (Rel, &RelEsc);
+		boolean bDir = pEntries[i].bDir;
 
-		if (pEntries[i].bDir)
+		// el nombre: entra en la carpeta, carga el fichero o, si no se puede cargar, nada
+		CString Name;
+		if (bDir)
 		{
-			Line.Format ("<tr><td><a href=\"/?d=%s\">[%s]</a></td><td></td><td></td></tr>",
-				     (const char *) Enc, (const char *) Esc);
+			Name.Format ("<a href=\"/?d=%s\">[%s]</a>", (const char *) Enc, (const char *) Esc);
+		}
+		else if (HasExtension (pEntries[i].Name, ".zip"))
+		{
+			Name.Format ("<a href=\"/zip?d=%s&f=%s\">%s</a>", (const char *) DirEnc, (const char *) Enc,
+				     (const char *) Esc);
+		}
+		else if (IsLoadable (pEntries[i].Name))
+		{
+			CString Confirm;
+			if (IsHardDisk (pEntries[i].Name))
+			{
+				CString Ask, AskJS, AskAttr;
+				Ask.Format (T ("¿Montar %s como disco duro? Se reinicia el Spectrum."), pEntries[i].Name);
+				JSText (Ask, &AskJS);
+				HTMLEscape (AskJS, &AskAttr);
+				Confirm.Format (" onclick=\"return confirm('%s')\"", (const char *) AskAttr);
+			}
+			Name.Format ("<a href=\"/load?d=%s&f=%s\"%s>%s</a>", (const char *) DirEnc, (const char *) Enc,
+				     (const char *) Confirm, (const char *) Esc);
 		}
 		else
 		{
-			CString Actions;
-			if (IsLoadable (pEntries[i].Name))
+			Name = Esc;
+		}
+
+		// las acciones
+		CString Actions;
+		if (!bDir && pEntries[i].nSize > MAX_CONTENT_SIZE)
+		{
+			// el servidor de Circle prepara la respuesta entera en memoria
+			Line.Format ("<span class=\"pr\">%s</span>", T ("más de 4 MB"));
+			Actions.Append (Line);
+		}
+		else if (!bDir)
+		{
+			Line.Format ("<a href=\"/sd/%s\" download>%s</a>", (const char *) Enc, T ("descargar"));
+			Actions.Append (Line);
+		}
+		if (bReadOnly)
+		{
+			// solo descargar
+		}
+		else if (Protected (Rel))
+		{
+			Line.Format ("<span class=\"pr\">%s</span>", T ("protegido"));
+			Actions.Append (Line);
+		}
+		else if (InUse (Rel))
+		{
+			Line.Format ("<span class=\"pr\">%s</span>", T ("en uso"));
+			Actions.Append (Line);
+		}
+		else
+		{
+			CString Text, TextJS, TextAttr;
+
+			// sin protección, lo del sistema avisa antes de cada operación
+			boolean bSystem = WebIsSystem (Rel);
+			CString Warn, WarnJS, WarnAttr, WarnPrefix;
+			if (bSystem)
 			{
-				Actions.Format ("<a href=\"/load?d=%s&f=%s\">%s</a> ",
-						(const char *) DirEnc, (const char *) Enc, T ("cargar"));
-			}
-			CString Del;
-			CString Ask;
-			Ask.Format (T ("¿Borrar %s?"), (const char *) Esc);
-			CString AskJS;		// para JavaScript: sin comillas simples
-			for (const char *p = Ask; *p != '\0'; p++)
-			{
-				char c[2] = {*p == '\'' ? ' ' : *p, '\0'};
-				AskJS.Append (c);
-			}
-			if (!bReadOnly)
-			{
-				Del.Format ("<a href=\"/del?d=%s&f=%s\" onclick=\"return confirm('%s')\">%s</a>",
-					    (const char *) DirEnc, (const char *) Enc, (const char *) AskJS, T ("borrar"));
-				Actions.Append (Del);
+				JSText (T ("Es del sistema: si lo cambias mal, la Pi puede no arrancar. ¿Seguro?"), &WarnJS);
+				HTMLEscape (WarnJS, &WarnAttr);
+				WarnPrefix.Format ("if(!confirm('%s'))return false;", (const char *) WarnAttr);
 			}
 
-			Line.Format ("<tr><td><a href=\"/sd/%s\" download>%s</a></td>"
-				     "<td class=\"s\">%u KB</td><td>%s</td></tr>",
-				     (const char *) Enc, (const char *) Esc,
-				     (pEntries[i].nSize + 1023) / 1024, (const char *) Actions);
+			// renombrar: se pide el nombre nuevo
+			JSText (T ("Nuevo nombre:"), &TextJS);
+			HTMLEscape (TextJS, &TextAttr);
+			Line.Format ("<form class=\"i\" action=\"/ren\" onsubmit=\"%svar n=prompt('%s',this.n.value);"
+				     "if(!n||n==this.n.value)return false;this.n.value=n\">"
+				     "<input type=\"hidden\" name=\"d\" value=\"%s\">"
+				     "<input type=\"hidden\" name=\"f\" value=\"%s\">"
+				     "<input type=\"hidden\" name=\"n\" value=\"%s\"><button>%s</button></form>",
+				     (const char *) WarnPrefix, (const char *) TextAttr, (const char *) DirEsc,
+				     (const char *) RelEsc, (const char *) Esc, T ("renombrar"));
+			Actions.Append (Line);
+
+			// mover: se marca y se pega en la carpeta de destino
+			Line.Format ("<a href=\"/cut?d=%s&f=%s\"%s%s%s>%s</a>", (const char *) DirEnc, (const char *) Enc,
+				     bSystem ? " onclick=\"return confirm('" : "", (const char *) WarnAttr,
+				     bSystem ? "')\"" : "", T ("mover"));
+			Actions.Append (Line);
+
+			// sustituir: se elige el fichero nuevo y se confirma
+			if (!bDir)
+			{
+				Text.Format (T ("¿Sustituir %s por el fichero elegido?"), pEntries[i].Name);
+				if (bSystem)
+				{
+					CString Both;
+					Both.Format ("%s %s", T ("Es del sistema: si lo cambias mal, la Pi puede no arrancar. ¿Seguro?"),
+						     (const char *) Text);
+					Text = Both;
+				}
+				JSText (Text, &TextJS);
+				HTMLEscape (TextJS, &TextAttr);
+				CString NameEnc;
+				URLEncode (pEntries[i].Name, &NameEnc);
+				Line.Format ("<form class=\"i\" method=\"post\" enctype=\"multipart/form-data\" "
+					     "action=\"/up?d=%s&r=%s\"><input type=\"file\" name=\"f\" style=\"display:none\" "
+					     "onchange=\"if(this.files.length&&confirm('%s'))this.form.submit();else this.value=''\">"
+					     "<button type=\"button\" onclick=\"this.form.f.click()\">%s</button></form>",
+					     (const char *) DirEnc, (const char *) NameEnc, (const char *) TextAttr,
+					     T ("sustituir"));
+				Actions.Append (Line);
+			}
+
+			// borrar (las carpetas, solo si están vacías)
+			Text.Format (T ("¿Borrar %s?"), pEntries[i].Name);
+			if (bSystem)
+			{
+				CString Both;
+				Both.Format ("%s %s", T ("Es del sistema: si lo cambias mal, la Pi puede no arrancar. ¿Seguro?"),
+					     (const char *) Text);
+				Text = Both;
+			}
+			JSText (Text, &TextJS);
+			HTMLEscape (TextJS, &TextAttr);
+			Line.Format ("<a href=\"/del?d=%s&f=%s\" onclick=\"return confirm('%s')\">%s</a>",
+				     (const char *) DirEnc, (const char *) Enc, (const char *) TextAttr, T ("borrar"));
+			Actions.Append (Line);
 		}
+
+		// el menú de acciones: en el móvil se despliega con el ⋮; en pantallas
+		// anchas, el CSS las pone en la fila
+		CString Menu;
+		if (Actions.GetLength () > 0)
+		{
+			Menu.Format ("<input type=\"checkbox\" class=\"t\" id=\"m%u\">"
+				     "<label class=\"m\" for=\"m%u\" aria-label=\"%s\">&#8942;</label>"
+				     "<div class=\"acts\">%s</div>", i, i, T ("Acciones"), (const char *) Actions);
+		}
+		CString Size;
+		if (!bDir)
+		{
+			Size.Format ("%u KB", (pEntries[i].nSize + 1023) / 1024);
+		}
+		Line.Format ("<tr><td class=\"n\">%s</td><td class=\"s\">%s</td><td class=\"a\">%s</td></tr>",
+			     (const char *) Name, (const char *) Size, (const char *) Menu);
 		Html.Append (Line);
 	}
-	Html.Append ("</table>");
+	Html.Append ("</table><script>"
+		     "document.addEventListener('change',function(e){var t=e.target;"
+		     "if(t.className=='t'&&t.checked)document.querySelectorAll('.t').forEach(function(c){"
+		     "if(c!=t)c.checked=false})});"
+		     "document.addEventListener('click',function(e){if(!e.target.closest('td.a'))"
+		     "document.querySelectorAll('.t').forEach(function(c){c.checked=false})});"
+		     "</script>");
 
 	HTMLEscape (pDir, &Esc);
 	if (!bReadOnly)
@@ -948,7 +1620,9 @@ static void EnsureCertificates (void)
 struct TNetJob
 {
 	boolean bSearch;
+	boolean bRequestLoad;		// descarga: pedir la carga (la web) o solo devolver SDPath (el menú)
 	char Arg[256];
+	char SDPath[192];		// descarga: dónde se ha guardado
 	TZXInfoResult Results[ZXINFO_MAX_RESULTS];
 	int nCount;
 	char Error[96];
@@ -1103,12 +1777,63 @@ CString CZXWebServer::Download (const char *pPath)
 		return Message;
 	}
 	pJob->bSearch = FALSE;
+	pJob->bRequestLoad = TRUE;
 	strncpy (pJob->Arg, pPath, sizeof pJob->Arg - 1);
 	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
 	RunJob (pJob);
 	Message = pJob->Message;
 	delete pJob;
 	return Message;
+}
+
+// Para el menú de la Pi (navegador de ficheros, F3): las mismas búsqueda y
+// descarga que la web, en la misma tarea de red. Esperan a que termine (los
+// avisos de «buscando» y «descargando» salen con el aviso de la red)
+int ZXDBSearch (const char *pQuery, TZXInfoResult *pResults, unsigned nMaxResults, CString *pError)
+{
+	TNetJob *pJob = new TNetJob;
+	if (pJob == 0)
+	{
+		*pError = T ("No hay memoria");
+		return -1;
+	}
+	pJob->bSearch = TRUE;
+	strncpy (pJob->Arg, pQuery, sizeof pJob->Arg - 1);
+	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
+	RunJob (pJob);
+	int nCount = pJob->nCount;
+	if (nCount > (int) nMaxResults)
+	{
+		nCount = nMaxResults;
+	}
+	for (int i = 0; i < nCount; i++)
+	{
+		pResults[i] = pJob->Results[i];
+	}
+	*pError = pJob->Error;
+	delete pJob;
+	return nCount;
+}
+
+boolean ZXDBDownload (const char *pPath, CString *pSDPath, CString *pMessage)
+{
+	TNetJob *pJob = new TNetJob;
+	if (pJob == 0)
+	{
+		*pMessage = T ("No hay memoria para la descarga");
+		return FALSE;
+	}
+	pJob->bSearch = FALSE;
+	pJob->bRequestLoad = FALSE;
+	pJob->SDPath[0] = '\0';
+	strncpy (pJob->Arg, pPath, sizeof pJob->Arg - 1);
+	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
+	RunJob (pJob);
+	*pMessage = pJob->Message;
+	*pSDPath = pJob->SDPath;
+	boolean bOK = pJob->SDPath[0] != '\0';
+	delete pJob;
+	return bOK;
 }
 
 // Descarga a SD:/descargas y pide cargarlo en el Spectrum (en la tarea)
@@ -1175,7 +1900,12 @@ static void DoDownload (TNetJob *pJob)
 		return;
 	}
 
-	WebRequestLoad (SDPath);
+	strncpy (pJob->SDPath, SDPath, sizeof pJob->SDPath - 1);
+	pJob->SDPath[sizeof pJob->SDPath - 1] = '\0';
+	if (pJob->bRequestLoad)
+	{
+		WebRequestLoad (SDPath);
+	}
 	Message.Format (T ("Descargado y cargando en el Spectrum: %s (%u KB)"), Name, (unsigned) (nSize + 1023) / 1024);
 	strncpy (pJob->Message, Message, sizeof pJob->Message - 1);
 	pJob->Message[sizeof pJob->Message - 1] = '\0';

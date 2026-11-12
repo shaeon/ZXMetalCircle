@@ -125,6 +125,7 @@ private:
 	boolean PrepareCSW (const u8 *p);
 	void JumpRelative (unsigned nFrom, int nRel);
 	unsigned GetSelectCountAt (const u8 *p) const;
+	boolean StopsAfter (unsigned nBlock) const;	// tras él, parada o fin
 	boolean PrepareGDB (const u8 *p);
 	void StartSymbol (const u8 *pSymDef, unsigned nMaxPulses);
 	unsigned SymbolPulse (void);		// 0 = fin del símbolo
