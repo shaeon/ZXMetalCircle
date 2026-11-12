@@ -24,7 +24,7 @@ Only the **16K/48K and 128K** ROMs are built into the kernel, so the emulator al
 | `plus3.rom` | 64 KB | +3 (and .DSK disks) |
 | `plus3e-es.rom` / `plus3e-en.rom` | 64 KB | +3e (and hard disk); chosen with `p3elang=` |
 | `if1.rom` | 8 KB | Interface 1 (microdrives, RS232, ZX Net, LEC's CP/M) |
-| `mf1.rom`, `mf128.rom`, `mfplus3.rom` | 8 KB | Multiface One, 128 and 3 (F5); **not included**, put your own; without them, F5 does a plain NMI |
+| `mf1.rom`, `mf128.rom`, `mfplus3.rom` | 8 KB | Multiface One, 128 and 3 (F5); without them, F5 does a plain NMI |
 | `esxmmc.bin` | 8 KB | esxDOS 0.8.9 for the divMMC (`divmmc=esxdos`) |
 | `spectranet.rom` | 128 KB | Spectranet flash with the firmware installed (`spectranet=1`) |
 

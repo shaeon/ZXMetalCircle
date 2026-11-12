@@ -152,7 +152,7 @@ El contenido de la carpeta **`sdcard`** es lo que va en la raíz de una tarjeta 
   ```
   y copiar **todo su contenido** a la raíz de la tarjeta.
 
-Lo que **no** va en la SD que se genera, y hay que añadir aparte si se tienen: las ROM del Multiface (`roms/mf1.rom`, `mf128.rom`, `mf3.rom`) y la tarjeta de esxDOS (`esxdos.img`).
+Lo que **no** va en la SD que se genera: la tarjeta de esxDOS (`esxdos.img`), que crea el propio emulador.
 
 ---
 

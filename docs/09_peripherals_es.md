@@ -92,7 +92,7 @@ Se emula el que corresponde a cada modelo, siguiendo la lógica de JSpeccy:
 | 128K y +2 | Multiface 128 | `mf128.rom` |
 | +2A | Multiface 3 | `mfplus3.rom` (o `mf3.rom`) |
 
-- **Las ROMs** (© Romantic Robot) **no se incluyen**: no tenemos permiso para distribuirlas. Copia el volcado de la ROM de tu propio Multiface en la carpeta `roms` de la SD como `mf1.rom`, `mf128.rom` o `mfplus3.rom` (8192 bytes cada una). Si falta alguna, F5 hace una NMI normal en esa máquina.
+- **Las ROMs** (© Romantic Robot) van en la carpeta `roms` de la SD: `mf1.rom`, `mf128.rom` y `mfplus3.rom` (8192 bytes cada una). Si falta alguna, F5 hace una NMI normal en esa máquina.
 - Sin la ROM de un modelo, F5 y el botón de NMI generan una NMI normal en ese modelo.
 - Se entra con F5, con el botón de NMI por GPIO o, en el modo extendido del teclado real, con la tecla 5.
 - Funcionan la paginación por puertos (0x9F/0x1F, 0xBF/0x3F), el bloqueo del MF128/MF3 (incluido el modo "invisible"), la lectura de 0x7FFD/0x1FFD desde el MF y los 8 KB de RAM propia.

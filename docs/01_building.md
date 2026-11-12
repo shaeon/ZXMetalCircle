@@ -152,7 +152,7 @@ The contents of the **`sdcard`** folder go in the root of a card formatted as **
   ```
   and copy **all its contents** to the root of the card.
 
-What is **not** included in the generated SD card, and has to be added separately if you have it: the Multiface ROMs (`roms/mf1.rom`, `mf128.rom`, `mf3.rom`) and the esxDOS card (`esxdos.img`).
+What is **not** included in the generated SD card: the esxDOS card (`esxdos.img`), which the emulator creates itself.
 
 ---
 

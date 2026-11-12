@@ -11,8 +11,7 @@ funcionando. Al arrancar aparece el aviso "Faltan ROMs: ..." con la lista.
 
 Las ROMs de Sinclair y Amstrad se distribuyen con permiso de Amstrad para
 su uso en emuladores; las del +3e, con permiso de Garry Lancaster. Las del
-Multiface (c) Romantic Robot no se incluyen: no tenemos permiso para
-distribuirlas. Si tienes un Multiface, copia aqui el volcado de su ROM.
+Multiface son (c) Romantic Robot.
 esxDOS es de Papaya Dezign (https://esxdos.org), de uso no comercial.
 El firmware de la Spectranet es de Dylan Smith (licencia MIT).
 
@@ -69,7 +68,7 @@ Si borras alguna por error, la tienes en el zip de ZXMetalCircle
 2) ROMS QUE PUEDES ANADIR TU
 ----------------------------
 
- ROMs del Multiface (no se incluyen; el volcado de la de tu Multiface):
+ ROMs del Multiface (c) Romantic Robot:
 
    mf1.rom       8192 bytes   Multiface One (16K/48K)
    mf128.rom     8192 bytes   Multiface 128 (128K y +2)
