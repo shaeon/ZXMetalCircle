@@ -38,7 +38,7 @@ La licencia y los créditos también se ven en el propio emulador: F1 y luego **
 
 - **Mbed TLS** 3.6 (Apache-2.0), **jsmn** (MIT, Serge Zaitsev), **ZXInfo API** (api.zxinfo.dk) y **Spectrum Computing** (ZXDB). Lista de certificados raíz de **Mozilla** (MPL-2.0).
 
-- **ROMs del Multiface** © Romantic Robot UK Ltd: **no se incluyen**, porque no tenemos permiso para distribuirlas (se ha pedido). La emulación del Multiface funciona con el volcado de la ROM de tu propio Multiface en `roms/` (`mf1.rom`, `mf128.rom`, `mfplus3.rom`).
+- **ROMs del Multiface** © Romantic Robot UK Ltd (`roms/mf1.rom`, `mf128.rom`, `mfplus3.rom`).
 
 - **ROMs del +3e** de Garry Lancaster (https://worldofspectrum.org/zxplus3e/), versión 1.43 para ZXMMC; distribución gratuita con permiso de Amstrad.
 - **zxp3** de Kyp (https://github.com/Kyp069/zxp3) y **MiST** (`sd_card.v`): referencia para la ZXMMC y la tarjeta SD.

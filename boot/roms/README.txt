@@ -11,9 +11,8 @@ needs it becomes unavailable: the rest keeps working. At boot the warning
 
 The Sinclair and Amstrad ROMs are distributed with Amstrad's permission for
 use in emulators; the +3e ones, with Garry Lancaster's permission. The
-Multiface ROMs (c) Romantic Robot are not included: we have no permission to
-distribute them. If you own a Multiface, copy the dump of its ROM here. esxDOS belongs to Papaya Dezign (https://esxdos.org), for
-non-commercial use. The Spectranet firmware is by Dylan Smith (MIT licence).
+Multiface ROMs are (c) Romantic Robot. esxDOS belongs to Papaya Dezign
+(https://esxdos.org), for non-commercial use. The Spectranet firmware is by Dylan Smith (MIT licence).
 
 
 1) ROMS THAT COME WITH ZXMETALCIRCLE
@@ -69,7 +68,7 @@ of zxcircle-sd.zip).
 2) ROMS YOU CAN ADD YOURSELF
 ----------------------------
 
- Multiface ROMs (not included; the dump of your own Multiface's ROM):
+ Multiface ROMs (c) Romantic Robot:
 
    mf1.rom       8192 bytes   Multiface One (16K/48K)
    mf128.rom     8192 bytes   Multiface 128 (128K and +2)

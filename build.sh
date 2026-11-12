@@ -267,8 +267,7 @@ cat "$ROOT/roms/plus3e-en-"[0-3].rom > "$ROOT/sdcard/roms/plus3e-en.rom"
 cp "$ROOT/roms/if1-2.rom" "$ROOT/sdcard/roms/if1.rom"
 # TK90X y TK95 (Microdigital): las originales y las v3 de Rodolfo Guerra
 cp "$ROOT/roms/"tk*.rom "$ROOT/sdcard/roms/"
-# ROMs del Multiface (© Romantic Robot): no se publican sin su permiso. Si
-# están en roms/ (las de cada uno), van a la SD; si no, el Multiface no está.
+# ROMs del Multiface (© Romantic Robot)
 for MF in mf1.rom mf128.rom mfplus3.rom; do
 	[ -f "$ROOT/roms/$MF" ] && cp "$ROOT/roms/$MF" "$ROOT/sdcard/roms/"
 done

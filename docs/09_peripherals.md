@@ -92,6 +92,6 @@ The one matching each model is emulated, following JSpeccy's logic:
 | 128K and +2 | Multiface 128 | `mf128.rom` |
 | +2A | Multiface 3 | `mfplus3.rom` (or `mf3.rom`) |
 
-- **The ROMs** (© Romantic Robot) are **not included**: we have no permission to distribute them. Copy the dump of your own Multiface's ROM to the SD card's `roms` folder as `mf1.rom`, `mf128.rom` or `mfplus3.rom` (8192 bytes each). If one is missing, F5 does a plain NMI on that machine.
+- **The ROMs** (© Romantic Robot) go in the SD card's `roms` folder: `mf1.rom`, `mf128.rom` and `mfplus3.rom` (8192 bytes each). If one is missing, F5 does a plain NMI on that machine.
 - It is entered with F5, with the GPIO NMI button or, in the real keyboard's extended mode, with key 5.
 - Port paging (0x9F/0x1F, 0xBF/0x3F), the MF128/MF3 lock (including "invisible" mode), reading 0x7FFD/0x1FFD from the MF and its own 8 KB of RAM all work.

@@ -35,7 +35,7 @@ The licence and the credits can also be seen in the emulator itself: F1 and then
 - **Spectranet** © Dylan Smith (https://spectrum.alioth.net), firmware under the MIT licence; the card emulation is based on Fuse's (Philip Kendall and others, GPL v2 or later).
 - **esxDOS 0.8.9** © 2005-2021 Papaya Dezign (https://esxdos.org): ROM and system files, unmodified, for non-commercial use.
 - **Mbed TLS** 3.6 (Apache-2.0), **jsmn** (MIT, Serge Zaitsev), **ZXInfo API** (api.zxinfo.dk) and **Spectrum Computing** (ZXDB). **Mozilla** root certificate list (MPL-2.0).
-- **Multiface ROMs** © Romantic Robot UK Ltd: **not included**, as we have no permission to distribute them (permission has been requested). The Multiface emulation works with the dump of your own Multiface's ROM in `roms/` (`mf1.rom`, `mf128.rom`, `mfplus3.rom`).
+- **Multiface ROMs** © Romantic Robot UK Ltd (`roms/mf1.rom`, `mf128.rom`, `mfplus3.rom`).
 - **+3e ROMs** by Garry Lancaster (https://worldofspectrum.org/zxplus3e/), version 1.43 for the ZXMMC; free distribution with Amstrad's permission.
 - **zxp3** by Kyp (https://github.com/Kyp069/zxp3) and **MiST** (`sd_card.v`): reference for the ZXMMC and the SD card.
 - **MAME** (https://github.com/mamedev/mame): uPD765 controller and floppy PLL (BSD-3-Clause, Olivier Galibert); the .DSK reading and the MFM track generation follow its code. Licence text in `third_party/mame/LICENSE`.
