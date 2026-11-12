@@ -52,6 +52,11 @@ En la página web del emulador hay un buscador: escribes un título y busca en *
 - Para cada uno se elige el mejor fichero disponible, por este orden: TZX, TAP, Z80, SNA, SZX, DSK, CSW…
 - Con "**descargar y cargar**", el emulador lo baja de spectrumcomputing.co.uk, lo descomprime si viene en ZIP, lo guarda en la carpeta **`descargas`** de la SD y lo carga en el Spectrum. Si hace falta, cambia de modelo, por ejemplo al +3 para un `.DSK`.
 
+**También desde el propio emulador**, sin la página web: en el navegador de ficheros (F1 y ENTER), con red, la línea **«Buscar en internet (ZXDB)»** aparece al principio de la raíz de la SD, y **F3** lleva directo a ella desde cualquier carpeta.
+1. Escribe el título, o una parte, con letras, números y espacios: no hacen falta guiones ni puntos (para *R-Type* basta con `R TYPE`).
+2. Sale una lista con los resultados: título, año, editora y el formato del fichero. Los que no tienen fichero en ZXDB lo indican.
+3. Al elegir uno, se descarga y se carga, igual que con «descargar y cargar» en la web, y queda en la carpeta `descargas` para la próxima vez. ESC en la lista hace otra búsqueda; ESC al escribir vuelve al navegador.
+
 **Cómo funciona**:
 - `src/download/httpsclient.cpp` es un cliente HTTP/1.1 con redirecciones y respuestas "chunked".
 - **Mbed TLS 3.6** (`third_party/mbedtls`, licencia Apache-2.0) cifra la conexión con TLS 1.2. Su configuración está en `zxmc_config.h`: ECDHE/RSA, AES-GCM, ChaCha20.

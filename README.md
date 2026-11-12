@@ -108,7 +108,7 @@ Done:
 - divMMC with esxDOS 0.8.9: its card is an image (`hdd/esxdos.img`) and whatever is left in the `esxdos_i` folder is copied into it; divMMC ports on the +3e.
 - Spectranet network card, with the official firmware.
 - Your own ROMs for any machine (`roms` folder of the SD card).
-- Network over WiFi or cable: web server to manage the SD card from a browser (it can be turned off, made read-only or protected with a password), time by NTP, and search and download of programs from ZXDB over HTTPS.
+- Network over WiFi or cable: web server to manage the SD card from a browser (it can be turned off, made read-only or protected with a password), time by NTP, and search and download of programs from ZXDB over HTTPS, from the web page or from the emulator's own file browser (F3).
 - Settings screens in the emulator (F1, C), with saving to `cmdline.txt` and Pi restart.
 - Menus and web page in Spanish and English (more languages can be added without recompiling).
 - On the 4-core Pis, the image scaling runs on core 1.

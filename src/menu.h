@@ -52,7 +52,8 @@ enum TMenuResult
 	MenuResultTapeInvert,		// P en el navegador de la cinta: invertir la polaridad
 	MenuResultInput,		// línea de texto: ENTER (GetInput ())
 	MenuResultInputCancel,		// línea de texto: ESC
-	MenuResultListKey		// lista de dos columnas: una tecla (GetListKey (), GetListSelected ())
+	MenuResultListKey,		// lista de dos columnas: una tecla (GetListKey (), GetListSelected ())
+	MenuResultZXDBSearch		// navegador: buscar en ZXDB (la línea de la raíz o F3)
 };
 
 class CMenu : public CTNFSListener
@@ -157,6 +158,7 @@ private:
 		char Name[MENU_NAME_LEN];
 		boolean bDir;
 		boolean bRemoteRoot;	// "Internet (TNFS)" en la raíz de la SD
+		boolean bZXDB;		// "Buscar en internet (ZXDB)", también en la raíz
 	};
 	CRemoteSource *m_pRemote;
 

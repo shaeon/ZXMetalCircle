@@ -26,6 +26,7 @@
 #include <fatfs/ff.h>
 #include <circle/types.h>
 
+#include "download/zxinfo.h"	// TZXInfoResult (búsqueda en ZXDB)
 #include "video.h"
 #include "zxkeyboard.h"
 #include "padprofile.h"
@@ -103,6 +104,11 @@ private:
 	void ToggleRecording (boolean bEarInput = FALSE);
 	void StartEarInput (void);
 	void LoadAnyFile (const char *pPath);
+	// Búsqueda en ZXDB desde el navegador (la línea de la raíz o F3)
+	void ZXDBAsk (void);				// pide el título
+	void ZXDBSearchTitle (const char *pQuery);	// busca y enseña los resultados
+	void ZXDBShowResults (unsigned nSelected = 0);
+	void ZXDBChoose (unsigned nResult);		// descarga y carga
 	void InsertDisk (const char *pPath, int nForceUnit = -1);	// 0: disco nuevo en la primera unidad libre
 	void EjectDisks (void);
 	void MountHardDisk (const char *pPath);
@@ -397,6 +403,11 @@ private:
 	boolean			m_bUpdateBootRunning;	// la tarea de al arrancar está buscando
 	TUpdateBootResult	m_UpdateBootResult;
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
+	boolean			m_bZXDBInput;		// la línea de texto es el título para ZXDB
+	boolean			m_bZXDBChoice;		// la lista es la de los resultados de ZXDB
+	TZXInfoResult		m_ZXDBResults[ZXINFO_MAX_RESULTS];
+	unsigned		m_nZXDBResults;
+	char			m_ZXDBQuery[32];
 	boolean			m_bZipOverwriteChoice;	// pregunta: usar el de tmp o sobrescribir
 	unsigned		m_nZipPending;
 	boolean			m_bIndicators;		// indicators=1: D, H, M1-M8 y grabación

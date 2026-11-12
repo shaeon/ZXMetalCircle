@@ -221,6 +221,10 @@ CKernel::CKernel (void)
 	m_ZipEntryPath[0] = '\0';
 	m_nZipChoices = 0;
 	m_bZipChoice = FALSE;
+	m_bZXDBInput = FALSE;
+	m_bZXDBChoice = FALSE;
+	m_nZXDBResults = 0;
+	m_ZXDBQuery[0] = '\0';
 	m_bZipOverwriteChoice = FALSE;
 	m_nZipPending = 0;
 	m_nFPSStart = 0;
@@ -2083,6 +2087,93 @@ void CKernel::OpenZip (const char *pPath, const char *pEntry)
 	{
 		m_Menu.SetChoiceItem (i, m_Zip.GetBaseName (m_ZipChoice[i]));
 	}
+}
+
+// Búsqueda en ZXDB desde el navegador de ficheros (la línea «Buscar en
+// internet (ZXDB)» de la raíz, o F3): la misma búsqueda y descarga que la web
+// (ZXInfo y Spectrum Computing), en su tarea de red. ZXInfo encuentra los
+// títulos aunque se escriban en mayúsculas y con espacios («R TYPE»), así que
+// basta la línea de texto del menú (letras, números y espacio)
+void CKernel::ZXDBAsk (void)
+{
+	m_bZXDBInput = TRUE;
+	m_Menu.OpenInput (T ("Buscar en internet (ZXDB)"), T ("Escribe el título, o una parte"),
+			  T ("(letras, números y espacios)"), T ("ENTER buscar  BORRAR corregir  ESC salir"));
+}
+
+void CKernel::ZXDBSearchTitle (const char *pQuery)
+{
+	strncpy (m_ZXDBQuery, pQuery, sizeof m_ZXDBQuery - 1);
+	m_ZXDBQuery[sizeof m_ZXDBQuery - 1] = '\0';
+
+	CString Error;
+	int nCount = ZXDBSearch (m_ZXDBQuery, m_ZXDBResults, ZXINFO_MAX_RESULTS, &Error);
+	if (nCount < 0)
+	{
+		ShowMessage (Error);
+		ZXDBAsk ();
+		return;
+	}
+	if (nCount == 0)
+	{
+		ShowMessage (T ("ZXDB: no se ha encontrado nada"));
+		ZXDBAsk ();
+		return;
+	}
+	m_nZXDBResults = nCount;
+	ZXDBShowResults ();
+}
+
+void CKernel::ZXDBShowResults (unsigned nSelected)
+{
+	m_bZXDBChoice = TRUE;
+	CString Title;
+	Title.Format (T ("ZXDB: %s"), m_ZXDBQuery);
+	m_Menu.OpenChoice (Title);
+	for (unsigned i = 0; i < m_nZXDBResults; i++)
+	{
+		const TZXInfoResult &R = m_ZXDBResults[i];
+		CString Item, Year;
+		if (R.nYear != 0)
+		{
+			Year.Format ("%u, ", R.nYear);
+		}
+		if (R.Path[0] != '\0')
+		{
+			Item.Format ("%s (%s%s) %s", R.Title, (const char *) Year, R.Publisher, R.Format);
+		}
+		else
+		{
+			Item.Format ("%s (%s%s) - %s", R.Title, (const char *) Year, R.Publisher, T ("sin fichero"));
+		}
+		m_Menu.SetChoiceItem (i, Item);
+	}
+	m_Menu.SetChoiceSelected (nSelected);		// al volver tras un aviso, en la misma
+}
+
+void CKernel::ZXDBChoose (unsigned nResult)
+{
+	if (nResult >= m_nZXDBResults)
+	{
+		return;
+	}
+	const TZXInfoResult &R = m_ZXDBResults[nResult];
+	if (R.Path[0] == '\0')
+	{
+		ShowMessage (T ("Ese programa no tiene fichero en ZXDB"));
+		ZXDBShowResults (nResult);
+		return;
+	}
+
+	CString SDPath, Message;
+	if (!ZXDBDownload (R.Path, &SDPath, &Message))
+	{
+		ShowMessage (Message);
+		ZXDBShowResults (nResult);
+		return;
+	}
+	m_Menu.Close ();
+	LoadAnyFile (SDPath);			// queda en SD:/descargas para la próxima vez
 }
 
 void CKernel::LoadZipEntry (unsigned nEntry)
@@ -4700,6 +4791,34 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			EjectUnit (m_Menu.GetSelectedUnit ());
 			UpdateUnitLines ();
+		}
+		else if (Result == MenuResultZXDBSearch)
+		{
+			ZXDBAsk ();
+		}
+		else if ((Result == MenuResultInput || Result == MenuResultInputCancel) && m_bZXDBInput)
+		{
+			m_bZXDBInput = FALSE;
+			if (Result == MenuResultInput && m_Menu.GetInput ()[0] != '\0')
+			{
+				ZXDBSearchTitle (m_Menu.GetInput ());
+			}
+			else
+			{
+				m_Menu.OpenBrowser ();		// ESC (o nada escrito): al navegador
+			}
+		}
+		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bZXDBChoice)
+		{
+			m_bZXDBChoice = FALSE;
+			if (Result == MenuResultChoice)
+			{
+				ZXDBChoose (m_Menu.GetChoice ());
+			}
+			else
+			{
+				ZXDBAsk ();			// ESC: otra búsqueda
+			}
 		}
 		else if (Result == MenuResultInput)
 		{

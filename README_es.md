@@ -114,7 +114,7 @@ Hecho:
 - divMMC con esxDOS 0.8.9: su tarjeta es una imagen (`hdd/esxdos.img`) y lo que se deja en la carpeta `esxdos_i` se copia a ella; puertos divMMC en el +3e.
 - Tarjeta de red Spectranet, con el firmware oficial.
 - ROMs propias para cualquier máquina (carpeta `roms` de la SD).
-- Red por WiFi o cable: servidor web para gestionar la SD desde el navegador (se puede apagar, dejar en solo lectura o proteger con contraseña), hora por NTP y búsqueda y descarga de programas de ZXDB por HTTPS.
+- Red por WiFi o cable: servidor web para gestionar la SD desde el navegador (se puede apagar, dejar en solo lectura o proteger con contraseña), hora por NTP y búsqueda y descarga de programas de ZXDB por HTTPS, desde la web o desde el navegador de ficheros del propio emulador (F3).
 - Configuración desde el emulador (F1, C), con guardado en `cmdline.txt` y reinicio de la Pi.
 - Menús y página web en español e inglés (se pueden añadir más idiomas sin recompilar).
 - En las Pi de 4 núcleos, la ampliación de la imagen va en el núcleo 1.

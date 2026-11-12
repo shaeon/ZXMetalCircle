@@ -57,4 +57,9 @@ private:
 	char m_Token[24];			// clave de esta petición ("" = sin contraseña)
 };
 
+// ZXDB desde el menú de la Pi (ver webserver.cpp): esperan a que termine
+#include "download/zxinfo.h"
+int ZXDBSearch (const char *pQuery, TZXInfoResult *pResults, unsigned nMaxResults, CString *pError);
+boolean ZXDBDownload (const char *pPath, CString *pSDPath, CString *pMessage);
+
 #endif

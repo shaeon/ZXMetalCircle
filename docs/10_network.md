@@ -52,6 +52,11 @@ The emulator's web page has a search box: you type a title and it searches **ZXD
 - For each one the best available file is chosen, in this order: TZX, TAP, Z80, SNA, SZX, DSK, CSW…
 - With "**download and load**", the emulator fetches it from spectrumcomputing.co.uk, unzips it if it comes as a ZIP, saves it in the **`descargas`** (downloads) folder of the SD card and loads it into the Spectrum. If needed, it changes model, for example to the +3 for a `.DSK`.
 
+**Also from the emulator itself**, without the web page: in the file browser (F1 and ENTER), with a network, the line **"Search the internet (ZXDB)"** appears at the top of the SD card's root, and **F3** goes straight to it from any folder.
+1. Type the title, or part of it, with letters, numbers and spaces: no hyphens or dots are needed (for *R-Type*, `R TYPE` is enough).
+2. A list with the results appears: title, year, publisher and file format. Those without a file in ZXDB say so.
+3. Choosing one downloads and loads it, as with "download and load" on the web page, and it stays in the `descargas` folder for next time. ESC in the list starts another search; ESC while typing goes back to the browser.
+
 **How it works**:
 - `src/download/httpsclient.cpp` is an HTTP/1.1 client with redirects and chunked responses.
 - **Mbed TLS 3.6** (`third_party/mbedtls`, Apache-2.0 licence) encrypts the connection with TLS 1.2. Its configuration is in `zxmc_config.h`: ECDHE/RSA, AES-GCM, ChaCha20.

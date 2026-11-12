@@ -1620,7 +1620,9 @@ static void EnsureCertificates (void)
 struct TNetJob
 {
 	boolean bSearch;
+	boolean bRequestLoad;		// descarga: pedir la carga (la web) o solo devolver SDPath (el menú)
 	char Arg[256];
+	char SDPath[192];		// descarga: dónde se ha guardado
 	TZXInfoResult Results[ZXINFO_MAX_RESULTS];
 	int nCount;
 	char Error[96];
@@ -1775,12 +1777,63 @@ CString CZXWebServer::Download (const char *pPath)
 		return Message;
 	}
 	pJob->bSearch = FALSE;
+	pJob->bRequestLoad = TRUE;
 	strncpy (pJob->Arg, pPath, sizeof pJob->Arg - 1);
 	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
 	RunJob (pJob);
 	Message = pJob->Message;
 	delete pJob;
 	return Message;
+}
+
+// Para el menú de la Pi (navegador de ficheros, F3): las mismas búsqueda y
+// descarga que la web, en la misma tarea de red. Esperan a que termine (los
+// avisos de «buscando» y «descargando» salen con el aviso de la red)
+int ZXDBSearch (const char *pQuery, TZXInfoResult *pResults, unsigned nMaxResults, CString *pError)
+{
+	TNetJob *pJob = new TNetJob;
+	if (pJob == 0)
+	{
+		*pError = T ("No hay memoria");
+		return -1;
+	}
+	pJob->bSearch = TRUE;
+	strncpy (pJob->Arg, pQuery, sizeof pJob->Arg - 1);
+	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
+	RunJob (pJob);
+	int nCount = pJob->nCount;
+	if (nCount > (int) nMaxResults)
+	{
+		nCount = nMaxResults;
+	}
+	for (int i = 0; i < nCount; i++)
+	{
+		pResults[i] = pJob->Results[i];
+	}
+	*pError = pJob->Error;
+	delete pJob;
+	return nCount;
+}
+
+boolean ZXDBDownload (const char *pPath, CString *pSDPath, CString *pMessage)
+{
+	TNetJob *pJob = new TNetJob;
+	if (pJob == 0)
+	{
+		*pMessage = T ("No hay memoria para la descarga");
+		return FALSE;
+	}
+	pJob->bSearch = FALSE;
+	pJob->bRequestLoad = FALSE;
+	pJob->SDPath[0] = '\0';
+	strncpy (pJob->Arg, pPath, sizeof pJob->Arg - 1);
+	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
+	RunJob (pJob);
+	*pMessage = pJob->Message;
+	*pSDPath = pJob->SDPath;
+	boolean bOK = pJob->SDPath[0] != '\0';
+	delete pJob;
+	return bOK;
 }
 
 // Descarga a SD:/descargas y pide cargarlo en el Spectrum (en la tarea)
@@ -1847,7 +1900,12 @@ static void DoDownload (TNetJob *pJob)
 		return;
 	}
 
-	WebRequestLoad (SDPath);
+	strncpy (pJob->SDPath, SDPath, sizeof pJob->SDPath - 1);
+	pJob->SDPath[sizeof pJob->SDPath - 1] = '\0';
+	if (pJob->bRequestLoad)
+	{
+		WebRequestLoad (SDPath);
+	}
 	Message.Format (T ("Descargado y cargando en el Spectrum: %s (%u KB)"), Name, (unsigned) (nSize + 1023) / 1024);
 	strncpy (pJob->Message, Message, sizeof pJob->Message - 1);
 	pJob->Message[sizeof pJob->Message - 1] = '\0';
