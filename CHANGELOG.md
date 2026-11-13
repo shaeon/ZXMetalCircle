@@ -6,9 +6,13 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
-## 1.10
+## Sin publicar
 
 - **Corregido**: las líneas de ayuda de abajo del navegador de ficheros y de la ayuda de teclado (Alt+K) salían en gris; ahora en amarillo, como en las demás pantallas.
+- **Compilación**: `build.sh` ya no recompila todo cada vez: conserva lo compilado de cada modelo y solo recompila lo que ha cambiado (y lo que usa una cabecera tocada). `LIMPIO=1 ./build.sh` compila desde cero. QEMU tiene su propia carpeta, porque compila con otra definición. La Action no cambia.
+
+## 1.10
+
 - **Nuevo**: buscar y descargar programas de ZXDB desde el propio emulador, sin la página web. En el navegador de ficheros, con red, la línea «Buscar en internet (ZXDB)» al principio de la raíz, o F3 desde cualquier carpeta: se escribe el título (ZXInfo lo encuentra aunque sea en mayúsculas y con espacios en lugar de guiones), sale la lista de resultados (título, año, editora y formato) y el elegido se descarga a `descargas` y se carga. La búsqueda y la descarga son las mismas de la web, en la misma tarea de red.
 - **Corregido**: las cintas TZX con los bloques obsoletos 0x34 (información de emulación) o 0x40 (instantánea), de las revisiones del formato hasta la 1.13, no se cargaban: esos bloques no siguen la regla de extensión del formato, se medían mal y el resto de la cinta se perdía. Ahora se saltan, también en la carga instantánea. Revisado el reproductor contra la especificación (<https://worldofspectrum.net/TZXformat.html>), que se cita ahora en el README; lo demás ya la seguía. Comparado también con la cinta de JSpeccy: no le falta nada. Prueba nueva en la Action (`tzx_blocks_test`).
 - **Compilación**: la Action compila dentro de una imagen Docker con todo el entorno ya instalado (`docker/Dockerfile`, la sube a GHCR la Action «Docker»), en lugar de instalar los paquetes de Ubuntu y descargar el Arm GNU Toolchain en cada ejecución. Ya no falla cuando esos servidores no responden. La misma imagen sirve para compilar en casa (guía 01, «Compilar con Docker»).

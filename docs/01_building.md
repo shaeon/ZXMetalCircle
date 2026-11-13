@@ -138,6 +138,7 @@ Useful options:
 | --- | --- |
 | `JOBS=4 ./build.sh` | build with 4 processes (by default, all the computer has) |
 | `QEMU=1 ./build.sh 3-64` | kernels for testing in QEMU (in the `qemu/` folder; they do not go on the SD card) |
+| `LIMPIO=1 ./build.sh` | build from scratch. Without it, only what has changed since the last build is recompiled (and whatever uses a header that was touched) |
 
 ---
 
