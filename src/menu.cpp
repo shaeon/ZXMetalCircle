@@ -2028,7 +2028,7 @@ void CMenu::Draw (TPixel *pScreen)
 		}
 
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ESC/ENTER: volver"),
-				    COLOR_UI_DIM, COLOR_UI_PANEL);
+				    COLOR_UI_TITLE, COLOR_UI_PANEL);
 		return;
 	}
 
@@ -2161,10 +2161,10 @@ void CMenu::Draw (TPixel *pScreen)
 	}
 
 	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 3), T ("ENTER cargar  ESC salir  BORRAR subir"),
-			    COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+			    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 	// con red, la tecla de la búsqueda en ZXDB (F3)
 	boolean bZXDBKey = m_nUnitTarget < 0 && CNetworkManager::IsNetRunning ();
 	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2),
 			    bZXDBKey ? T ("Letra: saltar  RePág/AvPág  F3: ZXDB") : T ("Letra: saltar  RePág/AvPág: páginas"),
-			    COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+			    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 }
