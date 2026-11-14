@@ -56,6 +56,8 @@ jobs:
           ./tzx_blocks_test
           g++ $FLAGS -o floatbus_test plus3/floatbus_test.cpp $CORE roms_host.S
           ./floatbus_test
+          g++ $FLAGS -o snapshot_snet_test snapshot_snet_test.cpp $S/snapshot.cpp $CORE roms_host.S
+          ./snapshot_snet_test
           g++ -O2 -std=c++17 -I. -I$S -o joystick_test joystick_test.cpp $S/zxkeyboard.cpp
           ./joystick_test
           g++ -O2 -std=c++17 -I. -I$S -o players_test players_test.cpp $S/zxkeyboard.cpp

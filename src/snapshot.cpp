@@ -49,6 +49,11 @@ void CSnapshot::SetModel (CSpectrum *pSpectrum, TModel Model)
 	pSpectrum->m_bIF2Inserted = FALSE;	// el snapshot trae su propia memoria
 	pSpectrum->SetModel (Model);		// incluye reset
 	pSpectrum->UnpageMultiface ();
+
+	// El reset deja paginada la Spectranet para que arranque su firmware; el
+	// snapshot sigue donde estaba, con la ROM del Spectrum (si no, sus llamadas
+	// a la ROM, como KEY-SCAN, acaban en la de la Spectranet)
+	pSpectrum->m_Snet.Unpage ();
 }
 
 void CSnapshot::Finish (CSpectrum *pSpectrum)

@@ -79,6 +79,8 @@ public:
 
 	// Memoria con la tarjeta paginada (0x0000-0x3FFF)
 	boolean IsPaged (void) const		{ return m_bPaged; }
+	// Despaginar sin más (al cargar un snapshot: el programa espera la ROM del Spectrum)
+	void Unpage (void)			{ m_bPaged = FALSE; m_bPagedViaIO = FALSE; }
 	u8 GetPage (unsigned nSlot) const	{ return m_Page[nSlot & 3]; }
 	u8 Read (u16 nAddress);
 	void Write (u16 nAddress, u8 nValue);

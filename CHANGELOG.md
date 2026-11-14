@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Corregido**: con la Spectranet activada, los snapshots (.z80, .sna, .szx) no funcionaban bien: al cargarlos, el Spectrum se reinicia y la Spectranet se queda paginada para arrancar su firmware, pero el snapshot sigue donde estaba, así que sus llamadas a la ROM caían en la de la Spectranet. Por ejemplo, *Ant Attack* se quedaba en «READY WHEN YOU ARE» sin hacer caso a las teclas, o paraba con «3 Subscript wrong». Ahora la Spectranet se despagina al cargar un snapshot, como el Multiface. Prueba nueva en la Action (`snapshot_snet_test`).
 - **Corregido**: las líneas de ayuda de abajo del navegador de ficheros y de la ayuda de teclado (Alt+K) salían en gris; ahora en amarillo, como en las demás pantallas.
 - **Compilación**: `build.sh` ya no recompila todo cada vez: conserva lo compilado de cada modelo y solo recompila lo que ha cambiado (y lo que usa una cabecera tocada). `LIMPIO=1 ./build.sh` compila desde cero. QEMU tiene su propia carpeta, porque compila con otra definición. La Action no cambia.
 
