@@ -95,6 +95,10 @@ CZXKeyboard::CZXKeyboard (void)
 	{
 		m_HeldMatrix[i] = 0;
 	}
+	for (unsigned i = 0; i < 8; i++)
+	{
+		m_ScriptMatrix[i] = 0;
+	}
 	for (unsigned i = 0; i < MAX_GAMEPADS; i++)
 	{
 		m_PadJoy[i] = 0;
@@ -113,6 +117,14 @@ void CZXKeyboard::SetGPIOMatrix (const u8 Matrix[8])
 	for (unsigned i = 0; i < 8; i++)
 	{
 		m_GPIOMatrix[i] = Matrix[i];
+	}
+}
+
+void CZXKeyboard::SetScriptMatrix (const u8 Matrix[8])
+{
+	for (unsigned i = 0; i < 8; i++)
+	{
+		m_ScriptMatrix[i] = Matrix[i];
 	}
 }
 
@@ -554,7 +566,7 @@ u8 CZXKeyboard::ReadPort (u8 nHighByte) const
 	u8 Matrix[8];
 	for (unsigned nRow = 0; nRow < 8; nRow++)
 	{
-		Matrix[nRow] = m_Matrix[nRow] | m_GPIOMatrix[nRow];
+		Matrix[nRow] = m_Matrix[nRow] | m_GPIOMatrix[nRow] | m_ScriptMatrix[nRow];
 		if (m_nHeldFrames != 0)
 		{
 			Matrix[nRow] |= m_HeldMatrix[nRow];	// Alt+V: varias a la vez

@@ -64,7 +64,7 @@ public:
 
 	boolean OpenBrowser (void);
 	void OpenHelp (void);			// ayuda general (F1); ENTER abre el selector
-	void OpenKeyHelp (void);		// ayuda del teclado (Alt+K)
+	void OpenKeyHelp (boolean bZX81 = FALSE);	// ayuda del teclado (Alt+K); del ZX81 si está puesto
 	void SetSettings (CSettings *pSettings)	{ m_pSettings = pSettings; }
 	void OpenSettings (void);		// configuración (C desde la ayuda)
 	unsigned GetChangedSetting (void) const	{ return m_nChangedSetting; }
@@ -152,6 +152,7 @@ private:
 	unsigned SettingsOnPage (unsigned *pIndex, unsigned nMax) const;
 	void FixSettingsRow (void);
 	TMode m_Mode;
+	boolean m_bKeyHelpZX81;		// Alt+K con el ZX81 puesto
 
 	struct TEntry
 	{

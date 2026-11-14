@@ -13,6 +13,8 @@ The Sinclair and Amstrad ROMs are distributed with Amstrad's permission for
 use in emulators; the +3e ones, with Garry Lancaster's permission. The
 Multiface ROMs are (c) Romantic Robot. esxDOS belongs to Papaya Dezign
 (https://esxdos.org), for non-commercial use. The Spectranet firmware is by Dylan Smith (MIT licence).
+The ZX81 emulator (ZX81+) is by Paul Farrow, www.fruitcake.plus.com, and is
+included with his permission.
 
 
 1) ROMS THAT COME WITH ZXMETALCIRCLE
@@ -60,6 +62,10 @@ Multiface ROMs are (c) Romantic Robot. esxDOS belongs to Papaya Dezign
 
  spectranet.rom 131072 bytes  Spectranet flash     The Spectranet cannot be
                                                    connected.
+
+ zx81.rom        16384 bytes  Paul Farrow's ZX81   No ZX81 (F7) and .P
+                              emulator (ZX81+      programs cannot be loaded.
+                              v3.13, on the 128K)
 
 If you delete one by mistake, it is in the ZXMetalCircle zip (roms folder
 of zxcircle-sd.zip).

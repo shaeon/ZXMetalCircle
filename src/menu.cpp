@@ -42,6 +42,7 @@ static char ToLower (char ch)
 CMenu::CMenu (CVideo *pVideo)
 :	m_pVideo (pVideo),
 	m_Mode (ModeClosed),
+	m_bKeyHelpZX81 (FALSE),
 	m_pEntries (new TEntry[MENU_MAX_ENTRIES]),
 	m_nEntries (0),
 	m_nSelected (0),
@@ -515,15 +516,17 @@ void CMenu::OpenHelp (void)
 	m_bSettingsFromShortcut = FALSE;
 }
 
-void CMenu::OpenKeyHelp (void)
+void CMenu::OpenKeyHelp (boolean bZX81)
 {
 	m_Mode = ModeKeyHelp;
+	m_bKeyHelpZX81 = bZX81;
 }
 
 static boolean IsLoadableName (const char *pName)
 {
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".z80", ".sna", ".szx", ".csw", ".rom", ".mdr",
-				    ".mdv", ".dsk", ".vhd", ".img", ".raw", ".hdf", ".zip"};
+				    ".mdv", ".dsk", ".vhd", ".img", ".raw", ".hdf", ".zip",
+				    ".p"};	// programas del ZX81
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (HasExtension (pName, Ext[i]))
@@ -2018,12 +2021,46 @@ void CMenu::Draw (TPixel *pScreen)
 			N_("joystick no es Kempston)"),
 		};
 
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), T ("ZXMetalCircle - Ayuda de teclado"), COLOR_UI_TITLE, COLOR_UI_PANEL);
+		// Con el ZX81 puesto (emulador de Paul Farrow): sus teclas
+		static const char *ZX81HelpLines[] =
+		{
+			N_("Teclado del PC     ZX81"),
+			"",
+			N_("Mayúsculas         SHIFT"),
+			"Enter              NEWLINE",
+			N_("Retroceso          RUBOUT"),
+			N_("Cursores           SHIFT + 5-8"),
+			N_("Esc o Espacio      BREAK"),
+			N_("Ctrl               . (punto)"),
+			"",
+			N_("Las palabras y los signos van en las"),
+			N_("teclas del ZX81 (signos: SHIFT+tecla);"),
+			N_("los signos del PC (, - +...) no valen"),
+			"",
+			N_("Distribución: la del ZX81 o la del 128"),
+			N_("(configuración, página 4)"),
+			N_("PRINT USR 8255: la del ZX81"),
+			N_("PRINT USR 8252: la del 128"),
+			"",
+			N_("Volver al Spectrum: F11 (quitar el"),
+			N_("cartucho) o F7 (elegir un modelo)"),
+			"",
+			N_("Emulador ZX81+ (C) Paul Farrow"),
+			"www.fruitcake.plus.com",
+		};
+
+		const char **ppLines = m_bKeyHelpZX81 ? ZX81HelpLines : KeyHelpLines;
+		unsigned nLines = m_bKeyHelpZX81 ? sizeof ZX81HelpLines / sizeof ZX81HelpLines[0]
+						 : sizeof KeyHelpLines / sizeof KeyHelpLines[0];
+
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (1),
+				    m_bKeyHelpZX81 ? T ("ZXMetalCircle - Teclado del ZX81") : T ("ZXMetalCircle - Ayuda de teclado"),
+				    COLOR_UI_TITLE, COLOR_UI_PANEL);
 
 		unsigned nRow = 3;
-		for (unsigned i = 0; i < sizeof KeyHelpLines / sizeof KeyHelpLines[0]; i++)
+		for (unsigned i = 0; i < nLines; i++)
 		{
-			m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow++), T (KeyHelpLines[i]),
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow++), T (ppLines[i]),
 					    i == 0 ? COLOR_UI_HILITE : COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS);
 		}
 

@@ -285,6 +285,8 @@ for MF in mf1.rom mf128.rom mfplus3.rom; do
 done
 cp "$ROOT/third_party/esxdos/ESXMMC.BIN" "$ROOT/sdcard/roms/esxmmc.bin"
 cp "$ROOT/roms/spectranet.rom" "$ROOT/sdcard/roms/spectranet.rom"
+# Emulador del ZX81 de Paul Farrow (ZX81+ v3.13), con su permiso
+cp "$ROOT/roms/zx81.rom" "$ROOT/sdcard/roms/zx81.rom"
 mkdir -p "$ROOT/sdcard/utils/spectranet"
 cp "$ROOT/third_party/spectranet/installer.tap" "$ROOT/third_party/spectranet/LEEME.txt" "$ROOT/third_party/spectranet/README.txt" "$ROOT/third_party/spectranet/LICENSE.txt" "$ROOT/sdcard/utils/spectranet/"
 

@@ -35,6 +35,7 @@ static const TOptionDef Options[] =
 	{"recreated",	"0|1|auto"},
 	{"multiface",	"0|1"},
 	{"gpiokbd",	"0|off|1|48|128|plus3|plus2a|+3|+2a"},
+	{"zx81kbd",	"zx81|128"},
 	{"gpioaudio",	"0|1"},
 	{"ulaplus",	"0|1"},
 	{"pureblack",	"0|1"},

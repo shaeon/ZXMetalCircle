@@ -214,6 +214,8 @@ CKernel::CKernel (void)
 	m_bUpdateBootRunning = FALSE;
 	m_pTKROM = 0;
 	m_pTK95ROM = 0;
+	m_pZX81ROM = 0;
+	m_bZX81 = FALSE;
 	m_bIndicators = TRUE;
 	m_pZipData = 0;
 	m_pZipEntry = 0;
@@ -1902,7 +1904,11 @@ void CKernel::LoadAnyFile (const char *pPath)
 
 	size_t nLen = strlen (pPath);
 	const char *pExt = nLen > 4 ? pPath + nLen - 4 : "";
-	if (   strcasecmp (pExt, ".z80") == 0 || strcasecmp (pExt, ".sna") == 0
+	if (nLen > 2 && strcasecmp (pPath + nLen - 2, ".p") == 0)
+	{
+		StartZX81 (pPath);		// programa del ZX81
+	}
+	else if (   strcasecmp (pExt, ".z80") == 0 || strcasecmp (pExt, ".sna") == 0
 	    || strcasecmp (pExt, ".szx") == 0)
 	{
 		LoadSnapshot (pPath);
@@ -1950,6 +1956,14 @@ static boolean ZipLoadable (const char *pName, boolean *pWritable)
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx", ".rom",
 				    ".dsk", ".mdr", ".mdv"};
 	unsigned nLen = strlen (pName);
+	if (nLen > 2 && strcasecmp (pName + nLen - 2, ".p") == 0)	// programa del ZX81
+	{
+		if (pWritable != 0)
+		{
+			*pWritable = FALSE;
+		}
+		return TRUE;
+	}
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (nLen > 4 && strcasecmp (pName + nLen - 4, Ext[i]) == 0)
@@ -2783,6 +2797,14 @@ void CKernel::ApplySetting (unsigned nIndex)
 	{
 		m_bF5Files = strcmp (pValue, "files") == 0;
 	}
+	else if (strcmp (pKey, "zx81kbd") == 0)
+	{
+		// la ROM lo mira al arrancar; con el ZX81 puesto, PRINT USR 8255/8252
+		if (IsZX81Active ())
+		{
+			ShowMessage (T ("Teclado del ZX81: al volver a arrancarlo"));
+		}
+	}
 	else if (strcmp (pKey, "cursors") == 0)
 	{
 		m_Keyboard.SetCursorMode (strcmp (pValue, "keys") == 0 ? CursorKeysOnly
@@ -3206,6 +3228,7 @@ void CKernel::EjectUnit (unsigned nUnit)
 	{
 		if (m_pSpectrum->IsCartridgeInserted ())
 		{
+			StopZX81 ();
 			m_pSpectrum->EjectCartridge ();
 			m_CartridgeName[0] = '\0';
 			ShowMessage (T ("Cartucho retirado"));
@@ -4333,6 +4356,8 @@ boolean CKernel::LoadCartridge (const char *pPath)
 		ShowMessage (T ("Cartucho no válido (máximo 16 KB)"));
 		return FALSE;
 	}
+	m_bZX81 = FALSE;		// otro cartucho en lugar del ZX81
+	m_ZX81Loader.Cancel (&m_Keyboard);
 
 	const char *pName = pPath;
 	for (const char *p = pPath; *p != '\0'; p++)
@@ -4680,6 +4705,7 @@ void CKernel::ApplySpeaker (void)
 
 void CKernel::SetModel (TModel Model)
 {
+	StopZX81 ();			// cambiar de modelo vuelve al Spectrum
 	EsxFolderToImage (TRUE);
 	m_pSpectrum->SetModel (Model);
 	ApplySpeaker ();
@@ -4838,7 +4864,12 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bModelList)
 		{
 			m_bModelList = FALSE;
-			if (Result == MenuResultChoice && m_Menu.GetChoice () < ModelCount)
+			if (Result == MenuResultChoice && m_Menu.GetChoice () == ModelCount)
+			{
+				m_Menu.Close ();
+				StartZX81 (0);
+			}
+			else if (Result == MenuResultChoice && m_Menu.GetChoice () < ModelCount)
 			{
 				TModel Model = ModelCycle[m_Menu.GetChoice ()];
 				m_Menu.Close ();
@@ -4846,7 +4877,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 				{
 					ShowMessage (T ("Falta la ROM de ese modelo (mira el README)"));
 				}
-				else if (Model != m_pSpectrum->GetModel ())
+				else if (Model != m_pSpectrum->GetModel () || IsZX81Active ())
 				{
 					SetModel (Model);
 					SyncSetting ("model");
@@ -5030,7 +5061,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	case ActionKeyHelp:
 		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
-		m_Menu.OpenKeyHelp ();
+		m_Menu.OpenKeyHelp (IsZX81Active ());
 		m_Keyboard.SetCaptured (TRUE);
 		break;
 
@@ -5114,9 +5145,22 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 				Item.Append (T (" (falta la ROM)"));
 			}
 			m_Menu.SetChoiceItem (i, Item);
-			if (ModelCycle[i] == m_pSpectrum->GetModel ())
+			if (ModelCycle[i] == m_pSpectrum->GetModel () && !IsZX81Active ())
 			{
 				m_Menu.SetChoiceSelected (i);
+			}
+		}
+		{
+			// el ZX81, con el emulador de Paul Farrow (cartucho del IF2 en el 128K)
+			CString Item (T ("ZX81 (emulador de Paul Farrow)"));
+			if (!IsZX81ROMPresent ())
+			{
+				Item.Append (T (" (falta la ROM)"));
+			}
+			m_Menu.SetChoiceItem (ModelCount, Item);
+			if (IsZX81Active ())
+			{
+				m_Menu.SetChoiceSelected (ModelCount);
 			}
 		}
 		break;
@@ -5140,6 +5184,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		break;
 
 	case ActionReset:
+		m_ZX81Loader.Cancel (&m_Keyboard);	// una carga de .P a medias se abandona
 		EsxFolderToImage (TRUE);	// esxDOS: lo nuevo de la carpeta, antes de arrancar
 		m_pSpectrum->Reset ();
 		ShowMessage (T ("Reset"));
@@ -5267,6 +5312,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	case ActionEjectCartridge:
 		if (m_pSpectrum->IsCartridgeInserted ())
 		{
+			StopZX81 ();
 			m_pSpectrum->EjectCartridge ();
 			m_CartridgeName[0] = '\0';
 			ShowMessage (T ("Cartucho retirado"));
@@ -5907,6 +5953,7 @@ TShutdownMode CKernel::Run (void)
 
 			m_pSpectrum->RunFrame ();
 			m_Keyboard.TickHeld ();			// Alt+V: teclas mantenidas
+			ZX81Frame ();				// la carga de un .P, si hay una en marcha
 
 			// Reloj para esxDOS (RTC.SYS): la hora de la Pi, si ya la tiene (NTP)
 			if (m_pSpectrum->IsDivMMCActive ())

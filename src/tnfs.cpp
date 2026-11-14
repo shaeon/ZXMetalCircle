@@ -306,7 +306,7 @@ static boolean LooksLikeFile (const char *pName)
 	// extensiones de ficheros de Spectrum: no hace falta preguntar si son carpetas
 	static const char *Ext[] = {".tap", ".tzx", ".z80", ".sna", ".szx", ".csw", ".rom",
 				    ".mdr", ".mdv", ".dsk", ".scr", ".txt", ".zip", ".bin",
-				    ".pzx", ".trd", ".scl", ".hdf", ".img", ".vhd", ".raw"};
+				    ".pzx", ".trd", ".scl", ".hdf", ".img", ".vhd", ".raw", ".p"};
 	size_t nLen = strlen (pName);
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{

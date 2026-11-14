@@ -59,6 +59,7 @@ Todas las opciones van en una sola línea:
 | `multiface=` | `1` (activo si está su ROM en la SD), `0` (desactivado) | `1` |
 | `gpioaudio=` | `1` (con `sounddev=sndpwm`, el audio sale también por GPIO12, en mono), `0` | `1` |
 | `gpiokbd=` | `48`, `plus3` (tipo de teclado por GPIO), `0` (ninguno) | `48` |
+| `zx81kbd=` | `zx81` (teclado del ZX81 original), `128` (el de la ROM de Paul Farrow, parecido al del 128) | `zx81` |
 | `logdev=` | `ttyS1` (mensajes por el puerto serie) | |
 
 Si falla el dispositivo de sonido elegido, el emulador prueba automáticamente el otro.
@@ -87,7 +88,7 @@ Desde la ayuda (F1), la tecla **C** abre la configuración: diez páginas con la
 | 1 Máquina | idioma, modelo, teclado Issue 2/3, velocidad, ULAplus, idioma del +3e*, disco duro al inicio* |
 | 2 Imagen y sonido | borde, scanlines, sonido AY, oír la carga, altavoz, quitar pitido 1 bit, salida de sonido*, sonido por GPIO12*, imagen en el núcleo 1* |
 | 3 Cintas y grabación | modo de carga, SAVE a la SD, formato de SAVE, formato de F8 |
-| 4 Teclado | F5 / Alt+F5, Recreated ZX, teclado por GPIO* |
+| 4 Teclado | F5 / Alt+F5, Recreated ZX, teclado por GPIO*, teclado del ZX81 |
 | 5 Joysticks y mandos | joystick de los jugadores 1 y 2, mando de cada jugador, mandos de más, cursores del PC, disparo con el teclado, botones del mando (ver [04_usb_gamepads_es.md](04_usb_gamepads_es.md)) |
 | 6 Periféricos | Spectranet, divMMC con esxDOS, memoria LEC, Interface 1, Multiface, RS232*, ZX Net* |
 | 7 Red, hora y casete | red*, zona horaria*, horario de verano*, IP fija*, máscara*, puerta de enlace*, DNS*, comprobar HTTPS*, casete real*, invertir casete*, GPIO del casete* |

@@ -13,6 +13,16 @@ Los TK90X y TK95 de Microdigital (Brasil) eran clones del ZX Spectrum 48K. Se el
 
 **La ROM v3 de Rodolfo Guerra** (2021, no oficial) es el resultado de tres años de trabajo a partir de la v1, la más consistente, incorporando lo que aportaba la v2. Es la ROM más compatible para los TK hasta la fecha, e incluye, entre otras muchas mejoras: carga turbo nativa a 4000 baudios (sin perder la carga normal: la ROM detecta cuál viene en la cinta), un editor BASIC mejorado y una lectura del teclado más rápida. Para ganar espacio cada ROM tiene un solo idioma, y por eso hay una para cada uno de los 17. Todas sus novedades están en los manuales (en español, inglés y portugués) de su página: https://sites.google.com/view/rodolfoguerra . En el emulador, la carga turbo debería funcionar con la carga real de cintas, que reproduce la cinta a su velocidad; con la instantánea o la rápida, de momento solo se acelera la carga normal.
 
+## ZX81 (emulador de Paul Farrow)
+
+El **ZX81+** de Paul Farrow (http://www.fruitcake.plus.com) es un emulador de ZX81 para el Spectrum 128 que cabe en un cartucho del Interface 2. Viene en `roms/zx81.rom` (versión 3.13) con su permiso. Es el mismo que incluyen el ZX Spectrum Next y ESPectrum.
+
+- **Arrancarlo**: F7 y la última línea, «ZX81 (emulador de Paul Farrow)». El emulador pasa al 128K si hace falta (solo funciona en el 128K y en el +2 gris), pone el cartucho y sale el menú de la ROM: se elige la memoria (1K, 4K, 16K o 32K), la carga de cintas del ZX81 o el menú de copia.
+- **Programas .P**: se cargan como cualquier fichero, desde el navegador (F1) o desde la web, también dentro de un ZIP. Como en ESPectrum, y como explica Paul Farrow para los emuladores, el emulador elige «32K RAM», escribe `PAUSE 5000` y, durante la pausa, copia el programa en la dirección 16393. Tarda unos 6 segundos; después, si el programa no arranca solo, `RUN` (R y ENTER).
+- **Volver al Spectrum**: F11 (quitar el cartucho) o F7 y un modelo.
+- **Teclado** (`zx81kbd=`, página 4 de la configuración): el del ZX81 original (por defecto) o el de la ROM de Paul Farrow, con los signos y los gráficos movidos para parecerse al del 128. Con el ZX81 en marcha, `PRINT USR 8255` y `PRINT USR 8252` cambian de uno a otro. Alt+K enseña las teclas del PC: Mayúsculas es SHIFT, Enter NEWLINE, Retroceso RUBOUT, los cursores SHIFT + 5-8, Esc BREAK y Ctrl el punto. Los signos del PC (`,`, `-`, `+`...) no sirven: SHIFT + la tecla, como en el ZX81.
+- **Límites** (del propio emulador): no funcionan los programas que usan el modo 2 de interrupciones, los que ponen en el registro I un valor entre 64 y 127 ni los que leen el puerto 254 sin quitar los bits de EAR y de 50/60 Hz. La lista de Paul Farrow con los incompatibles, y parches para algunos, está en su página.
+
 ## ROMs
 
 Solo las ROMs del **16K/48K y del 128K** van dentro del kernel, para que el emulador arranque siempre. Las demás se cargan al encender desde la carpeta **`roms`** de la SD, donde vienen incluidas:
@@ -27,6 +37,7 @@ Solo las ROMs del **16K/48K y del 128K** van dentro del kernel, para que el emul
 | `mf1.rom`, `mf128.rom`, `mfplus3.rom` | 8 KB | Multiface One, 128 y 3 (F5); sin ellas, F5 hace una NMI normal |
 | `esxmmc.bin` | 8 KB | esxDOS 0.8.9 para la divMMC (`divmmc=esxdos`) |
 | `spectranet.rom` | 128 KB | Flash de la Spectranet con el firmware instalado (`spectranet=1`) |
+| `zx81.rom` | 16 KB | Emulador de ZX81 de Paul Farrow (F7 y programas .P) |
 
 **Si falta alguna** (o tiene otro tamaño), lo que la necesita deja de estar disponible y el resto funciona:
 - F7 se salta esa máquina;

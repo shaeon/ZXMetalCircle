@@ -22,6 +22,7 @@ Author: **Shaeon (Carlos Palmero)**, © 2026.
 - To **Jordi** (https://jbinary.itch.io), for his advice about the Spectrum.
 - To **Víctor Iborra (EremusOne)**, for **ESPectrum** (https://github.com/EremusOne/ESPectrum), the Spectrum emulator for ESP32.
 - To **Rodolfo Guerra**, for the TK90X v3 ROMs in 17 languages, included with his permission, and for his help with the TK90X and TK95 (https://sites.google.com/view/rodolfoguerra).
+- To **Paul Farrow** (http://www.fruitcake.plus.com), for his ZX81 emulator for the Spectrum 128 (ZX81+), included with his permission.
 
 The licence and the credits can also be seen in the emulator itself: F1 and then **A**.
 
@@ -36,6 +37,7 @@ The licence and the credits can also be seen in the emulator itself: F1 and then
 - **esxDOS 0.8.9** © 2005-2021 Papaya Dezign (https://esxdos.org): ROM and system files, unmodified, for non-commercial use.
 - **Mbed TLS** 3.6 (Apache-2.0), **jsmn** (MIT, Serge Zaitsev), **ZXInfo API** (api.zxinfo.dk) and **Spectrum Computing** (ZXDB). **Mozilla** root certificate list (MPL-2.0).
 - **Multiface ROMs** © Romantic Robot UK Ltd (`roms/mf1.rom`, `mf128.rom`, `mfplus3.rom`).
+- **ZX81+** © Paul Farrow (http://www.fruitcake.plus.com): ZX81 emulator for the Spectrum 128 as an Interface 2 cartridge, version 3.13 (`roms/zx81.rom`), unmodified, included with his permission; the way of loading .P files follows ESPectrum.
 - **+3e ROMs** by Garry Lancaster (https://worldofspectrum.org/zxplus3e/), version 1.43 for the ZXMMC; free distribution with Amstrad's permission.
 - **zxp3** by Kyp (https://github.com/Kyp069/zxp3) and **MiST** (`sd_card.v`): reference for the ZXMMC and the SD card.
 - **MAME** (https://github.com/mamedev/mame): uPD765 controller and floppy PLL (BSD-3-Clause, Olivier Galibert); the .DSK reading and the MFM track generation follow its code. Licence text in `third_party/mame/LICENSE`.
@@ -56,7 +58,7 @@ This program is free software: you can redistribute it and/or modify it under th
 
 Version 3 is required because the Circle library and z80cpp are licensed under the GPL v3. Third-party code keeps its own copyright notices and licenses, all compatible with the GPL v3: Fuse (GPL v2 or later), SpectRusty (LGPL v3 or later), MAME uPD765 and floppy PLL (BSD-3-Clause), Mbed TLS (Apache-2.0), jsmn (MIT), Spectranet firmware (MIT).
 
-The ROMs and system files distributed with the emulator are not covered by the GPL and belong to their respective owners: the Sinclair and Amstrad ROMs are distributed with Amstrad's permission for use in emulators; the +3e ROMs with Garry Lancaster's permission; esxDOS (Papaya Dezign) for non-commercial use; the LEC CP/M by Jiří Lamač, free for non-profit use with credit. The Raspberry Pi firmware and the WiFi firmware are downloaded by `build.sh` and keep their own licences (`LICENCE.broadcom` and the files in `firmware/`).
+The ROMs and system files distributed with the emulator are not covered by the GPL and belong to their respective owners: the Sinclair and Amstrad ROMs are distributed with Amstrad's permission for use in emulators; the +3e ROMs with Garry Lancaster's permission; Paul Farrow's ZX81 emulator with his permission, as long as the emulator is not sold; esxDOS (Papaya Dezign) for non-commercial use; the LEC CP/M by Jiří Lamač, free for non-profit use with credit. The Raspberry Pi firmware and the WiFi firmware are downloaded by `build.sh` and keep their own licences (`LICENCE.broadcom` and the files in `firmware/`).
 
 ## Disclaimer
 
@@ -98,6 +100,7 @@ Done:
 - .PZX files (Perfect ZX Tape): pulses (PULS), data with its initial level (DATA), pauses (PAUS), texts (BRWS) and stops (STOP). They keep the real polarity of the signal, which TZX does not: some loaders need it (Forbidden Planet). Data blocks with ROM timings also load instantly.
 - **Polarity**: in the block browser (F3), the **P** key inverts the tape signal. It is for TZX files that have it the wrong way round (with Forbidden Planet's, the loader slips half a bit and never finishes). It goes back to normal when another tape is inserted.
 - Interface 2 cartridges (.ROM).
+- ZX81, with Paul Farrow's ZX81+ emulator (on the 128K): F7, or loading a .P program from the browser or the web page.
 - Interface 1 with up to 8 microdrives (.MDR and .MDV cartridges, read and write), RS232 and ZX Net network.
 - 528 KB LEC memory expansion (48K, and from 48 BASIC on the 128K models), with which LEC's CP/M 2.2 on microdrives works (included in `cpm/`).
 - Saving with SAVE: the blocks saved by the ROM go to .TAP files in the SD card's `saves` folder.
@@ -189,7 +192,7 @@ Everything about how to use the emulator is in the [`docs`](docs/README.md) fold
 | 09 | [Peripherals](docs/09_peripherals.md) | Spectranet, Interface 1 and Microdrives, LEC and CP/M, Multiface, ULAplus |
 | 10 | [Network](docs/10_network.md) | WiFi, web server and time, searching and downloading programs, TNFS |
 | 11 | [Picture and sound](docs/11_picture_and_sound.md) | border and scanlines, sound, Issue 2/3 and speed, several cores |
-| 12 | [Models and ROMs](docs/12_models_and_roms.md) | TK90X and TK95, the ROMs |
+| 12 | [Models and ROMs](docs/12_models_and_roms.md) | TK90X and TK95, ZX81, the ROMs |
 | 13 | [Updating the emulator](docs/13_updating.md) | updating from GitHub (page 10 of the settings) |
 
 ## Structure

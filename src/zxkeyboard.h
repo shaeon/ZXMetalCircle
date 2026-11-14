@@ -142,6 +142,8 @@ public:
 
 	// Teclado real por GPIO: se combina con el USB en ReadPort()
 	void SetGPIOMatrix (const u8 Matrix[8]);
+	// Teclas que pulsa el propio emulador (la carga de un .P en el ZX81)
+	void SetScriptMatrix (const u8 Matrix[8]);
 
 	// Eventos generados por otros teclados (GPIO en modo extendido o en menús)
 	void InjectKeyEvent (u8 nKey, u8 nModifiers)	{ PushEvent (nKey, nModifiers); }
@@ -177,6 +179,7 @@ private:
 private:
 	volatile u8 m_Matrix[8];
 	volatile u8 m_GPIOMatrix[8];
+	volatile u8 m_ScriptMatrix[8];
 	volatile u8 m_HeldMatrix[8];		// Alt+V: teclas mantenidas
 	volatile unsigned m_nHeldFrames;
 	volatile u8 m_nKeyJoy;			// joystick desde los cursores del teclado

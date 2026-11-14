@@ -59,6 +59,7 @@ All the options go on a single line:
 | `multiface=` | `1` (active if its ROM is on the SD card), `0` (disabled) | `1` |
 | `gpioaudio=` | `1` (with `sounddev=sndpwm`, audio also comes out of GPIO12, in mono), `0` | `1` |
 | `gpiokbd=` | `48`, `plus3` (GPIO keyboard type), `0` (none) | `48` |
+| `zx81kbd=` | `zx81` (original ZX81 layout), `128` (the 128-style layout of Paul Farrow's ROM) | `zx81` |
 | `logdev=` | `ttyS1` (messages through the serial port) | |
 
 If the chosen sound device fails, the emulator automatically tries the other one.
@@ -87,7 +88,7 @@ From the help screen (F1), the **C** key opens the settings: ten pages with the 
 | 1 Machine | language, model, Issue 2/3 keyboard, speed, ULAplus, +3e language*, boot hard disk* |
 | 2 Video and sound | border, scanlines, AY sound, hear loading, speaker, remove 1-bit whine, sound output*, sound on GPIO12*, video on core 1* |
 | 3 Tapes and saving | loading mode, SAVE to the SD card, SAVE format, F8 format |
-| 4 Keyboard | F5 / Alt+F5, Recreated ZX, GPIO keyboard* |
+| 4 Keyboard | F5 / Alt+F5, Recreated ZX, GPIO keyboard*, ZX81 keyboard |
 | 5 Joysticks and pads | players 1 and 2 joysticks, each player's gamepad, extra gamepads, PC cursor keys, keyboard fire, gamepad buttons (see [04_usb_gamepads.md](04_usb_gamepads.md)) |
 | 6 Peripherals | Spectranet, divMMC with esxDOS, LEC memory, Interface 1, Multiface, RS232*, ZX Net* |
 | 7 Network, time and tape | network*, time zone*, summer time*, fixed IP*, mask*, gateway*, DNS*, check HTTPS*, real cassette*, invert cassette*, cassette GPIO* |

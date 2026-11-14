@@ -77,6 +77,7 @@ static TSettingDef Settings[] =
 	{"f5",		N_("F5 / Alt+F5"),	3, "nmi|files", N_("NMI / ficheros|ficheros / NMI"),	"nmi",	TRUE},
 	{"recreated",	N_("Recreated ZX"),	3, "0|auto|1", N_("no|automático|sí"),			"auto",	TRUE},
 	{"gpiokbd",	N_("Teclado por GPIO"),	3, "48|plus3|0", N_("48K/128|+2A/+3|ninguno"),		"48",	FALSE},
+	{"zx81kbd",	N_("Teclado del ZX81"),	3, "zx81|128", N_("el del ZX81|el del 128"),		"zx81",	TRUE},
 
 	// 4 Periféricos
 	{"spectranet",	N_("Spectranet"),	5, "0|1", N_("no|sí"),					"0",	TRUE},

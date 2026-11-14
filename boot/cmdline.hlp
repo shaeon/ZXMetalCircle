@@ -178,6 +178,13 @@ defecto.
                            cinta (ear=gpio) va entonces por el GPIO15
                     0      sin teclado GPIO (deja libres los pines)
 
+ zx81kbd=zx81     Teclado del ZX81 (emulador de Paul Farrow, F7 o un .P):
+                    zx81   el del ZX81 original (por defecto)
+                    128    el de la ROM de Paul Farrow, con los signos y los
+                           graficos movidos para parecerse al del 128
+                  Con el ZX81 en marcha: PRINT USR 8255 (el del ZX81) y
+                  PRINT USR 8252 (el del 128)
+
 ------------------------------------------------------------------------------
  SONIDO
 ------------------------------------------------------------------------------

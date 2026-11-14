@@ -13,6 +13,16 @@ Microdigital's TK90X and TK95 (Brazil) were ZX Spectrum 48K clones. Choose them 
 
 **Rodolfo Guerra's v3 ROM** (2021, unofficial) is the result of three years of work starting from v1, the most consistent one, adding what v2 brought. It is the most compatible TK ROM to date and includes, among many other improvements: native turbo loading at 4000 baud (without losing normal loading: the ROM detects which one is on the tape), an improved BASIC editor and faster keyboard reading. To gain space each ROM has a single language, hence one for each of the 17. All its features are described in the manuals (in Spanish, English and Portuguese) on his page: https://sites.google.com/view/rodolfoguerra . In the emulator, turbo loading should work with real tape loading, which plays the tape at its own speed; instant and fast loading only speed up normal loading for now.
 
+## ZX81 (Paul Farrow's emulator)
+
+Paul Farrow's **ZX81+** (http://www.fruitcake.plus.com) is a ZX81 emulator for the Spectrum 128 that fits in an Interface 2 cartridge. It comes in `roms/zx81.rom` (version 3.13) with his permission. It is the same one the ZX Spectrum Next and ESPectrum include.
+
+- **Start it**: F7 and the last line, "ZX81 (Paul Farrow's emulator)". The emulator switches to the 128K if needed (it only works on the 128K and the grey +2), inserts the cartridge and the ROM's menu appears: choose the RAM (1K, 4K, 16K or 32K), the ZX81 tape loader or the copy menu.
+- **.P programs**: load them like any other file, from the browser (F1) or from the web page, also inside a ZIP. As in ESPectrum, and as Paul Farrow explains for emulators, the emulator chooses "32K RAM", types `PAUSE 5000` and, during the pause, copies the program to address 16393. It takes about 6 seconds; then type `RUN` (R and ENTER) if the program does not start by itself.
+- **Back to the Spectrum**: F11 (remove the cartridge) or F7 and a model.
+- **Keyboard** (`zx81kbd=`, settings page 4): the original ZX81 layout (default) or the one in Paul Farrow's ROM, with symbols and graphics moved to look like the 128's. With the ZX81 running, `PRINT USR 8255` and `PRINT USR 8252` switch between them. Alt+K shows the PC keys: Shift is SHIFT, Enter NEWLINE, Backspace RUBOUT, the cursors SHIFT + 5-8, Esc BREAK and Ctrl the full stop. The PC's symbol keys (`,`, `-`, `+`...) do not work: use SHIFT + the key, as on the ZX81.
+- **Limits** (of the emulator itself): programs that use interrupt mode 2, that change the I register to a value between 64 and 127, or that read port 254 without masking the EAR and 50/60 Hz bits do not work. Paul Farrow's list of incompatible programs, with patches for some, is on his page.
+
 ## ROMs
 
 Only the **16K/48K and 128K** ROMs are built into the kernel, so the emulator always boots. The others are loaded at power-on from the **`roms`** folder of the SD card, where they come included:
@@ -27,6 +37,7 @@ Only the **16K/48K and 128K** ROMs are built into the kernel, so the emulator al
 | `mf1.rom`, `mf128.rom`, `mfplus3.rom` | 8 KB | Multiface One, 128 and 3 (F5); without them, F5 does a plain NMI |
 | `esxmmc.bin` | 8 KB | esxDOS 0.8.9 for the divMMC (`divmmc=esxdos`) |
 | `spectranet.rom` | 128 KB | Spectranet flash with the firmware installed (`spectranet=1`) |
+| `zx81.rom` | 16 KB | Paul Farrow's ZX81 emulator (F7 and .P programs) |
 
 **If one is missing** (or has the wrong size), whatever needs it becomes unavailable and the rest works:
 - F7 skips that machine;

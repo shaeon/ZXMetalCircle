@@ -48,6 +48,7 @@
 #include "if1link.h"
 #include "i18n.h"
 #include "videocore.h"
+#include "zx81.h"
 #include <circle/gpiomanager.h>
 #include <circle/sched/scheduler.h>
 
@@ -101,6 +102,12 @@ private:
 	boolean ReadSource (const char *pPath, u8 *pBuffer, unsigned nSize);
 	boolean SaveSnapshot (void);
 	boolean LoadCartridge (const char *pPath);
+	// ZX81 con el emulador de Paul Farrow (kernelzx81.cpp)
+	boolean StartZX81 (const char *pProgram);	// 0: solo arrancarlo; si no, un .P
+	void ZX81Frame (void);				// tras cada cuadro: la carga del .P
+	void StopZX81 (void);				// fuera el cartucho del ZX81
+	boolean IsZX81Active (void) const;
+	boolean IsZX81ROMPresent (void);
 	void ToggleRecording (boolean bEarInput = FALSE);
 	void StartEarInput (void);
 	void LoadAnyFile (const char *pPath);
@@ -389,6 +396,10 @@ private:
 	const u8		*m_pTKROM;		// ROMs del TK cargadas (LoadTKROMs)
 	const u8		*m_pTK95ROM;
 	boolean			m_bModelList;		// pregunta: F7, lista de modelos
+	// ZX81 (kernelzx81.cpp)
+	const u8		*m_pZX81ROM;		// roms/zx81.rom, al usarlo la primera vez
+	boolean			m_bZX81;		// el cartucho puesto es el del ZX81
+	CZX81Loader		m_ZX81Loader;		// carga de un .P
 	char			m_UpdateVersion[16];	// versión nueva que hay en GitHub ("" = no se sabe)
 	char			m_UpdateURL[600];	// y la dirección de su paquete
 	char			m_UpdateTarget[16];	// la que se va a instalar

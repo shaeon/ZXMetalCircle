@@ -177,6 +177,13 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                            (ear=gpio) then goes through GPIO15
                     0      no GPIO keyboard (leaves the pins free)
 
+ zx81kbd=zx81     ZX81 keyboard (Paul Farrow's emulator, F7 or a .P file):
+                    zx81   the original ZX81 one (default)
+                    128    the one in Paul Farrow's ROM, with symbols and
+                           graphics moved to look like the 128's
+                  With the ZX81 running: PRINT USR 8255 (ZX81 layout) and
+                  PRINT USR 8252 (128 layout)
+
 ------------------------------------------------------------------------------
  SOUND
 ------------------------------------------------------------------------------
