@@ -190,6 +190,7 @@
 	"Microdrive %u: %s%s": "Microdrive %u: %s%s",
 	" (protegido)": " (protegido)",
 	"Microdrive %u grabado en %s": "Microdrive %u gravado em %s",
+	"Microdrive %u: no cabe en .MDR, grabado en %s": "Microdrive %u: não cabe em .MDR, gravado em %s",
 	"Error al grabar el microdrive %u": "Erro ao gravar o microdrive %u",
 	"Microdrives vacíos": "Microdrives vazios",
 	"El +2A no admite cartuchos": "O +2A não aceita cartuchos",

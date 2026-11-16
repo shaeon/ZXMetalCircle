@@ -4273,6 +4273,7 @@ void CKernel::SaveMicrodrives (boolean bForce)
 			continue;
 		}
 		const char *pExt = bSinclair ? "mdr" : "mdv";
+		boolean bToMDV = FALSE;		// era un .mdr y ahora va a .mdv
 
 		if (m_MDRPath[i][0] == '\0')
 		{
@@ -4293,6 +4294,7 @@ void CKernel::SaveMicrodrives (boolean bForce)
 			size_t nLen = strlen (m_MDRPath[i]);
 			if (nLen > 4 && m_MDRPath[i][nLen - 4] == '.')
 			{
+				bToMDV = strcasecmp (m_MDRPath[i] + nLen - 3, "mdr") == 0 && !bSinclair;
 				strcpy (m_MDRPath[i] + nLen - 3, pExt);
 			}
 		}
@@ -4301,7 +4303,14 @@ void CKernel::SaveMicrodrives (boolean bForce)
 		if (WriteFile (m_MDRPath[i], Buffer, nSize, FALSE))
 		{
 			pDrive->ClearModified ();
-			Message.Format (T ("Microdrive %u grabado en %s"), i + 1, m_MDRPath[i] + 4);
+			if (bToMDV)		// el .mdr de antes se queda como estaba: avisarlo
+			{
+				Message.Format (T ("Microdrive %u: no cabe en .MDR, grabado en %s"), i + 1, m_MDRPath[i] + 4);
+			}
+			else
+			{
+				Message.Format (T ("Microdrive %u grabado en %s"), i + 1, m_MDRPath[i] + 4);
+			}
 		}
 		else
 		{
