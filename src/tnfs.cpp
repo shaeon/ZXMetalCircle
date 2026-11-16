@@ -60,7 +60,10 @@ unsigned CTNFSClient::Request (u8 nCommand, const u8 *pData, unsigned nLength)
 	m_Request[1] = m_nSession >> 8;
 	m_Request[2] = m_nSeq;
 	m_Request[3] = nCommand;
-	memcpy (m_Request + 4, pData, nLength);
+	if (nLength > 0)		// (sin datos, pData puede ser 0)
+	{
+		memcpy (m_Request + 4, pData, nLength);
+	}
 
 	for (unsigned nTry = 0; nTry < RETRIES; nTry++)
 	{

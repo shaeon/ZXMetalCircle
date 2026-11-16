@@ -848,6 +848,13 @@ void CMenu::GoParent (void)
 		}
 	}
 
+	if (pSlash == 0)		// (no pasa: siempre hay una '/'; por si acaso, a la raíz)
+	{
+		strcpy (m_CurrentDir, ROOT_DIR);
+		ReadDirectory ();
+		return;
+	}
+
 	char OldName[MENU_NAME_LEN];
 	strncpy (OldName, pSlash + 1, sizeof OldName - 1);
 	OldName[sizeof OldName - 1] = '\0';
