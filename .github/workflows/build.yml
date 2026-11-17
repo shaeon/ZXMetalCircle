@@ -88,6 +88,8 @@ jobs:
           ./fdc_test
           g++ -O2 -std=c++17 -I. -I$S -I$M/compat -I$M -o prot_test plus3/prot_test.cpp $M/*.cpp $M/compat/*.cpp
           ./prot_test
+          g++ -O2 -std=c++17 -I. -I$S -I$M/compat -I$M -o seek_test plus3/seek_test.cpp $M/*.cpp $M/compat/*.cpp
+          ./seek_test
 
       - name: Compilar los kernels y la SD
         run: ./build.sh

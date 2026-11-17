@@ -2,7 +2,8 @@
 // copyright-holders:Olivier Galibert
 // ZXMetalCircle: copia recortada del original de MAME (src/devices/machine/upd765.cpp).
 // Solo se conserva upd765_family_device y upd765a_device (el FDC del Spectrum +3);
-// las demás variantes y los mapas de direcciones se han quitado. El resto, sin cambios.
+// las demás variantes y los mapas de direcciones se han quitado. El resto, sin
+// cambios, salvo en seek_start y seek_continue (marcado con "ZXMetalCircle").
 
 #include "emu.h"
 #include "upd765.h"
@@ -1477,11 +1478,32 @@ void upd765_family_device::recalibrate_start(floppy_info &fi)
 void upd765_family_device::seek_start(floppy_info &fi)
 {
 	LOGCOMMAND("command %sseek %d\n", command[0] & 0x80 ? "relative " : "", command[2]);
+	// ZXMetalCircle: un SEEK a una unidad que ya está haciendo otro no corta el
+	// paso en curso: sigue con su temporizador hacia el destino nuevo. Antes se
+	// empezaba otro paso enseguida; si el anterior aún tenía STEP abajo, no
+	// había flanco, la cabeza no se movía, pero el PCN sí contaba. El cargador
+	// de Vindicators (+3) repite el SEEK hasta que Sense Interrupt Status deja
+	// de dar 80, y acababa leyendo la pista 1 creyendo estar en la 5.
+	// Además, el SEEK nuevo sustituye a la interrupción pendiente de la unidad
+	// (de un RECALIBRATE o SEEK anterior que no se ha consultado): si no, Sense
+	// Interrupt Status la devolvía con el ST0 a medias y el PCN de mitad de
+	// camino, y el cargador leía antes de llegar.
+	// Y si llega mientras termina un RECALIBRATE con la cabeza ya en la pista
+	// 0 (el cargador de Vindicators lo pide en cuanto Sense Drive Status da
+	// T0), el PCN ya es 0: antes se quedaba con el valor de antes y el SEEK se
+	// paraba antes de llegar.
+	if(fi.main_state == RECALIBRATE && fi.dev && !fi.dev->trk00_r())
+		fi.pcn = 0;
+	bool stepping = fi.main_state == SEEK
+		&& (fi.sub_state == SEEK_WAIT_STEP_SIGNAL_TIME || fi.sub_state == SEEK_WAIT_STEP_TIME);
 	fi.main_state = SEEK;
-	fi.sub_state = SEEK_WAIT_STEP_TIME_DONE;
-	fi.dir = fi.pcn > command[2] ? 1 : 0;
 	fi.ready = get_ready(command[1] & 3);
 	fi.st0 = command[1] & 3;
+	fi.st0_filled = false;
+	if(fi.ready && stepping)
+		return;
+	fi.sub_state = SEEK_WAIT_STEP_TIME_DONE;
+	fi.dir = fi.pcn > command[2] ? 1 : 0;
 	if(fi.ready) {
 		seek_continue(fi);
 	} else {
@@ -1519,7 +1541,9 @@ void upd765_family_device::seek_continue(floppy_info &fi)
 				fi.dev->stp_w(1);
 
 			if(fi.main_state == SEEK) {
-				if(fi.pcn > command[2])
+				// ZXMetalCircle: según el sentido del paso que se ha dado
+				// (el destino puede haber cambiado con otro SEEK a medias)
+				if(fi.dir)
 					fi.pcn--;
 				else
 					fi.pcn++;
@@ -1551,6 +1575,7 @@ void upd765_family_device::seek_continue(floppy_info &fi)
 			case SEEK:
 				LOGSTATE("SEEK\n");
 				done = fi.pcn == command[2];
+				fi.dir = fi.pcn > command[2] ? 1 : 0;	// ZXMetalCircle: por si cambió el destino
 				break;
 			}
 			if(done) {
