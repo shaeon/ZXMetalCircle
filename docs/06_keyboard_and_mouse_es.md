@@ -22,7 +22,7 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 | Alt+F7 | Pasar al siguiente modelo (16K, 48K, 128K, +2, +2A, +3, +3e) |
 | F8 | Grabar snapshot en `snaps/` (.Z80, .SNA o .SZX según `snapformat=`) |
 | F9 | Reparto estéreo del AY: ABC → ACB → BAC → mono |
-| Alt + + / Alt + - / Alt+0 | Volumen: subir / bajar (de 10 en 10 %) / silencio sí-no. También valen el + y el - del teclado numérico |
+| Alt+ + / Alt+ - / Alt+0 | Volumen: subir / bajar (de 10 en 10 %) / silencio sí-no. También valen el + y el - del teclado numérico |
 | F10 | Velocidad: x1 → x2 → x4 → x10 |
 | F11 | Quitar el cartucho del Interface 2 (con reset) |
 | Alt+B | Tamaño del borde: sin borde → estándar → completo → enorme |

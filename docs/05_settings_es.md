@@ -34,7 +34,7 @@ Todas las opciones van en una sola línea:
 | `f5=` | `nmi` (F5 = NMI, Alt+F5 = ficheros), `files` (F5 = ficheros, Alt+F5 = NMI) | `nmi` |
 | `aystereo=` | `abc`, `acb`, `bac`, `mono` | `abc` |
 | `tapesound=` | `1` (se oye la carga), `0` (silencio) | `1` |
-| `volume=` | de `0` a `100`, de 10 en 10 (también Alt + + / Alt + -; Alt+0 silencia) | `100` |
+| `volume=` | de `0` a `100`, de 10 en 10 (también Alt+ + / Alt+ -; Alt+0 silencia) | `100` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (activadas), `0` | `0` |
 | `pureblack=` | `1` (negro puro también en la paleta del 16K/48K), `0` | `0` |

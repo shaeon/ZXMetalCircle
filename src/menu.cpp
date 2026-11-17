@@ -1674,10 +1674,34 @@ void CMenu::Draw (TPixel *pScreen)
 			}
 		}
 
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow++), T ("T       Todas las teclas..."),
-				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
-
+		// las teclas de esta pantalla, en amarillo y separadas por una fila
+		static const struct { const char *pKey; const char *pText; } MenuKeys[] =
+		{
+			{"ENTER", N_("Cintas / ficheros")},
+			{"C",     N_("Configuración")},
+			{"U",     N_("Unidades")},
+			{"T",     N_("Todas las teclas...")},
+		};
 		nRow++;
+		for (unsigned i = 0; i < sizeof MenuKeys / sizeof MenuKeys[0]; i++)
+		{
+			CString Line;
+			Line.Format ("%-7s %s", MenuKeys[i].pKey, T (MenuKeys[i].pText));
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow++), Line,
+					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		}
+
+		// el estado, pegado abajo con una fila libre encima de la barra
+		unsigned nStatusLines = 0;
+		for (unsigned i = 0; i < MENU_STATUS_LINES; i++)
+		{
+			if (m_Status[i][0] != '\0')
+			{
+				nStatusLines++;
+			}
+		}
+		unsigned nStatusRow = PANEL_ROWS - 3 - nStatusLines;
+		nRow = nStatusRow > nRow ? nStatusRow : nRow + 1;
 		for (unsigned i = 0; i < MENU_STATUS_LINES; i++)
 		{
 			if (m_Status[i][0] != '\0')
@@ -1687,8 +1711,17 @@ void CMenu::Draw (TPixel *pScreen)
 			}
 		}
 
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ENTER cintas C conf. U unidades A acerca"),
+		// ESC a la izquierda y A a la derecha
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ESC volver"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		const char *pAbout = T ("A Acerca del proyecto");
+		unsigned nAboutCols = UTF8Length (pAbout);
+		if (nAboutCols > TEXT_COLS)
+		{
+			nAboutCols = TEXT_COLS;
+		}
+		m_pVideo->DrawText (pScreen, tx + (TEXT_COLS - nAboutCols) * 8, ROW_Y (PANEL_ROWS - 2), pAbout,
+				    COLOR_UI_TITLE, COLOR_UI_PANEL, nAboutCols);
 		return;
 	}
 

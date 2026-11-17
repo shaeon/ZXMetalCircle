@@ -200,12 +200,12 @@ static const TKeyBinding KeyBindings[] =
 	// Imagen y sonido. Volumen: + y - del teclado numérico, y las teclas + y -
 	// del teclado español (y = y - del inglés); 0 es el silencio
 	{HID_KEY_F1 + 8, FALSE, ActionAYStereo,     "F9",        GroupVideoSound, N_("Sonido AY: ABC/ACB/BAC/mono")},
-	{0x30,           TRUE,  ActionVolumeUp,     "Alt + +",   GroupVideoSound, N_("Subir el volumen")},
-	{0x57,           TRUE,  ActionVolumeUp,     "Alt + +",   GroupNone,  0},
-	{0x2E,           TRUE,  ActionVolumeUp,     "Alt + +",   GroupNone,  0},
-	{0x38,           TRUE,  ActionVolumeDown,   "Alt + -",   GroupVideoSound, N_("Bajar el volumen")},
-	{0x56,           TRUE,  ActionVolumeDown,   "Alt + -",   GroupNone,  0},
-	{0x2D,           TRUE,  ActionVolumeDown,   "Alt + -",   GroupNone,  0},
+	{0x30,           TRUE,  ActionVolumeUp,     "Alt+ +",    GroupVideoSound, N_("Subir el volumen")},
+	{0x57,           TRUE,  ActionVolumeUp,     "Alt+ +",    GroupNone,  0},
+	{0x2E,           TRUE,  ActionVolumeUp,     "Alt+ +",    GroupNone,  0},
+	{0x38,           TRUE,  ActionVolumeDown,   "Alt+ -",    GroupVideoSound, N_("Bajar el volumen")},
+	{0x56,           TRUE,  ActionVolumeDown,   "Alt+ -",    GroupNone,  0},
+	{0x2D,           TRUE,  ActionVolumeDown,   "Alt+ -",    GroupNone,  0},
 	{0x27,           TRUE,  ActionMute,         "Alt+0",     GroupVideoSound, N_("Silencio sí/no")},
 	{0x62,           TRUE,  ActionMute,         "Alt+0",     GroupNone,  0},
 	{0x05,           TRUE,  ActionBorder,       "Alt+B",     GroupVideoSound, N_("Tamaño del borde")},
@@ -234,8 +234,6 @@ static const struct { const char *pKey; const char *pDescription; } ShortHelp[] 
 	{"F11",     N_("Quitar cartucho (IF2)")},
 	{"F12",     N_("Reset")},
 	{N_("Pausa"), N_("Pausa")},
-	{"Alt+U",   N_("Unidades: montar y vaciar")},
-	{"Alt +/-", N_("Volumen (Alt+0: silencio)")},
 };
 
 CKernel *CKernel::s_pThis = 0;

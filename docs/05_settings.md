@@ -34,7 +34,7 @@ All the options go on a single line:
 | `f5=` | `nmi` (F5 = NMI, Alt+F5 = files), `files` (F5 = files, Alt+F5 = NMI) | `nmi` |
 | `aystereo=` | `abc`, `acb`, `bac`, `mono` | `abc` |
 | `tapesound=` | `1` (loading is heard), `0` (silent) | `1` |
-| `volume=` | `0` to `100`, in steps of 10 (also Alt + + / Alt + -; Alt+0 mutes) | `100` |
+| `volume=` | `0` to `100`, in steps of 10 (also Alt+ + / Alt+ -; Alt+0 mutes) | `100` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (on), `0` | `0` |
 | `pureblack=` | `1` (pure black also in the 16K/48K palette), `0` | `0` |
