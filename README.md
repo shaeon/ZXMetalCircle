@@ -104,7 +104,7 @@ Done:
 - Interface 1 with up to 8 microdrives (.MDR and .MDV cartridges, read and write), RS232 and ZX Net network.
 - 528 KB LEC memory expansion (48K, and from 48 BASIC on the 128K models), with which LEC's CP/M 2.2 on microdrives works (included in `cpm/`).
 - Saving with SAVE: the blocks saved by the ROM go to .TAP files in the SD card's `saves` folder.
-- Snapshots: .Z80 (versions 1, 2 and 3), .SNA (48K and 128K) and .SZX loading; saving as .Z80 v3, .SNA or .SZX with F8.
+- Snapshots: .Z80 (versions 1, 2 and 3), .SNA (48K and 128K), .SZX and .SP loading; saving as .Z80 v3, .SNA or .SZX with F8.
 - Recording of the tape signal (MIC output) with Alt+W, for programs with their own saving routines.
 - Spectrum +3 with disk drive: .DSK disks (standard and extended, with protections: weak sectors, Speedlock, long tracks, CRC errors) and 720K disks (the drive becomes a 3.5" one by itself), with MAME's uPD765 controller.
 - Spectrum +3e (Garry Lancaster's ROMs) with a hard disk on a ZXMMC card: .VHD, .IMG, .RAW and .HDF images.
@@ -206,7 +206,7 @@ src/audiomixer.*   sample generation (beeper + AY) per t-state, speaker model
 src/tape.*         TAP/TZX/PZX/CSW tape (pulses, instant loading and blocks)
 src/inflate.*      zlib decompressor (CSW Z-RLE blocks and .SZX pages)
 src/zipfile.*      ZIP file reader (central directory, deflate and CRC)
-src/snapshot.*     .Z80/.SNA/.SZX snapshots
+src/snapshot.*     .Z80/.SNA/.SZX/.SP snapshots
 src/interface1.*   Interface 1, microdrives (.MDR and .MDV) and RS232
 src/zxnet.*        Interface 1 ZX Net network (from SpectRusty)
 src/if1link.*      RS232 (TCP 2323) and ZX Net (UDP 5050) over the Pi's network

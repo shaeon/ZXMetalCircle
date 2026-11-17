@@ -219,7 +219,8 @@ static boolean IsLoadable (const char *pName)
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx",
 				    ".rom", ".mdr", ".mdv", ".dsk",
 				    ".vhd", ".img", ".raw", ".hdf", ".zip",
-				    ".p"};	// programas del ZX81
+				    ".p",	// programas del ZX81
+				    ".sp"};	// snapshots de Pedro Gimeno
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (HasExtension (pName, Ext[i]))
@@ -263,7 +264,7 @@ static const char PageStyle[] =
 static bool IsZipEntryLoadable (const char *pName)
 {
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx", ".rom",
-				    ".dsk", ".mdr", ".mdv", ".p"};
+				    ".dsk", ".mdr", ".mdv", ".p", ".sp"};
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (HasExtension (pName, Ext[i]))

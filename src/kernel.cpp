@@ -2030,7 +2030,8 @@ void CKernel::LoadAnyFile (const char *pPath)
 		StartZX81 (pPath);		// programa del ZX81
 	}
 	else if (   strcasecmp (pExt, ".z80") == 0 || strcasecmp (pExt, ".sna") == 0
-	    || strcasecmp (pExt, ".szx") == 0)
+		 || strcasecmp (pExt, ".szx") == 0
+		 || (nLen > 3 && strcasecmp (pPath + nLen - 3, ".sp") == 0))	// .SP de Pedro Gimeno
 	{
 		LoadSnapshot (pPath);
 	}
@@ -2077,7 +2078,8 @@ static boolean ZipLoadable (const char *pName, boolean *pWritable)
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx", ".rom",
 				    ".dsk", ".mdr", ".mdv"};
 	unsigned nLen = strlen (pName);
-	if (nLen > 2 && strcasecmp (pName + nLen - 2, ".p") == 0)	// programa del ZX81
+	if (   (nLen > 2 && strcasecmp (pName + nLen - 2, ".p") == 0)	// programa del ZX81
+	    || (nLen > 3 && strcasecmp (pName + nLen - 3, ".sp") == 0))	// snapshot .SP
 	{
 		if (pWritable != 0)
 		{
@@ -4567,6 +4569,14 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 
 	ApplySpeaker ();		// el snapshot puede haber cambiado de máquina
 	m_nNextFrameTime = 0;
+	if (m_pSpectrum->IsCartridgeInserted ())
+	{
+		strcpy (m_CartridgeName, ".SP (ROM)");	// un .SP con su propia ROM
+	}
+	else
+	{
+		m_CartridgeName[0] = '\0';
+	}
 
 	const char *pName = pPath;
 	for (const char *p = pPath; *p != '\0'; p++)

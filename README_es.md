@@ -110,7 +110,7 @@ Hecho:
 - Interface 1 con hasta 8 microdrives (cartuchos .MDR y .MDV, lectura y escritura), RS232 y red ZX Net.
 - Ampliación de memoria LEC de 528 KB (48K, y en los 128K desde 48 BASIC), con la que funciona el CP/M 2.2 de LEC sobre microdrives (incluido en `cpm/`).
 - Grabación con SAVE: los bloques que graba la ROM van a ficheros .TAP en la carpeta `saves` de la SD.
-- Snapshots: carga de .Z80 (versiones 1, 2 y 3), .SNA (48K y 128K) y .SZX; grabación en .Z80 v3, .SNA o .SZX con F8.
+- Snapshots: carga de .Z80 (versiones 1, 2 y 3), .SNA (48K y 128K), .SZX y .SP; grabación en .Z80 v3, .SNA o .SZX con F8.
 - Grabación de la señal de cinta (salida MIC) con Alt+W, para programas con rutinas de grabación propias.
 - Spectrum +3 con disquetera: discos .DSK (normales y extendidos, con protecciones: sectores débiles, Speedlock, pistas largas, errores de CRC) y discos de 720K (la unidad pasa sola a ser de 3,5"), con el controlador uPD765 de MAME.
 - Spectrum +3e (ROMs de Garry Lancaster) con disco duro en una tarjeta ZXMMC: imágenes .VHD, .IMG, .RAW y .HDF.
@@ -212,7 +212,7 @@ src/audiomixer.*  generación de muestras (beeper + AY) por t-states
 src/tape.*        cinta TAP/TZX/PZX/CSW (pulsos, carga instantánea y bloques)
 src/inflate.*     descompresor zlib (bloques CSW Z-RLE y páginas de .SZX)
 src/zipfile.*     lector de ficheros ZIP (directorio central, deflate y CRC)
-src/snapshot.*    snapshots .Z80/.SNA/.SZX
+src/snapshot.*    snapshots .Z80/.SNA/.SZX/.SP
 src/interface1.*  Interface 1, microdrives (.MDR y .MDV) y RS232
 src/zxnet.*       red ZX Net del Interface 1 (de SpectRusty)
 src/if1link.*     RS232 (TCP 2323) y ZX Net (UDP 5050) por la red de la Pi

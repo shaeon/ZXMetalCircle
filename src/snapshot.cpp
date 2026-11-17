@@ -34,6 +34,7 @@ const char *CSnapshot::Load (CSpectrum *pSpectrum, const u8 *pData, unsigned nSi
 	if (HasExtension (pFileName, ".sna"))	return LoadSNA (pSpectrum, pData, nSize);
 	if (HasExtension (pFileName, ".z80"))	return LoadZ80 (pSpectrum, pData, nSize);
 	if (HasExtension (pFileName, ".szx"))	return LoadSZX (pSpectrum, pData, nSize);
+	if (HasExtension (pFileName, ".sp"))	return LoadSP (pSpectrum, pData, nSize);
 
 	return N_("Formato de snapshot desconocido");
 }
@@ -65,6 +66,105 @@ void CSnapshot::Finish (CSpectrum *pSpectrum)
 	pSpectrum->m_CPU.setHalted (false);
 	pSpectrum->m_CPU.setPendingEI (false);
 	pSpectrum->m_CPU.setNMI (false);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// .SP (Pedro Gimeno: emulador «Spectrum» y VgaSpec). Solo 16K y 48K.
+//
+//   0  "SP"			 20  DE'
+//   2  longitud del bloque	 22  HL'
+//   4  dirección del bloque	 24  AF'
+//   6  BC			 26  R
+//   8  DE			 27  I
+//  10  HL			 28  SP
+//  12  AF (F, A)		 30  PC
+//  14  IX			 32  0
+//  16  IY			 34  borde
+//  18  BC'			 35  0
+//				 36  estado: bit 0 IFF1, 1 IM2 (si no, IM1), 2 IFF2,
+//				     3 reservado (IM0 en algunas versiones), 4
+//				     interrupción pendiente, 5 fase del parpadeo
+//  38  la memoria: "longitud" bytes desde "dirección" (49152 desde 16384, o
+//      16384 desde 16384 en un 16K). Con longitud y dirección a 0, una ROM de
+//      16 KB y después los 48 KB de RAM (un programa con su propia ROM): la
+//      ROM va como cartucho del Interface 2, que ocupa el mismo sitio, así
+//      que se quita con F11 o al cambiar de modelo, como un cartucho.
+//
+// El bit 3 no se mira: la documentación del propio emulador lo da por
+// reservado (ESPectrum tampoco lo usa). La interrupción pendiente no hace falta:
+// el primer cuadro tras cargar empieza con la interrupción. La fase del
+// parpadeo no se guarda en ningún otro formato y no se nota.
+
+#define SP_HEADER_SIZE	38
+
+const char *CSnapshot::LoadSP (CSpectrum *p, const u8 *pData, unsigned nSize)
+{
+	if (nSize < SP_HEADER_SIZE || pData[0] != 'S' || pData[1] != 'P')
+	{
+		return N_("Snapshot no válido");
+	}
+
+	unsigned nLength = Word (pData + 2);
+	unsigned nStart = Word (pData + 4);
+	boolean bROM = nLength == 0 && nStart == 0;
+	if (bROM)
+	{
+		nStart = 0x4000;
+		nLength = 0xC000;
+		if (nSize != SP_HEADER_SIZE + 0x4000 + nLength)
+		{
+			return N_("Snapshot no válido");
+		}
+	}
+	else if (   nLength == 0 || nStart < 0x4000 || nStart + nLength > 0x10000
+		 || nSize < SP_HEADER_SIZE + nLength)
+	{
+		return N_("Snapshot no válido");
+	}
+
+	// 16K si el bloque cabe entero en los primeros 16 KB de RAM
+	SetModel (p, nStart + nLength <= 0x8000 ? Model16K : Model48K);
+
+	const u8 *pMem = pData + SP_HEADER_SIZE;
+	if (bROM)
+	{
+		memcpy (p->m_IF2ROM, pMem, 0x4000);	// (SetModel ha quitado el cartucho)
+		p->m_bIF2Inserted = TRUE;
+		pMem += 0x4000;
+	}
+	for (unsigned i = 0; i < nLength; i++)
+	{
+		unsigned nAddress = nStart + i;		// 0x4000-0xFFFF
+		static const unsigned Banks[4] = {0, 5, 2, 0};
+		p->m_RAM[Banks[nAddress >> 14]][nAddress & 0x3FFF] = pMem[i];
+	}
+
+	Z80 &CPU = p->m_CPU;
+	CPU.setRegBC (Word (pData + 6));
+	CPU.setRegDE (Word (pData + 8));
+	CPU.setRegHL (Word (pData + 10));
+	CPU.setRegAF (Word (pData + 12));
+	CPU.setRegIX (Word (pData + 14));
+	CPU.setRegIY (Word (pData + 16));
+	CPU.setRegBCx (Word (pData + 18));
+	CPU.setRegDEx (Word (pData + 20));
+	CPU.setRegHLx (Word (pData + 22));
+	CPU.setRegAFx (Word (pData + 24));
+	CPU.setRegR (pData[26]);
+	CPU.setRegI (pData[27]);
+	CPU.setRegSP (Word (pData + 28));
+	CPU.setRegPC (Word (pData + 30));
+	p->m_nPortFE = pData[34] & 0x07;
+
+	u16 nStatus = Word (pData + 36);
+	CPU.setIFF1 ((nStatus & 0x01) != 0);
+	CPU.setIFF2 ((nStatus & 0x04) != 0);
+	CPU.setIM ((nStatus & 0x02) ? Z80::IM2 : Z80::IM1);
+
+	p->m_nPort7FFD = 0;
+	Finish (p);
+
+	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

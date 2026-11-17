@@ -570,7 +570,8 @@ static boolean IsLoadableName (const char *pName)
 {
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".z80", ".sna", ".szx", ".csw", ".rom", ".mdr",
 				    ".mdv", ".dsk", ".vhd", ".img", ".raw", ".hdf", ".zip",
-				    ".p"};	// programas del ZX81
+				    ".p",	// programas del ZX81
+				    ".sp"};	// snapshots de Pedro Gimeno
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (HasExtension (pName, Ext[i]))
