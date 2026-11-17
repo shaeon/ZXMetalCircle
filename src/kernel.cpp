@@ -215,7 +215,7 @@ static const TKeyBinding KeyBindings[] =
 	{HID_KEY_F1,     TRUE,  ActionSettings,     "Alt+F1",    GroupOther, N_("Configuración directamente")},
 	{0x0E,           TRUE,  ActionKeyHelp,      "Alt+K",     GroupOther, N_("Teclado del Spectrum/ZX81")},
 	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D",     GroupOther, N_("Diagnóstico del teclado")},
-	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",     GroupOther, N_("Varias teclas a la vez")},
+	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",     GroupOther, N_("Pulsar teclas simultáneas")},
 };
 
 // Ayuda corta (F1): las teclas de todos los días. Las demás, en la lista (T).
@@ -5429,7 +5429,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			OpenMenu ();
 			m_Keyboard.SetCaptured (TRUE);
 		}
-		m_Menu.OpenInput (T ("Pulsar varias teclas a la vez"),
+		m_Menu.OpenInput (T ("Pulsar teclas simultáneas"),
 				  T ("Teclas que se pulsan a la vez (1,5 s):"),
 				  T ("letras, números y espacio. Ej.: VICTOR"));
 		break;

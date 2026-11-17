@@ -34,7 +34,7 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 | Alt+L / Alt+T / Alt+X | LEC memory / Spectranet / divMMC on/off (with reset) |
 | Alt+F / Alt+E | +3 disk: new / eject |
 | Alt+D | Keyboard diagnostics: what arrives over USB, the keys the Spectrum sees, frames per second and frame times |
-| Alt+V | Press several keys at once (cheats like VICTOR in Profanation) |
+| Alt+V | Press keys simultaneously (cheats like VICTOR in Profanation) |
 | F12 or Alt+R | Reset |
 | Pause or Alt+P | Pause |
 
@@ -47,7 +47,7 @@ PC keyboard to Spectrum keyboard mapping:
 
 To load a tape: press F1 and then ENTER, choose the `.TAP`, `.TZX`, `.PZX` or `.CSW` and type `LOAD ""` (on the 128K/+2A, choose "Tape Loader" or "Loader" in the menu). The tape starts by itself when the ROM or a custom loader starts reading it, and stops by itself when the program stops reading it like a loader for 2 seconds. What counts is reading like a loader (the same IN over and over, with a counter that advances, as Fuse does), not reading a lot: menus that poll the keyboard non-stop neither start the tape nor keep it running, so multiloads find the next block where they left it. In fast mode, the emulator runs at full speed while loading.
 
-## Several keys at once (Alt+V)
+## Simultaneous keys (Alt+V)
 
 Some cheats need many keys pressed together, like **VICTOR** in Profanation for infinite lives. A USB keyboard reports at most six keys at a time, and many cannot detect some combinations of four, five or six keys.
 

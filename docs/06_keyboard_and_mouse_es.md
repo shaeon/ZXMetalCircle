@@ -34,7 +34,7 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 | Alt+L / Alt+T / Alt+X | Memoria LEC / Spectranet / divMMC sí/no (con reset) |
 | Alt+F / Alt+E | Disco +3: nuevo / expulsar |
 | Alt+D | Diagnóstico del teclado: lo que llega por USB, las teclas que ve el Spectrum, los cuadros por segundo y el tiempo de cada cuadro |
-| Alt+V | Pulsar varias teclas a la vez (trucos como VICTOR en Profanation) |
+| Alt+V | Pulsar teclas simultáneas (trucos como VICTOR en Profanation) |
 | F12 o Alt+R | Reset |
 | Pausa o Alt+P | Pausa |
 
@@ -47,7 +47,7 @@ Correspondencia del teclado del PC con el del Spectrum:
 
 Para cargar una cinta: pulsa F1 y luego ENTER, elige el `.TAP`, `.TZX`, `.PZX` o `.CSW` y escribe `LOAD ""` (en el 128K/+2A, elige "Tape Loader" o "Loader" en el menú). La cinta arranca sola cuando la ROM o un cargador propio empiezan a leerla, y se para sola cuando el programa deja de leerla como un cargador durante 2 segundos. Lo que cuenta es leer como un cargador (el mismo IN una y otra vez, con un contador que avanza, como hace Fuse), no leer mucho: los menús que miran el teclado sin parar no arrancan la cinta ni la mantienen en marcha, y así las multicargas encuentran el siguiente bloque donde lo dejaron. En el modo rápido, el emulador va a toda velocidad mientras dura la carga.
 
-## Varias teclas a la vez (Alt+V)
+## Teclas simultáneas (Alt+V)
 
 Algunos trucos piden pulsar muchas teclas juntas, como **VICTOR** en Profanation para tener vidas infinitas. Un teclado USB manda como mucho seis teclas a la vez, y muchos no detectan ciertas combinaciones de cuatro, cinco o seis teclas.
 

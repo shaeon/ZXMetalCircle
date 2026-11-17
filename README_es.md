@@ -192,7 +192,7 @@ Todo lo que explica cómo usar el emulador está en la carpeta [`docs`](docs/REA
 | 03 | [Pines GPIO](docs/03_gpio_es.md) | pines, teclado real y joysticks por GPIO, casete real |
 | 04 | [Joysticks y mandos USB](docs/04_usb_gamepads_es.md) | dos jugadores, qué mando es de cada uno, perfiles de los botones |
 | 05 | [Configuración](docs/05_settings_es.md) | opciones de `cmdline.txt`, la configuración (Alt+F1), idiomas, `excluir.txt` |
-| 06 | [Teclado y ratón](docs/06_keyboard_and_mouse_es.md) | teclas, varias teclas a la vez, diagnóstico, Recreated ZX, ratón Kempston |
+| 06 | [Teclado y ratón](docs/06_keyboard_and_mouse_es.md) | teclas, teclas simultáneas, diagnóstico, Recreated ZX, ratón Kempston |
 | 07 | [Ficheros y cintas](docs/07_files_and_tapes_es.md) | unidades, ficheros ZIP, snapshots, cartuchos del Interface 2 |
 | 08 | [Discos](docs/08_disks_es.md) | +3 y discos .DSK, +3e y disco duro, divMMC con esxDOS |
 | 09 | [Periféricos](docs/09_peripherals_es.md) | Spectranet, Interface 1 y Microdrives, LEC y CP/M, Multiface, ULAplus |

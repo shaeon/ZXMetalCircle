@@ -186,7 +186,7 @@ Everything about how to use the emulator is in the [`docs`](docs/README.md) fold
 | 03 | [GPIO pins](docs/03_gpio.md) | pins, real keyboard and joysticks through GPIO, real cassette |
 | 04 | [Joysticks and USB gamepads](docs/04_usb_gamepads.md) | two players, which gamepad belongs to whom, button profiles |
 | 05 | [Settings](docs/05_settings.md) | `cmdline.txt` options, the settings (Alt+F1), languages, `excluir.txt` |
-| 06 | [Keyboard and mouse](docs/06_keyboard_and_mouse.md) | keys, several keys at once, diagnostics, Recreated ZX, Kempston mouse |
+| 06 | [Keyboard and mouse](docs/06_keyboard_and_mouse.md) | keys, simultaneous keys, diagnostics, Recreated ZX, Kempston mouse |
 | 07 | [Files and tapes](docs/07_files_and_tapes.md) | drives, ZIP files, snapshots, Interface 2 cartridges |
 | 08 | [Disks](docs/08_disks.md) | +3 and .DSK disks, +3e and hard disk, divMMC with esxDOS |
 | 09 | [Peripherals](docs/09_peripherals.md) | Spectranet, Interface 1 and Microdrives, LEC and CP/M, Multiface, ULAplus |
