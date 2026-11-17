@@ -4,11 +4,11 @@
 
 ## Keys
 
-The function keys are in a single table (`KeyBindings` in `src/kernel.cpp`). The F1 help is generated from it, so changing an assignment only needs that table.
+The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the group each one appears in on the list of all keys. The F1 help has two parts: the short one, with the everyday keys and the status (`ShortHelp`), and the list of **all keys** (T from the help), in three pages by topic (PgUp/PgDn; ESC goes back to the help), generated from the table. Changing an assignment only needs that table.
 
 | Key | Function |
 | --- | --- |
-| F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives and A the credits |
+| F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives, T the list of all keys and A the credits |
 | Alt+F1 | The settings directly (ESC goes back to the Spectrum) |
 | Alt+U | Drives: see, mount and empty each drive |
 | Alt+K | Keyboard help |

@@ -73,6 +73,7 @@ static const char *TapeModeNames[TapeModeCount] =
 
 enum TAction
 {
+	ActionListOnly,			// solo en la lista de teclas
 	ActionHelp,
 	ActionKeyHelp,
 	ActionTapePlayStop,
@@ -113,66 +114,128 @@ enum TAction
 
 static const unsigned Speeds[] = {1, 2, 4, 10};
 
-struct TKeyBinding
+// Grupos de la lista de todas las teclas (T en la ayuda); cada página lleva los
+// suyos (KeyListPages)
+enum TKeyGroup
 {
-	u8 nKey;		// código HID
-	boolean bAlt;		// requiere Alt
-	TAction Action;
-	const char *pKeyName;
-	const char *pDescription;	// NULL: no se muestra en la ayuda (atajo repetido)
+	GroupNone,		// no sale en la lista (atajo repetido)
+	GroupTape,
+	GroupUnits,
+	GroupMachine,
+	GroupPeripherals,
+	GroupJoystick,
+	GroupVideoSound,
+	GroupOther,
+	GroupCount
 };
 
+static const char *KeyGroupNames[GroupCount] =
+{
+	0, N_("Cintas"), N_("Unidades"), N_("Máquina"), N_("Periféricos"),
+	N_("Joystick y mandos"), N_("Imagen y sonido"), N_("Otros")
+};
+
+static const struct
+{
+	const char *pTitle;
+	TKeyGroup Groups[3];		// GroupNone: no hay más
+}
+KeyListPages[] =
+{
+	{N_("Cintas y unidades"),	{GroupTape, GroupUnits, GroupNone}},
+	{N_("Máquina y periféricos"),	{GroupMachine, GroupPeripherals, GroupJoystick}},
+	{N_("Imagen, sonido y otros"),	{GroupVideoSound, GroupOther, GroupNone}},
+};
+
+struct TKeyBinding
+{
+	u8 nKey;		// código HID (0: solo para la lista, no es un atajo)
+	boolean bAlt;		// requiere Alt
+	TAction Action;
+	const char *pKeyName;	// en la lista de todas las teclas
+	TKeyGroup Group;	// GroupNone: no sale en la lista
+	const char *pDescription;
+};
+
+// Todas las teclas del emulador: los atajos y, en el orden de la tabla, la
+// lista de todas las teclas de la ayuda (T). La ayuda corta (F1) va aparte,
+// en ShortHelp.
 static const TKeyBinding KeyBindings[] =
 {
-	{HID_KEY_F1,     FALSE, ActionHelp,         "F1/Alt", N_("Ayuda, cintas / configuración")},
-	{HID_KEY_F1,     TRUE,  ActionSettings,     "Alt+F1", 0},
-	{0x0E,           TRUE,  ActionKeyHelp,      "Alt+K",  N_("Ayuda de teclado")},
-	{HID_KEY_F1 + 1, FALSE, ActionTapePlayStop, "F2/F3",  N_("Cinta: play-stop / bloques")},
-	{HID_KEY_F1 + 2, FALSE, ActionTapeRewind,   "F3",     0},
-	{HID_KEY_F1 + 3, FALSE, ActionJoystick,     "F4",     N_("Cambiar joystick")},
-	{HID_KEY_F1 + 4, FALSE, ActionNMI,          "F5/Alt", N_("NMI-Multiface / ficheros")},	// ver f5=
-	{HID_KEY_F1 + 4, TRUE,  ActionFiles,        "Alt+F5", 0},
-	{HID_KEY_F1 + 5, FALSE, ActionTapeMode,     "F6",     N_("Velocidad de carga")},
-	{HID_KEY_F1 + 6, FALSE, ActionModel,        "F7/Alt", N_("Modelo: lista / siguiente")},
-	{HID_KEY_F1 + 6, TRUE,  ActionModelNext,    "Alt+F7", 0},
-	{HID_KEY_F1 + 7, FALSE, ActionSaveSnapshot, "F8",     N_("Grabar snapshot")},
-	{HID_KEY_F1 + 8, FALSE, ActionAYStereo,     "F9",     N_("Sonido AY (Alt +/-/0: volumen)")},
-	{HID_KEY_F1 + 9, FALSE, ActionSpeed,        "F10",    N_("Velocidad x1/x2/x4/x10")},
-	// Alt+I (Issue 2/3) se quitó: solo en la configuración (F1, C, página 1), que
-	// la pone en gris fuera del 16K y el 48K. Así cabe la línea de la red en la ayuda.
-	{HID_KEY_F1 + 10, FALSE, ActionEjectCartridge, "F11", N_("Quitar cartucho (IF2)")},
-	{0x18,           TRUE,  ActionUnits,        "Alt+U",  N_("Unidades: montar y vaciar")},
-	{0x05,           TRUE,  ActionBorder,       "Alt+B/S", N_("Borde / scanlines")},
-	{0x16,           TRUE,  ActionScanlines,    "Alt+S",  0},
-	{0x1A,           TRUE,  ActionRecord,       "Alt+W/G", N_("Grabar salida MIC / casete")},
-	{0x0A,           TRUE,  ActionRecordEar,    "Alt+G",  0},
-	{0x11,           TRUE,  ActionBlankMicrodrive, "Alt+N/M", N_("Microdrive: nuevo / sacar todos")},
-	{0x10,           TRUE,  ActionEjectMicrodrives, "Alt+M", 0},
-	{0x0F,           TRUE,  ActionLEC,          "Alt+L/T/X", N_("LEC/Spectranet/divMMC sí/no")},
-	{0x17,           TRUE,  ActionSpectranet,   "Alt+T",  0},
-	{0x1B,           TRUE,  ActionDivMMC,       "Alt+X",  0},
-	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D/V", N_("Diagnóstico / varias teclas")},
-	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",  0},
-	{0x09,           TRUE,  ActionBlankDisk,    "Alt+F/E", N_("Disco +3: nuevo / expulsar")},
-	{0x08,           TRUE,  ActionEjectDisks,   "Alt+E",  0},
-	{HID_KEY_F12,    FALSE, ActionReset,        "F12",    N_("Reset (también Alt+R)")},
-	{0x15,           TRUE,  ActionReset,        "Alt+R",  0},
-	{HID_KEY_PAUSE,  FALSE, ActionPause,        "Pausa",  N_("Pausa (también Alt+P)")},
-	{0x13,           TRUE,  ActionPause,        "Alt+P",  0},
-	// Volumen (en la ayuda, con F9): + y - del teclado numérico, y las teclas
-	// + y - del teclado español (y = y - del inglés); 0 es el silencio
-	{0x57,           TRUE,  ActionVolumeUp,     "Alt++",  0},
-	{0x30,           TRUE,  ActionVolumeUp,     "Alt++",  0},
-	{0x2E,           TRUE,  ActionVolumeUp,     "Alt++",  0},
-	{0x56,           TRUE,  ActionVolumeDown,   "Alt+-",  0},
-	{0x38,           TRUE,  ActionVolumeDown,   "Alt+-",  0},
-	{0x2D,           TRUE,  ActionVolumeDown,   "Alt+-",  0},
-	{0x27,           TRUE,  ActionMute,         "Alt+0",  0},
-	{0x62,           TRUE,  ActionMute,         "Alt+0",  0},
-	{KEY_PAD_SELECT, FALSE, ActionJoystick,     "Select", 0},	// botón del mando
-	{KEY_PAD_SELECT2, FALSE, ActionJoystick2,   "Select", 0},	// botón de un mando del jugador 2
-	{KEY_PAD_FILES,   FALSE, ActionFiles,       "Select", 0},	// navegador de ficheros, desde un mando
-	{KEY_PAD_SETTINGS, FALSE, ActionSettings,   "Start",  0},	// configuración, desde un mando
+	// Cintas
+	{0,              FALSE, ActionListOnly,         "F1 ENTER",  GroupTape,  N_("Elegir cinta, disco...")},
+	{HID_KEY_F1 + 1, FALSE, ActionTapePlayStop, "F2",        GroupTape,  N_("Cinta: play / stop")},
+	{HID_KEY_F1 + 2, FALSE, ActionTapeRewind,   "F3",        GroupTape,  N_("Cinta: lista de bloques")},
+	{HID_KEY_F1 + 5, FALSE, ActionTapeMode,     "F6",        GroupTape,  N_("Velocidad de carga")},
+	{0x1A,           TRUE,  ActionRecord,       "Alt+W",     GroupTape,  N_("Grabar la salida MIC")},
+	{0x0A,           TRUE,  ActionRecordEar,    "Alt+G",     GroupTape,  N_("Grabar la entrada (casete)")},
+	// Unidades
+	{0x18,           TRUE,  ActionUnits,        "Alt+U",     GroupUnits, N_("Ver, montar y vaciar")},
+	{HID_KEY_F1 + 4, TRUE,  ActionFiles,        "Alt+F5",    GroupUnits, N_("Navegador de ficheros")},	// ver f5=
+	{0x09,           TRUE,  ActionBlankDisk,    "Alt+F",     GroupUnits, N_("Disco +3: nuevo")},
+	{0x08,           TRUE,  ActionEjectDisks,   "Alt+E",     GroupUnits, N_("Disco +3: expulsar")},
+	{0x11,           TRUE,  ActionBlankMicrodrive, "Alt+N",  GroupUnits, N_("Microdrive: cartucho nuevo")},
+	{0x10,           TRUE,  ActionEjectMicrodrives, "Alt+M", GroupUnits, N_("Microdrives: grabar y sacar")},
+	{HID_KEY_F1 + 10, FALSE, ActionEjectCartridge, "F11",    GroupUnits, N_("Quitar cartucho (IF2)")},
+	{HID_KEY_F1 + 7, FALSE, ActionSaveSnapshot, "F8",        GroupUnits, N_("Grabar snapshot")},
+	// Máquina
+	{HID_KEY_F1 + 6, FALSE, ActionModel,        "F7",        GroupMachine, N_("Lista de modelos (y ZX81)")},
+	{HID_KEY_F1 + 6, TRUE,  ActionModelNext,    "Alt+F7",    GroupMachine, N_("Siguiente modelo")},
+	{HID_KEY_F1 + 9, FALSE, ActionSpeed,        "F10",       GroupMachine, N_("Velocidad x1/x2/x4/x10")},
+	{HID_KEY_F12,    FALSE, ActionReset,        "F12/Alt+R", GroupMachine, N_("Reset")},
+	{0x15,           TRUE,  ActionReset,        "Alt+R",     GroupNone,  0},
+	{HID_KEY_PAUSE,  FALSE, ActionPause,        N_("Pausa/Alt+P"), GroupMachine, N_("Pausa")},
+	{0x13,           TRUE,  ActionPause,        "Alt+P",     GroupNone,  0},
+	// Periféricos
+	{HID_KEY_F1 + 4, FALSE, ActionNMI,          "F5",        GroupPeripherals, N_("NMI (Multiface)")},	// ver f5=
+	{0x0F,           TRUE,  ActionLEC,          "Alt+L",     GroupPeripherals, N_("Memoria LEC sí/no (reset)")},
+	{0x17,           TRUE,  ActionSpectranet,   "Alt+T",     GroupPeripherals, N_("Spectranet sí/no (reset)")},
+	{0x1B,           TRUE,  ActionDivMMC,       "Alt+X",     GroupPeripherals, N_("divMMC sí/no (reset)")},
+	// Joystick y mandos
+	{HID_KEY_F1 + 3, FALSE, ActionJoystick,     "F4",        GroupJoystick, N_("Cambiar joystick")},
+	{KEY_PAD_SELECT, FALSE, ActionJoystick,     "Select",    GroupJoystick, N_("Joystick (desde el mando)")},	// botón del mando
+	{KEY_PAD_SELECT2, FALSE, ActionJoystick2,   "Select",    GroupNone,  0},	// botón de un mando del jugador 2
+	{KEY_PAD_FILES,   FALSE, ActionFiles,       "Select",    GroupNone,  0},	// navegador de ficheros, desde un mando
+	{KEY_PAD_SETTINGS, FALSE, ActionSettings,   "Start",     GroupJoystick, N_("Configuración (mando)")},
+	// Imagen y sonido. Volumen: + y - del teclado numérico, y las teclas + y -
+	// del teclado español (y = y - del inglés); 0 es el silencio
+	{HID_KEY_F1 + 8, FALSE, ActionAYStereo,     "F9",        GroupVideoSound, N_("Sonido AY: ABC/ACB/BAC/mono")},
+	{0x30,           TRUE,  ActionVolumeUp,     "Alt + +",   GroupVideoSound, N_("Subir el volumen")},
+	{0x57,           TRUE,  ActionVolumeUp,     "Alt + +",   GroupNone,  0},
+	{0x2E,           TRUE,  ActionVolumeUp,     "Alt + +",   GroupNone,  0},
+	{0x38,           TRUE,  ActionVolumeDown,   "Alt + -",   GroupVideoSound, N_("Bajar el volumen")},
+	{0x56,           TRUE,  ActionVolumeDown,   "Alt + -",   GroupNone,  0},
+	{0x2D,           TRUE,  ActionVolumeDown,   "Alt + -",   GroupNone,  0},
+	{0x27,           TRUE,  ActionMute,         "Alt+0",     GroupVideoSound, N_("Silencio sí/no")},
+	{0x62,           TRUE,  ActionMute,         "Alt+0",     GroupNone,  0},
+	{0x05,           TRUE,  ActionBorder,       "Alt+B",     GroupVideoSound, N_("Tamaño del borde")},
+	{0x16,           TRUE,  ActionScanlines,    "Alt+S",     GroupVideoSound, N_("Scanlines sí/no")},
+	// Otros
+	{HID_KEY_F1,     FALSE, ActionHelp,         "F1",        GroupNone,  0},
+	{HID_KEY_F1,     TRUE,  ActionSettings,     "Alt+F1",    GroupOther, N_("Configuración directamente")},
+	{0x0E,           TRUE,  ActionKeyHelp,      "Alt+K",     GroupOther, N_("Teclado del Spectrum/ZX81")},
+	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D",     GroupOther, N_("Diagnóstico del teclado")},
+	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",     GroupOther, N_("Varias teclas a la vez")},
+};
+
+// Ayuda corta (F1): las teclas de todos los días. Las demás, en la lista (T).
+// Alt+I (Issue 2/3) se quitó: solo en la configuración (F1, C, página 1).
+static const struct { const char *pKey; const char *pDescription; } ShortHelp[] =
+{
+	{"F1",      N_("Ayuda, cintas / configuración")},
+	{"F2/F3",   N_("Cinta: play-stop / bloques")},
+	{"F4",      N_("Cambiar joystick")},
+	{"F5",      N_("NMI (Multiface)")},		// con f5=files, "Ficheros"
+	{"F6",      N_("Velocidad de carga")},
+	{"F7",      N_("Modelo")},
+	{"F8",      N_("Grabar snapshot")},
+	{"F9",      N_("Sonido AY: ABC/ACB/BAC/mono")},
+	{"F10",     N_("Velocidad x1/x2/x4/x10")},
+	{"F11",     N_("Quitar cartucho (IF2)")},
+	{"F12",     N_("Reset")},
+	{N_("Pausa"), N_("Pausa")},
+	{"Alt+U",   N_("Unidades: montar y vaciar")},
+	{"Alt +/-", N_("Volumen (Alt+0: silencio)")},
 };
 
 CKernel *CKernel::s_pThis = 0;
@@ -1385,20 +1448,47 @@ void CKernel::UpdateStatusLines (void)
 
 	CString Line;
 
+	// ayuda corta (F1)
 	unsigned nHelpLine = 0;
-	for (unsigned i = 0; i < sizeof KeyBindings / sizeof KeyBindings[0]; i++)
+	for (unsigned i = 0; i < sizeof ShortHelp / sizeof ShortHelp[0]; i++)
 	{
-		if (KeyBindings[i].pDescription == 0)
+		const char *pDescription = T (ShortHelp[i].pDescription);
+		if (strcmp (ShortHelp[i].pKey, "F5") == 0 && m_bF5Files)
 		{
-			continue;
+			pDescription = T ("Navegador de ficheros");	// f5=files
 		}
-		const char *pDescription = T (KeyBindings[i].pDescription);
-		if (KeyBindings[i].Action == ActionNMI && m_bF5Files)
-		{
-			pDescription = T ("Ficheros / NMI-Multiface");	// f5=files
-		}
-		Line.Format ("%-7s %s", KeyBindings[i].pKeyName, pDescription);
+		Line.Format ("%-7s %s", T (ShortHelp[i].pKey), pDescription);
 		m_Menu.SetHelpLine (nHelpLine++, Line);
+	}
+
+	// todas las teclas (T en la ayuda), por páginas y grupos
+	m_Menu.ClearKeyList ();
+	for (unsigned nPage = 0; nPage < sizeof KeyListPages / sizeof KeyListPages[0]; nPage++)
+	{
+		m_Menu.AddKeyListPage (T (KeyListPages[nPage].pTitle));
+		for (unsigned g = 0; g < 3 && KeyListPages[nPage].Groups[g] != GroupNone; g++)
+		{
+			TKeyGroup Group = KeyListPages[nPage].Groups[g];
+			if (g > 0)
+			{
+				m_Menu.AddKeyListLine ("", "");			// separación
+			}
+			m_Menu.AddKeyListLine (0, T (KeyGroupNames[Group]));	// título del grupo
+			for (unsigned i = 0; i < sizeof KeyBindings / sizeof KeyBindings[0]; i++)
+			{
+				if (KeyBindings[i].Group != Group || KeyBindings[i].pDescription == 0)
+				{
+					continue;
+				}
+				const char *pDescription = T (KeyBindings[i].pDescription);
+				if (KeyBindings[i].nKey == HID_KEY_F1 + 4 && m_bF5Files)	// f5=files: al revés
+				{
+					pDescription = KeyBindings[i].Action == ActionNMI ? T ("Navegador de ficheros")
+											 : T ("NMI (Multiface)");
+				}
+				m_Menu.AddKeyListLine (T (KeyBindings[i].pKeyName), pDescription);
+			}
+		}
 	}
 
 	Line.Format (T ("Modelo: |%s%s|  Vel. |x%u|"), m_pSpectrum->GetTiming ()->pName,
@@ -5083,7 +5173,8 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	const TKeyBinding *pBinding = 0;
 	for (unsigned i = 0; i < sizeof KeyBindings / sizeof KeyBindings[0]; i++)
 	{
-		if (KeyBindings[i].nKey == rEvent.nKey && KeyBindings[i].bAlt == bAlt)
+		if (   KeyBindings[i].nKey == rEvent.nKey && KeyBindings[i].bAlt == bAlt
+		    && KeyBindings[i].Action != ActionListOnly)
 		{
 			pBinding = &KeyBindings[i];
 			break;
@@ -5106,6 +5197,9 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 
 	switch (Action)
 	{
+	case ActionListOnly:
+		break;
+
 	case ActionHelp:
 		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		UpdateStatusLines ();

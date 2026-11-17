@@ -4,11 +4,11 @@
 
 ## Teclas
 
-Las teclas de función están en una sola tabla (`KeyBindings` en `src/kernel.cpp`). La ayuda de F1 se genera a partir de ella, así que para cambiar una asignación basta con tocar esa tabla.
+Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el grupo en el que salen en la lista de todas las teclas. La ayuda de F1 tiene dos partes: la corta, con las teclas de todos los días y el estado (`ShortHelp`), y la lista de **todas las teclas** (T desde la ayuda), en tres páginas por temas (RePág/AvPág; ESC vuelve a la ayuda), que se genera a partir de la tabla. Para cambiar una asignación basta con tocar la tabla.
 
 | Tecla | Función |
 | --- | --- |
-| F1 | Ayuda y estado; desde ahí, ENTER abre el selector, C la configuración, U las unidades y A los créditos |
+| F1 | Ayuda y estado; desde ahí, ENTER abre el selector, C la configuración, U las unidades, T la lista de todas las teclas y A los créditos |
 | Alt+F1 | La configuración directamente (ESC vuelve al Spectrum) |
 | Alt+U | Unidades: ver, montar y vaciar cada unidad |
 | Alt+K | Ayuda de teclado |

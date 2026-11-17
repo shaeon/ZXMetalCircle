@@ -133,6 +133,13 @@ public:
 	// Líneas de la ayuda general (teclas de función), generadas por el kernel
 	void SetHelpLine (unsigned nLine, const char *pText);
 
+	// Lista de todas las teclas (T en la ayuda), por páginas, generada por el
+	// kernel: AddKeyListLine (0, título) es el título de un grupo y ("", "")
+	// una línea en blanco
+	void ClearKeyList (void);
+	void AddKeyListPage (const char *pTitle);
+	void AddKeyListLine (const char *pKey, const char *pText);
+
 private:
 	boolean ReadDirectory (void);
 	boolean ReadRemoteDirectory (void);
@@ -148,7 +155,7 @@ private:
 	CVideo *m_pVideo;
 
 	enum TMode { ModeClosed, ModeBrowser, ModeHelp, ModeKeyHelp, ModeSettings, ModeChoice, ModeUnits,
-		     ModeAbout, ModeTape, ModeInput, ModeList };
+		     ModeAbout, ModeTape, ModeInput, ModeList, ModeKeyList };
 	unsigned SettingsOnPage (unsigned *pIndex, unsigned nMax) const;
 	void FixSettingsRow (void);
 	TMode m_Mode;
@@ -185,6 +192,14 @@ private:
 
 	char m_Status[MENU_STATUS_LINES][64];		// con los valores entre |
 	char m_Help[MENU_HELP_LINES][48];
+	#define MENU_KEYLIST_PAGES	4
+	#define MENU_KEYLIST_LINES	28
+	char m_KeyListTitle[MENU_KEYLIST_PAGES][48];
+	char m_KeyListKey[MENU_KEYLIST_PAGES][MENU_KEYLIST_LINES][16];	// \x01: título de grupo
+	char m_KeyListText[MENU_KEYLIST_PAGES][MENU_KEYLIST_LINES][48];
+	unsigned m_nKeyListLines[MENU_KEYLIST_PAGES];
+	unsigned m_nKeyListPages;
+	unsigned m_nKeyListPage;
 	CSettings *m_pSettings;
 	unsigned m_nSettingsPage;
 	unsigned m_nSettingsRow;

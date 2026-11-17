@@ -75,6 +75,8 @@ CMenu::CMenu (CVideo *pVideo)
 	m_bUnitsFromShortcut = FALSE;
 	m_bSettingsFromShortcut = FALSE;
 	m_nAboutTop = 0;
+	m_nKeyListPages = 0;
+	m_nKeyListPage = 0;
 	m_nUnitSelected = 0;
 	m_nUnitTarget = -1;
 	m_pTape = 0;
@@ -507,6 +509,48 @@ boolean CMenu::OpenBrowser (void)
 	}
 
 	return TRUE;
+}
+
+void CMenu::ClearKeyList (void)
+{
+	m_nKeyListPages = 0;
+}
+
+void CMenu::AddKeyListPage (const char *pTitle)
+{
+	if (m_nKeyListPages < MENU_KEYLIST_PAGES)
+	{
+		strncpy (m_KeyListTitle[m_nKeyListPages], pTitle, sizeof m_KeyListTitle[0] - 1);
+		m_KeyListTitle[m_nKeyListPages][sizeof m_KeyListTitle[0] - 1] = '\0';
+		m_nKeyListLines[m_nKeyListPages] = 0;
+		m_nKeyListPages++;
+	}
+}
+
+void CMenu::AddKeyListLine (const char *pKey, const char *pText)
+{
+	if (m_nKeyListPages == 0)
+	{
+		return;
+	}
+	unsigned nPage = m_nKeyListPages - 1;
+	unsigned n = m_nKeyListLines[nPage];
+	if (n >= MENU_KEYLIST_LINES)
+	{
+		return;
+	}
+	if (pKey == 0)
+	{
+		strcpy (m_KeyListKey[nPage][n], "\x01");		// título de grupo
+	}
+	else
+	{
+		strncpy (m_KeyListKey[nPage][n], pKey, sizeof m_KeyListKey[0][0] - 1);
+		m_KeyListKey[nPage][n][sizeof m_KeyListKey[0][0] - 1] = '\0';
+	}
+	strncpy (m_KeyListText[nPage][n], pText, sizeof m_KeyListText[0][0] - 1);
+	m_KeyListText[nPage][n][sizeof m_KeyListText[0][0] - 1] = '\0';
+	m_nKeyListLines[nPage] = n + 1;
 }
 
 void CMenu::OpenHelp (void)
@@ -1000,6 +1044,11 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		{
 			Result = MenuResultOpenUnits;
 		}
+		else if (nKey == 0x17 && m_nKeyListPages > 0)	// T: todas las teclas
+		{
+			m_nKeyListPage = 0;
+			m_Mode = ModeKeyList;
+		}
 		else if (nKey == HID_KEY_ESC || nKey == HID_KEY_F1 || nKey == HID_KEY_SPACE)
 		{
 			m_Mode = ModeClosed;
@@ -1432,6 +1481,30 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		return Result;
 	}
 
+	if (m_Mode == ModeKeyList)
+	{
+		if (   (nKey == 0x4E || nKey == HID_KEY_RIGHT || nKey == HID_KEY_DOWN)	// AvPág
+		    && m_nKeyListPage + 1 < m_nKeyListPages)
+		{
+			m_nKeyListPage++;
+		}
+		else if (   (nKey == 0x4B || nKey == HID_KEY_LEFT || nKey == HID_KEY_UP)	// RePág
+			 && m_nKeyListPage > 0)
+		{
+			m_nKeyListPage--;
+		}
+		else if (nKey == HID_KEY_ESC || nKey == 0x17)	// ESC o T: a la ayuda
+		{
+			m_Mode = ModeHelp;
+		}
+		else if (nKey == HID_KEY_F1)
+		{
+			m_Mode = ModeClosed;
+			Result = MenuResultClose;
+		}
+		return Result;
+	}
+
 	if (m_Mode == ModeKeyHelp)
 	{
 		if (   nKey == HID_KEY_ESC || nKey == HID_KEY_ENTER
@@ -1600,6 +1673,9 @@ void CMenu::Draw (TPixel *pScreen)
 			}
 		}
 
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow++), T ("T       Todas las teclas..."),
+				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+
 		nRow++;
 		for (unsigned i = 0; i < MENU_STATUS_LINES; i++)
 		{
@@ -1611,6 +1687,34 @@ void CMenu::Draw (TPixel *pScreen)
 		}
 
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ENTER cintas C conf. U unidades A acerca"),
+				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		return;
+	}
+
+	if (m_Mode == ModeKeyList)
+	{
+		unsigned nPage = m_nKeyListPage < m_nKeyListPages ? m_nKeyListPage : 0;
+		CString Title;
+		Title.Format (T ("Teclas %u/%u: %s"), nPage + 1, m_nKeyListPages, m_KeyListTitle[nPage]);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+
+		const unsigned nKeyCols = 12;
+		for (unsigned i = 0; i < m_nKeyListLines[nPage] && 3 + i < PANEL_ROWS - 3; i++)
+		{
+			int y = ROW_Y (3 + i);
+			if (m_KeyListKey[nPage][i][0] == '\x01')
+			{
+				m_pVideo->DrawText (pScreen, tx, y, m_KeyListText[nPage][i], COLOR_UI_DIR, COLOR_UI_PANEL, TEXT_COLS);
+			}
+			else
+			{
+				m_pVideo->DrawText (pScreen, tx, y, m_KeyListKey[nPage][i], COLOR_UI_VALUE, COLOR_UI_PANEL, nKeyCols - 1);
+				m_pVideo->DrawText (pScreen, tx + nKeyCols * 8, y, m_KeyListText[nPage][i],
+						    COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS - nKeyCols);
+			}
+		}
+
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("RePág/AvPág página    ESC volver"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		return;
 	}
