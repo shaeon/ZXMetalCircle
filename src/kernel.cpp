@@ -69,6 +69,7 @@ static const char *TapeModeNames[TapeModeCount] =
 // Teclas de función. Para cambiar una asignación basta con tocar esta tabla:
 // la ayuda (F1) se genera a partir de ella.
 #define MULTIKEY_FRAMES		75		// Alt+V: las teclas se mantienen 1,5 s
+#define VOLUME_STEP		10		// Alt + +/-: el volumen, de 10 en 10 %
 
 enum TAction
 {
@@ -104,7 +105,10 @@ enum TAction
 	ActionLEC,
 	ActionSpectranet,
 	ActionDivMMC,
-	ActionUnits
+	ActionUnits,
+	ActionVolumeUp,			// Alt + +: subir el volumen
+	ActionVolumeDown,		// Alt + -: bajarlo
+	ActionMute			// Alt+0: silencio sí/no
 };
 
 static const unsigned Speeds[] = {1, 2, 4, 10};
@@ -132,7 +136,7 @@ static const TKeyBinding KeyBindings[] =
 	{HID_KEY_F1 + 6, FALSE, ActionModel,        "F7/Alt", N_("Modelo: lista / siguiente")},
 	{HID_KEY_F1 + 6, TRUE,  ActionModelNext,    "Alt+F7", 0},
 	{HID_KEY_F1 + 7, FALSE, ActionSaveSnapshot, "F8",     N_("Grabar snapshot")},
-	{HID_KEY_F1 + 8, FALSE, ActionAYStereo,     "F9",     N_("Sonido AY: ABC/ACB/BAC/mono")},
+	{HID_KEY_F1 + 8, FALSE, ActionAYStereo,     "F9",     N_("Sonido AY (Alt +/-/0: volumen)")},
 	{HID_KEY_F1 + 9, FALSE, ActionSpeed,        "F10",    N_("Velocidad x1/x2/x4/x10")},
 	// Alt+I (Issue 2/3) se quitó: solo en la configuración (F1, C, página 1), que
 	// la pone en gris fuera del 16K y el 48K. Así cabe la línea de la red en la ayuda.
@@ -155,6 +159,16 @@ static const TKeyBinding KeyBindings[] =
 	{0x15,           TRUE,  ActionReset,        "Alt+R",  0},
 	{HID_KEY_PAUSE,  FALSE, ActionPause,        "Pausa",  N_("Pausa (también Alt+P)")},
 	{0x13,           TRUE,  ActionPause,        "Alt+P",  0},
+	// Volumen (en la ayuda, con F9): + y - del teclado numérico, y las teclas
+	// + y - del teclado español (y = y - del inglés); 0 es el silencio
+	{0x57,           TRUE,  ActionVolumeUp,     "Alt++",  0},
+	{0x30,           TRUE,  ActionVolumeUp,     "Alt++",  0},
+	{0x2E,           TRUE,  ActionVolumeUp,     "Alt++",  0},
+	{0x56,           TRUE,  ActionVolumeDown,   "Alt+-",  0},
+	{0x38,           TRUE,  ActionVolumeDown,   "Alt+-",  0},
+	{0x2D,           TRUE,  ActionVolumeDown,   "Alt+-",  0},
+	{0x27,           TRUE,  ActionMute,         "Alt+0",  0},
+	{0x62,           TRUE,  ActionMute,         "Alt+0",  0},
 	{KEY_PAD_SELECT, FALSE, ActionJoystick,     "Select", 0},	// botón del mando
 	{KEY_PAD_SELECT2, FALSE, ActionJoystick2,   "Select", 0},	// botón de un mando del jugador 2
 	{KEY_PAD_FILES,   FALSE, ActionFiles,       "Select", 0},	// navegador de ficheros, desde un mando
@@ -279,6 +293,8 @@ CKernel::CKernel (void)
 	m_nNMIReleased = 0;
 	m_pAudioGPIO = 0;
 	m_bMonoAudio = FALSE;
+	m_nVolume = 100;
+	m_bMute = FALSE;
 	memset (m_PrevGPIOMatrix, 0, sizeof m_PrevGPIOMatrix);
 	s_pThis = this;
 
@@ -576,6 +592,7 @@ void CKernel::ParseOptions (void)
 		}
 	}
 	m_pSpectrum->GetAudio ()->SetTapeSound (m_Options.GetAppOptionDecimal ("tapesound", 1) != 0);
+	SetVolume (m_Options.GetAppOptionDecimal ("volume", 100));
 	m_pSpectrum->GetAudio ()->SetBeeperFilter (m_Options.GetAppOptionDecimal ("beeperfilter", 1) != 0);
 	strncpy (m_Speaker, m_Options.GetAppOptionString ("speaker", "auto"), sizeof m_Speaker - 1);
 	m_Speaker[sizeof m_Speaker - 1] = '\0';
@@ -1440,8 +1457,17 @@ void CKernel::UpdateStatusLines (void)
 		m_Menu.SetStatusLine (4, "");
 	}
 
-	Line.Format (T ("Sonido: |%s|, AY |%s|"), T (m_pSoundName),
-		     AYStereoNames[m_pSpectrum->GetAY ()->GetStereoMode ()]);
+	CString Volume;
+	if (m_bMute)
+	{
+		Volume = T ("silencio");
+	}
+	else
+	{
+		Volume.Format ("%u%%", m_nVolume);
+	}
+	Line.Format (T ("Sonido: |%s|, AY |%s|, vol. |%s|"), T (m_pSoundName),
+		     AYStereoNames[m_pSpectrum->GetAY ()->GetStereoMode ()], (const char *) Volume);
 	m_Menu.SetStatusLine (5, Line);
 
 	if (m_pSpectrum->IsCartridgeInserted ())
@@ -2604,6 +2630,11 @@ void CKernel::SyncSetting (const char *pKey)
 	else if (strcmp (pKey, "scanlines") == 0)	pValue = m_bScanlines ? "1" : "0";
 	else if (strcmp (pKey, "pureblack") == 0)	pValue = m_pSpectrum->IsPureBlack () ? "1" : "0";
 	else if (strcmp (pKey, "indicators") == 0)	pValue = m_bIndicators ? "1" : "0";
+	else if (strcmp (pKey, "volume") == 0)
+	{
+		Value.Format ("%u", m_nVolume);
+		pValue = Value;
+	}
 	else if (strcmp (pKey, "aystereo") == 0)
 	{
 		static const char *Stereo[] = {"abc", "acb", "bac", "mono"};
@@ -2723,6 +2754,11 @@ void CKernel::ApplySetting (unsigned nIndex)
 			m_bScanlines = FALSE;
 			ShowMessage (T ("Scanlines: pantalla demasiado pequeña"));
 		}
+	}
+	else if (strcmp (pKey, "volume") == 0)
+	{
+		SetVolume (atoi (pValue));
+		m_bMute = FALSE;
 	}
 	else if (strcmp (pKey, "aystereo") == 0)
 	{
@@ -5378,7 +5414,41 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		SyncSetting ("aystereo");
 		break;
 	}
+
+	case ActionVolumeUp:
+	case ActionVolumeDown:
+		if (!m_bMute)			// con silencio, la primera pulsación solo lo quita
+		{
+			int nVolume = (int) m_nVolume + (Action == ActionVolumeUp ? VOLUME_STEP : -VOLUME_STEP);
+			SetVolume (nVolume < 0 ? 0 : nVolume);
+		}
+		m_bMute = FALSE;
+		Message.Format (T ("Volumen: %u %%"), m_nVolume);
+		ShowMessage (Message);
+		SyncSetting ("volume");
+		break;
+
+	case ActionMute:
+		m_bMute = !m_bMute;		// (no se guarda)
+		if (m_bMute)
+		{
+			ShowMessage (T ("Sonido: silencio (Alt+0 lo quita)"));
+		}
+		else
+		{
+			Message.Format (T ("Volumen: %u %%"), m_nVolume);
+			ShowMessage (Message);
+		}
+		break;
 	}
+}
+
+// Volumen de 0 a 100, en pasos de VOLUME_STEP
+void CKernel::SetVolume (int nVolume)
+{
+	if (nVolume < 0)		nVolume = 0;
+	if (nVolume > 100)		nVolume = 100;
+	m_nVolume = (unsigned) ((nVolume + VOLUME_STEP / 2) / VOLUME_STEP * VOLUME_STEP);
 }
 
 // Teclado real por GPIO:
@@ -5753,17 +5823,27 @@ void CKernel::OutputAudio (void)
 
 	if (m_pSound != 0 && !IsAccelerating () && !bQueueFull)
 	{
-		if (m_bMonoAudio)
+		// Volumen: el factor va al cuadrado (como el oído: el 50 % suena a la
+		// mitad), en 1/4096. El 100 % deja las muestras como están.
+		unsigned nVolume = m_bMute ? 0 : m_nVolume;
+		int nGain = (int) (nVolume * nVolume * 4096 / 10000);
+		if (m_bMonoAudio || nVolume < 100)
 		{
-			static s16 Mono[AUDIO_MAX_FRAME_SAMPLES * 2];
+			static s16 Out[AUDIO_MAX_FRAME_SAMPLES * 2];
 			const s16 *pIn = pAudio->GetBuffer ();
 			unsigned nFrames = pAudio->GetFrameCount ();
 			for (unsigned i = 0; i < nFrames; i++)
 			{
-				s16 nSample = (s16) (((int) pIn[2 * i] + pIn[2 * i + 1]) / 2);
-				Mono[2 * i] = Mono[2 * i + 1] = nSample;
+				int nLeft = pIn[2 * i];
+				int nRight = pIn[2 * i + 1];
+				if (m_bMonoAudio)
+				{
+					nLeft = nRight = (nLeft + nRight) / 2;
+				}
+				Out[2 * i] = (s16) (nLeft * nGain / 4096);
+				Out[2 * i + 1] = (s16) (nRight * nGain / 4096);
 			}
-			m_pSound->Write (Mono, nFrames * 2 * sizeof (s16));
+			m_pSound->Write (Out, nFrames * 2 * sizeof (s16));
 		}
 		else
 		{

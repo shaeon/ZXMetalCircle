@@ -118,6 +118,9 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
 
  tapesound=1      Hear the tape signal while loading: 1 = yes, 0 = no
 
+ volume=100       Volume, from 0 to 100 in steps of 10 (Alt + + and Alt + -
+                  change it; Alt+0 mutes)
+
  savetrap=1       The ROM's SAVE writes straight to the SD card (saves
                   folder):  1 = yes (default),  0 = no
 

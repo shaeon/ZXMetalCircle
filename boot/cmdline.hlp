@@ -119,6 +119,9 @@ defecto.
 
  tapesound=1      Oir la señal de la cinta al cargar: 1 = si, 0 = no
 
+ volume=100       Volumen, de 0 a 100 de 10 en 10 (Alt + + y Alt + - lo
+                  cambian; Alt+0 silencia)
+
  savetrap=1       SAVE de la ROM graba directamente en la SD (carpeta saves):
                     1 = si (por defecto),  0 = no
 

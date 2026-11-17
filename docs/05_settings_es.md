@@ -34,6 +34,7 @@ Todas las opciones van en una sola línea:
 | `f5=` | `nmi` (F5 = NMI, Alt+F5 = ficheros), `files` (F5 = ficheros, Alt+F5 = NMI) | `nmi` |
 | `aystereo=` | `abc`, `acb`, `bac`, `mono` | `abc` |
 | `tapesound=` | `1` (se oye la carga), `0` (silencio) | `1` |
+| `volume=` | de `0` a `100`, de 10 en 10 (también Alt + + / Alt + -; Alt+0 silencia) | `100` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (activadas), `0` | `0` |
 | `pureblack=` | `1` (negro puro también en la paleta del 16K/48K), `0` | `0` |
@@ -86,8 +87,8 @@ Desde la ayuda (F1), la tecla **C** abre la configuración: diez páginas con la
 | Página | Opciones |
 | --- | --- |
 | 1 Máquina | idioma, modelo, teclado Issue 2/3, velocidad, ULAplus, idioma del +3e*, disco duro al inicio* |
-| 2 Imagen y sonido | borde, scanlines, sonido AY, oír la carga, altavoz, quitar pitido 1 bit, salida de sonido*, sonido por GPIO12*, imagen en el núcleo 1* |
-| 3 Cintas y grabación | modo de carga, SAVE a la SD, formato de SAVE, formato de F8 |
+| 2 Imagen y sonido | borde, scanlines, sonido AY, volumen, altavoz, quitar pitido 1 bit, salida de sonido*, sonido por GPIO12*, imagen en el núcleo 1* |
+| 3 Cintas y grabación | modo de carga, oír la carga, SAVE a la SD, formato de SAVE, formato de F8 |
 | 4 Teclado | F5 / Alt+F5, Recreated ZX, teclado por GPIO*, teclado del ZX81 |
 | 5 Joysticks y mandos | joystick de los jugadores 1 y 2, mando de cada jugador, mandos de más, cursores del PC, disparo con el teclado, botones del mando (ver [04_usb_gamepads_es.md](04_usb_gamepads_es.md)) |
 | 6 Periféricos | Spectranet, divMMC con esxDOS, memoria LEC, Interface 1, Multiface, RS232*, ZX Net* |

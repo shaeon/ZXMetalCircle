@@ -134,6 +134,7 @@ private:
 	void ToggleLEC (void);
 	void LoadSettings (void);
 	static boolean FindCmdLineOption (const char *pCmdLine, const char *pKey, char *pValue, unsigned nSize);
+	void SetVolume (int nVolume);
 	void SyncSetting (const char *pKey);
 	void SyncPeripheralSettings (void);
 	void ApplySpeaker (void);
@@ -321,6 +322,8 @@ private:
 	// Audio PWM también por GPIO12 (pin 32)
 	CGPIOPin		*m_pAudioGPIO;
 	boolean			m_bMonoAudio;
+	unsigned		m_nVolume;		// volume=: 0-100 %, en pasos de 10
+	boolean			m_bMute;		// Alt+0: silencio (no se guarda)
 	u8			m_PrevGPIOMatrix[8];
 
 	// Búferes grandes en el heap: la imagen del kernel (código + datos) no puede

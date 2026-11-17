@@ -22,6 +22,7 @@ The function keys are in a single table (`KeyBindings` in `src/kernel.cpp`). The
 | Alt+F7 | Switch to the next model (16K, 48K, 128K, +2, +2A, +3, +3e) |
 | F8 | Save a snapshot to `snaps/` (.Z80, .SNA or .SZX according to `snapformat=`) |
 | F9 | AY stereo: ABC → ACB → BAC → mono |
+| Alt + + / Alt + - / Alt+0 | Volume up / down (in steps of 10 %) / mute on-off. The + and - of the keypad also work |
 | F10 | Speed: x1 → x2 → x4 → x10 |
 | F11 | Remove the Interface 2 cartridge (with reset) |
 | Alt+B | Border size: none → standard → full → huge |

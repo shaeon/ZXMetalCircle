@@ -41,6 +41,7 @@ static const TOptionDef Options[] =
 	{"pureblack",	"0|1"},
 	{"aystereo",	"abc|acb|bac|mono"},
 	{"tapesound",	"0|1"},
+	{"volume",	"0|10|20|30|40|50|60|70|80|90|100"},
 	{"beeperfilter", "0|1"},
 	{"speaker",	"auto|beeper|tv|off"},
 	{"issue",	"2|3"},

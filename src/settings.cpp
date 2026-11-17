@@ -48,7 +48,8 @@ static TSettingDef Settings[] =
 	{"pureblack",	N_("Negro puro (48K)"), 1, "0|1", N_("no|sí"),			"0",	TRUE},
 	{"indicators",	N_("Indicadores de unidad"), 1, "1|0", N_("sí|no"),			"1",	TRUE},
 	{"aystereo",	N_("Sonido AY"),	1, "abc|acb|bac|mono", "ABC|ACB|BAC|mono",		"abc",	TRUE},
-	{"tapesound",	N_("Oír la carga"),	1, "1|0", N_("sí|no"),					"1",	TRUE},
+	{"volume",	N_("Volumen"),		1, "100|90|80|70|60|50|40|30|20|10|0",
+					   "100 %|90 %|80 %|70 %|60 %|50 %|40 %|30 %|20 %|10 %|0 %",	"100",	TRUE},
 	{"speaker",	N_("Altavoz"),		1, "auto|beeper|tv|off", N_("automático|el del 48K|televisor|sin modelo"), "auto", TRUE},
 	{"beeperfilter", N_("Quitar pitido 1 bit"), 1, "1|0", N_("sí|no"),			"1",	TRUE},
 	{"sounddev",	N_("Salida de sonido"),	1, "sndhdmi|sndpwm|sndusb|none", N_("HDMI|jack (PWM)|USB|ninguna"), "sndhdmi", FALSE},
@@ -57,6 +58,7 @@ static TSettingDef Settings[] =
 
 	// 2 Cintas y grabación
 	{"tape",	N_("Carga de cintas"),	2, "flash|fast|normal", N_("instantánea|rápida|real"), "flash", TRUE},
+	{"tapesound",	N_("Oír la carga"),	2, "1|0", N_("sí|no"),					"1",	TRUE},
 	{"tapeaccel",	N_("Acelerar cargadores"), 2, "1|0", N_("sí|no"),				"1",	TRUE},
 	{"diskaccel",	N_("Acelerar discos"),	2, "0|1", N_("no|sí"),					"0",	TRUE},
 	{"savetrap",	N_("SAVE a la SD"),	2, "1|0", N_("sí|no"),					"1",	TRUE},

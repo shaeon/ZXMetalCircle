@@ -34,6 +34,7 @@ All the options go on a single line:
 | `f5=` | `nmi` (F5 = NMI, Alt+F5 = files), `files` (F5 = files, Alt+F5 = NMI) | `nmi` |
 | `aystereo=` | `abc`, `acb`, `bac`, `mono` | `abc` |
 | `tapesound=` | `1` (loading is heard), `0` (silent) | `1` |
+| `volume=` | `0` to `100`, in steps of 10 (also Alt + + / Alt + -; Alt+0 mutes) | `100` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (on), `0` | `0` |
 | `pureblack=` | `1` (pure black also in the 16K/48K palette), `0` | `0` |
@@ -86,8 +87,8 @@ From the help screen (F1), the **C** key opens the settings: ten pages with the 
 | Page | Options |
 | --- | --- |
 | 1 Machine | language, model, Issue 2/3 keyboard, speed, ULAplus, +3e language*, boot hard disk* |
-| 2 Video and sound | border, scanlines, AY sound, hear loading, speaker, remove 1-bit whine, sound output*, sound on GPIO12*, video on core 1* |
-| 3 Tapes and saving | loading mode, SAVE to the SD card, SAVE format, F8 format |
+| 2 Video and sound | border, scanlines, AY sound, volume, speaker, remove 1-bit whine, sound output*, sound on GPIO12*, video on core 1* |
+| 3 Tapes and saving | loading mode, hear loading, SAVE to the SD card, SAVE format, F8 format |
 | 4 Keyboard | F5 / Alt+F5, Recreated ZX, GPIO keyboard*, ZX81 keyboard |
 | 5 Joysticks and pads | players 1 and 2 joysticks, each player's gamepad, extra gamepads, PC cursor keys, keyboard fire, gamepad buttons (see [04_usb_gamepads.md](04_usb_gamepads.md)) |
 | 6 Peripherals | Spectranet, divMMC with esxDOS, LEC memory, Interface 1, Multiface, RS232*, ZX Net* |
