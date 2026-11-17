@@ -21,7 +21,7 @@ jobs:
   docker:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Versión de la imagen
         id: version
@@ -32,14 +32,14 @@ jobs:
           echo "Imagen ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/zxmetalcircle-build:$v"
 
       - name: Entrar en GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Construir y subir la imagen
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: docker
           push: true

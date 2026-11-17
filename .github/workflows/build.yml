@@ -31,7 +31,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Pruebas en el PC
         working-directory: test/host
@@ -111,14 +111,14 @@ jobs:
       # un zip al descargarlos, así que subir el zip ya hecho daba un zip dentro
       # de otro. La release sí lleva el zip (abajo).
       - name: Subir la tarjeta (Artifacts)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ZXMetalCircle-${{ steps.version.outputs.version }}-sd
           path: sdcard/
 
       - name: Borrador de release (solo con etiquetas vX.YY)
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           name: ZXMetalCircle ${{ steps.version.outputs.version }}
