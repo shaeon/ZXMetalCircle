@@ -31,6 +31,8 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                             ROMs and a hard disk on a ZXMMC card)
                     tk90x   Microdigital TK90X (Brazilian 48K clone)
                     tk95    Microdigital TK95
+                    zx81    ZX81 with Paul Farrow's emulator (on the 128K;
+                            needs roms/zx81.rom)
 
  lang=es          Language of the menus and the web page: es (Spanish),
                   en (English), pt (European Portuguese) or pt-br (Brazilian

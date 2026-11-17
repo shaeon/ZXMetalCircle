@@ -216,6 +216,7 @@ CKernel::CKernel (void)
 	m_pTK95ROM = 0;
 	m_pZX81ROM = 0;
 	m_bZX81 = FALSE;
+	m_bStartZX81 = FALSE;
 	m_bIndicators = TRUE;
 	m_pZipData = 0;
 	m_pZipEntry = 0;
@@ -458,6 +459,10 @@ void CKernel::ParseOptions (void)
 	else if (strcasecmp (pModel, "tk95") == 0)
 	{
 		Model = ModelTK95;
+	}
+	else if (strcasecmp (pModel, "zx81") == 0)
+	{
+		m_bStartZX81 = TRUE;		// el 128K, y el ZX81 al empezar (Run)
 	}
 
 	// Idioma (lang=, SD:/locales): antes de los avisos de las opciones
@@ -2580,6 +2585,10 @@ void CKernel::SyncSetting (const char *pKey)
 				pValue = Models[i];
 			}
 		}
+		if (IsZX81Active ())
+		{
+			pValue = "zx81";
+		}
 	}
 	else if (strcmp (pKey, "issue") == 0)		pValue = m_pSpectrum->IsIssue2 () ? "2" : "3";
 	else if (strcmp (pKey, "speed") == 0)
@@ -2685,6 +2694,10 @@ void CKernel::ApplySetting (unsigned nIndex)
 					ShowMessage (T ("Falta la ROM de ese modelo (se guarda igual)"));
 				}
 			}
+		}
+		if (strcmp (pValue, "zx81") == 0 && !IsZX81Active ())
+		{
+			StartZX81 (0);		// (si falta la ROM, lo avisa)
 		}
 	}
 	else if (strcmp (pKey, "issue") == 0)		m_pSpectrum->SetIssue2 (strcmp (pValue, "2") == 0);
@@ -3013,7 +3026,9 @@ void CKernel::SetupROMLists (void)
 			while (nCount < 24 && f_readdir (&Dir, &Info) == FR_OK && Info.fname[0] != '\0')
 			{
 				if (   (Info.fattrib & AM_DIR) || Info.fsize != ROMs[i].nSize
-				    || strchr (Info.fname, ' ') != 0 || strlen (Info.fname) > 60)
+				    || strchr (Info.fname, ' ') != 0 || strlen (Info.fname) > 60
+				    || strcasecmp (Info.fname, ZX81_ROM_NAME) == 0)	// el ZX81 va por F7
+
 				{
 					continue;
 				}
@@ -3228,10 +3243,15 @@ void CKernel::EjectUnit (unsigned nUnit)
 	{
 		if (m_pSpectrum->IsCartridgeInserted ())
 		{
+			boolean bZX81 = IsZX81Active ();
 			StopZX81 ();
 			m_pSpectrum->EjectCartridge ();
 			m_CartridgeName[0] = '\0';
 			ShowMessage (T ("Cartucho retirado"));
+			if (bZX81)
+			{
+				SyncSetting ("model");		// se sale del ZX81: el 128K
+			}
 		}
 	}
 	else if (nUnit < UNIT_COUNT)
@@ -3609,7 +3629,9 @@ void CKernel::LoadROMs (void)
 	for (unsigned i = 0; i < sizeof ROMs / sizeof ROMs[0]; i++)
 	{
 		const char *pName = m_Options.GetAppOptionString (ROMs[i].pOption, ROMs[i].pDefault);
-		if (pName != 0 && strcasecmp (pName, "default") == 0)
+		if (   pName != 0
+		    && (   strcasecmp (pName, "default") == 0
+			|| strcasecmp (pName, ZX81_ROM_NAME) == 0))	// (el ZX81 no es una ROM de Spectrum)
 		{
 			pName = ROMs[i].pDefault;	// "la incluida" en la configuración
 		}
@@ -4876,7 +4898,10 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			if (Result == MenuResultChoice && m_Menu.GetChoice () == ModelCount)
 			{
 				m_Menu.Close ();
-				StartZX81 (0);
+				if (StartZX81 (0))
+				{
+					SyncSetting ("model");
+				}
 			}
 			else if (Result == MenuResultChoice && m_Menu.GetChoice () < ModelCount)
 			{
@@ -5321,10 +5346,15 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	case ActionEjectCartridge:
 		if (m_pSpectrum->IsCartridgeInserted ())
 		{
+			boolean bZX81 = IsZX81Active ();
 			StopZX81 ();
 			m_pSpectrum->EjectCartridge ();
 			m_CartridgeName[0] = '\0';
 			ShowMessage (T ("Cartucho retirado"));
+			if (bZX81)
+			{
+				SyncSetting ("model");		// se sale del ZX81: el 128K
+			}
 		}
 		else
 		{
@@ -5850,6 +5880,11 @@ TShutdownMode CKernel::Run (void)
 	}
 
 	StartEarInput ();
+
+	if (m_bStartZX81)
+	{
+		StartZX81 (0);			// model=zx81 (los avisos de abajo van después)
+	}
 
 	if (UpdateInit ())
 	{

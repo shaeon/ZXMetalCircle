@@ -399,6 +399,7 @@ private:
 	// ZX81 (kernelzx81.cpp)
 	const u8		*m_pZX81ROM;		// roms/zx81.rom, al usarlo la primera vez
 	boolean			m_bZX81;		// el cartucho puesto es el del ZX81
+	boolean			m_bStartZX81;		// model=zx81: arrancar el ZX81 al empezar
 	CZX81Loader		m_ZX81Loader;		// carga de un .P
 	char			m_UpdateVersion[16];	// versión nueva que hay en GitHub ("" = no se sabe)
 	char			m_UpdateURL[600];	// y la dirección de su paquete

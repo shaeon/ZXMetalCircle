@@ -30,8 +30,8 @@ static TSettingDef Settings[] =
 {
 	// 0 Máquina
 	{"lang",	N_("Idioma"),		0, "es", "Español",					"es",	TRUE},
-	{"model",	N_("Modelo"),		0, "16k|48k|128k|plus2|plus2a|plus3|plus3e|tk90x|tk95",
-					   "16K|48K|128K|+2|+2A|+3|+3e|TK90X|TK95",			"128k",	TRUE},
+	{"model",	N_("Modelo"),		0, "16k|48k|128k|plus2|plus2a|plus3|plus3e|tk90x|tk95|zx81",
+					   "16K|48K|128K|+2|+2A|+3|+3e|TK90X|TK95|ZX81",		"128k",	TRUE},
 	{"issue",	N_("Teclado"),		0, "3|2", "Issue 3|Issue 2",				"3",	TRUE},
 	{"speed",	N_("Velocidad"),	0, "1|2|4|10", "x1|x2|x4|x10",				"1",	TRUE},
 	{"ulaplus",	N_("ULAplus (64 colores)"), 0, "1|0", N_("sí|no"),			"1",	TRUE},

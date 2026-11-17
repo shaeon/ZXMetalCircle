@@ -33,6 +33,8 @@ defecto.
                             Lancaster y disco duro en una tarjeta ZXMMC)
                     tk90x   Microdigital TK90X (clon brasileno del 48K)
                     tk95    Microdigital TK95
+                    zx81    ZX81 con el emulador de Paul Farrow (en el 128K;
+                            hace falta roms/zx81.rom)
 
  p3elang=es       Idioma de las ROMs del +3e incluidas:  es  o  en
 

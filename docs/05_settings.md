@@ -10,7 +10,7 @@ All the options go on a single line:
 
 | Option | Values | Default |
 | --- | --- | --- |
-| `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95` | `128k` |
+| `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95`, `zx81` (the ZX81 with Paul Farrow's emulator, on the 128K) | `128k` |
 | `tkula=` | TK90X and TK95 ULA: `50` (Microdigital at 50 Hz: Uruguay), `60` (Microdigital at 60 Hz: Brazil) or `ferranti` (the first export units; 48K timings) | `50` |
 | `tkrom=` | TK90X ROM: `v3` (Rodolfo Guerra's, the most compatible), `v1` (original, the most widespread) or `v2` (original; the TK95 always has it). Applied at once: with a TK, it restarts with the new ROM | `v3` |
 | `tklang=` | Language of the TK90X and TK95 ROM: `auto` (the menu's), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. The originals only have Spanish and Portuguese (other languages use Spanish): v1 chooses with the diode of the Brazilian TK90X (bit 7 of port 254 at 0 gives Portuguese), v2 and the TK95 with their Spanish or Brazilian ROM. v3 has all 17. Applied at once | `auto` |
