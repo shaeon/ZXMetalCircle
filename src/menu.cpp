@@ -283,6 +283,17 @@ void CMenu::SetUnitLine (unsigned nUnit, const char *pName)
 	}
 }
 
+// Tecla de cada opción de una lista de hasta 36: 1-9, 0 para la décima y de
+// la A a la Z para las siguientes (0 si no tiene: en las más largas, ninguna)
+char CMenu::ChoiceKey (unsigned nItem) const
+{
+	if (m_nChoices > MENU_CHOICE_KEYS || nItem >= MENU_CHOICE_KEYS)
+	{
+		return 0;
+	}
+	return nItem < 9 ? '1' + nItem : nItem == 9 ? '0' : 'A' + nItem - 10;
+}
+
 void CMenu::OpenChoice (const char *pTitle)
 {
 	m_nScrollTick = 0;			// el nombre elegido, desde el principio
@@ -1273,16 +1284,13 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		{
 			SetChoiceSelected (m_nChoices - 1);
 		}
-		else if (   nKey >= 0x1E && nKey <= 0x26 && (unsigned) (nKey - 0x1E) < m_nChoices
-			 && m_nChoices <= MENU_CHOICE_ROWS)		// 1-9: solo en las listas cortas
+		else if (   ((nKey >= 0x1E && nKey <= 0x27) || (nKey >= 0x04 && nKey <= 0x1D))
+			 && m_nChoices <= MENU_CHOICE_KEYS && (rEvent.nModifiers & (HID_MOD_LALT | HID_MOD_RALT)) == 0
+			 && (nKey >= 0x1E ? nKey - 0x1E : 10 + nKey - 0x04) < (int) m_nChoices)
 		{
-			m_nChoiceSelected = nKey - 0x1E;		// 1-9: elegir directamente
-			m_Mode = ModeClosed;
-			Result = MenuResultChoice;
-		}
-		else if (nKey == 0x27 && m_nChoices >= 10 && m_nChoices <= MENU_CHOICE_ROWS)
-		{
-			m_nChoiceSelected = 9;				// 0: la décima
+			// 1-9, 0 (la décima) y A-Z (de la 11 a la 36): elegir directamente,
+			// en las listas de hasta 36
+			m_nChoiceSelected = nKey >= 0x1E ? nKey - 0x1E : 10 + nKey - 0x04;
 			m_Mode = ModeClosed;
 			Result = MenuResultChoice;
 		}
@@ -2049,11 +2057,12 @@ void CMenu::Draw (TPixel *pScreen)
 				m_pVideo->FillRect (pScreen, tx - 2, y - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
 			}
 
-			char Number[4] = {(char) (i == 9 ? '0' : '1' + i), ' ', '\0', '\0'};	// la décima, con el 0
-			if (i >= 10 || bLong)
+			// su tecla (1-9, 0, A-Z); en las listas de más de 36, ninguna
+			char Number[4] = {ChoiceKey (i), ' ', '\0', '\0'};
+			if (Number[0] == 0)
 			{
-				Number[0] = ' ';			// de la 11 en adelante y en las
-			}					// listas largas: con los cursores
+				Number[0] = ' ';
+			}
 			m_pVideo->DrawText (pScreen, tx, y, Number, nInk, nPaper, 2);
 
 			// Si el nombre no cabe, el de la opción elegida se desplaza poco a
@@ -2085,8 +2094,11 @@ void CMenu::Draw (TPixel *pScreen)
 		}
 		if (!m_bChoiceInfo)
 		{
-			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), m_nChoices > MENU_CHOICE_ROWS ? T ("ENTER: elegir  RePág/AvPág  ESC: seguir")
-					    : m_nChoices >= 10 ? T ("ENTER o 0-9: elegir   ESC: seguir")
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2),
+					      m_nChoices > MENU_CHOICE_KEYS ? T ("ENTER: elegir  RePág/AvPág  ESC: seguir")
+					    : m_nChoices > MENU_CHOICE_ROWS ? T ("0-9 A-Z ENTER  RePág/AvPág  ESC: seguir")
+					    : m_nChoices > 10 ? T ("ENTER, 0-9, A-Z: elegir   ESC: seguir")
+					    : m_nChoices == 10 ? T ("ENTER o 0-9: elegir   ESC: seguir")
 							       : T ("ENTER o 1-9: elegir   ESC: seguir"),
 					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		}

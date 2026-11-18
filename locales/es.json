@@ -469,6 +469,8 @@
 	"Cursores y RePág/AvPág   ESC volver": "Cursores y RePág/AvPág   ESC volver",
 	"ENTER pulsar  BORRAR corregir  ESC salir": "ENTER pulsar  BORRAR corregir  ESC salir",
 	"ENTER: elegir  RePág/AvPág  ESC: seguir": "ENTER: elegir  RePág/AvPág  ESC: seguir",
+	"0-9 A-Z ENTER  RePág/AvPág  ESC: seguir": "0-9 A-Z ENTER  RePág/AvPág  ESC: seguir",
+	"ENTER, 0-9, A-Z: elegir   ESC: seguir": "ENTER, 0-9, A-Z: elegir   ESC: seguir",
 	"ENTER o 0-9: elegir   ESC: seguir": "ENTER o 0-9: elegir   ESC: seguir",
 	"ENTER o 1-9: elegir   ESC: seguir": "ENTER o 1-9: elegir   ESC: seguir",
 	"Configuración %u/%u: %s": "Configuración %u/%u: %s",

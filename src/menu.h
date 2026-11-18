@@ -24,6 +24,7 @@
 #define MENU_OPTION_LINES	6
 #define MENU_CHOICE_ITEMS	512		// las de un ZIP grande
 #define MENU_CHOICE_ROWS	14		// las que caben en pantalla
+#define MENU_CHOICE_KEYS	36		// con tecla propia: 1-9, 0 y A-Z
 
 // Unidades de la pantalla de unidades
 #define UNIT_TAPE		0
@@ -86,6 +87,7 @@ public:
 
 	// Lista para elegir una opción (por ejemplo, el bloque 0x28 de una cinta)
 	void OpenChoice (const char *pTitle);
+	char ChoiceKey (unsigned nItem) const;
 	void SetChoiceItem (unsigned nItem, const char *pText);
 	unsigned GetChoice (void) const		{ return m_nChoiceSelected; }
 	void SetChoiceSelected (unsigned nItem);

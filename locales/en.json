@@ -469,6 +469,8 @@
 	"Cursores y RePág/AvPág   ESC volver": "Cursors and PgUp/PgDn   ESC back",
 	"ENTER pulsar  BORRAR corregir  ESC salir": "ENTER press  BKSP correct  ESC exit",
 	"ENTER: elegir  RePág/AvPág  ESC: seguir": "ENTER: choose  PgUp/PgDn  ESC: continue",
+	"0-9 A-Z ENTER  RePág/AvPág  ESC: seguir": "0-9 A-Z ENTER  PgUp/PgDn  ESC: continue",
+	"ENTER, 0-9, A-Z: elegir   ESC: seguir": "ENTER, 0-9, A-Z: choose   ESC: continue",
 	"ENTER o 0-9: elegir   ESC: seguir": "ENTER or 0-9: choose   ESC: continue",
 	"ENTER o 1-9: elegir   ESC: seguir": "ENTER or 1-9: choose   ESC: continue",
 	"Configuración %u/%u: %s": "Settings %u/%u: %s",
