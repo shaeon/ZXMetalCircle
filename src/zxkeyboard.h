@@ -93,6 +93,13 @@ public:
 	// Llamado desde el manejador USB (contexto de interrupción)
 	void UpdateFromReport (u8 nModifiers, const u8 RawKeys[6]);
 
+	// Varios teclados USB a la vez (p. ej. el de la Pi 400 y otro): cada
+	// informe es el estado de SU teclado, y se juntan con los de los demás.
+	// Con UpdateFromReport, el informe de un teclado (aunque sea el que repite
+	// cada poco sin teclas) soltaba las que se tenían pulsadas en el otro.
+	void UpdateFromKeyboard (unsigned nKeyboard, u8 nModifiers, const u8 RawKeys[6]);
+	void ForgetKeyboard (unsigned nKeyboard);	// desenchufado: sus teclas se sueltan
+
 	// Lectura del puerto del teclado (byte alto de la dirección)
 	u8 ReadPort (u8 nHighByte) const;
 	u8 ReadKempston (void) const;
@@ -199,6 +206,11 @@ private:
 	volatile boolean m_bCaptured;
 
 	u8 m_PrevKeys[6];
+
+	#define ZXKBD_KEYBOARDS	4
+	u8 m_KbdModifiers[ZXKBD_KEYBOARDS];
+	u8 m_KbdKeys[ZXKBD_KEYBOARDS][6];
+	void UpdateMerged (void);
 
 	TKeyEvent m_Events[32];
 	volatile unsigned m_nEventIn, m_nEventOut;

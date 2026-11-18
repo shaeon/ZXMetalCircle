@@ -6,6 +6,10 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## Sin publicar
+
+- **Corregido**: con dos teclados USB a la vez (por ejemplo, el de la Pi 400 y otro enchufado, directamente o por un hub), el informe de uno soltaba las teclas que se tenían pulsadas en el otro. Muchos teclados repiten su estado cada poco aunque no se pulse nada, así que en el que se usaba las teclas se soltaban y volvían solas: los menús iban a saltos al mantener una tecla y en los juegos (Aquaplane, por ejemplo) el movimiento no era continuo. Ahora se juntan las teclas de todos los teclados, y al desenchufar uno solo se sueltan las suyas. Venía desde la 1.00. Lo encontró José Luis Sánchez. Prueba nueva en la Action (`multikbd_test`).
+
 ## 1.11
 
 - **Corregido**: en las listas de ROMs de la página 8, la ROM de por defecto salía dos veces (por ejemplo, `plus2a.rom` como primera opción y otra vez en la lista). Ahora sale solo la primera. Un `romplus2a=plus2a.rom` guardado así se lee como la de por defecto. Además, en «ROM de esxDOS» ya no salen las ROMs del Interface 1 ni las del Multiface (que también son de 8 KB), y en «ROM Interface 1», ni las de esxDOS ni las del Multiface. Probado en QEMU (Pi 3).
