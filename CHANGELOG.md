@@ -6,7 +6,7 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
-## Sin publicar
+## 1.11
 
 - **Corregido**: en las listas de ROMs de la página 8, la ROM de por defecto salía dos veces (por ejemplo, `plus2a.rom` como primera opción y otra vez en la lista). Ahora sale solo la primera. Un `romplus2a=plus2a.rom` guardado así se lee como la de por defecto. Además, en «ROM de esxDOS» ya no salen las ROMs del Interface 1 ni las del Multiface (que también son de 8 KB), y en «ROM Interface 1», ni las de esxDOS ni las del Multiface. Probado en QEMU (Pi 3).
 - **Cambiado**: también salen por orden alfabético «Idioma ROM del TK» (con «automático» primero, y se vuelve a ordenar al cambiar el idioma del menú: en inglés, Basque, Catalan, Czech...), «Disco duro al inicio» («ninguno» primero) e «Importar a esxDOS desde» (`esxdos_i` primero y «no» al final). Probado en QEMU (Pi 3).
