@@ -182,6 +182,8 @@ private:
 	// ENTER en una opción de muchos valores: su lista (ver HandleKey)
 	#define SETTING_LIST_MIN	4	// con más valores que estos
 	boolean m_bSettingChoice;
+	boolean m_bSettingsTitle;	// la barra en el título: las flechas cambian de página
+	boolean m_bSettingsPageChoice;	// ENTER en el título: la lista de páginas
 	unsigned m_nSettingChoiceIndex;
 	unsigned m_nSettingChoiceItems;
 	u16 m_SettingChoiceItem[MENU_CHOICE_ITEMS];	// opción de la lista -> valor

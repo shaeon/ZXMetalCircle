@@ -64,6 +64,8 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nListTop = 0;
 	m_nListKey = 0;
 	m_bSettingChoice = FALSE;
+	m_bSettingsTitle = FALSE;
+	m_bSettingsPageChoice = FALSE;
 	m_nSettingChoiceIndex = 0;
 	m_nSettingChoiceItems = 0;
 	m_InputFooter[0] = '\0';
@@ -399,6 +401,7 @@ void CMenu::SetChoiceItem (unsigned nItem, const char *pText)
 void CMenu::OpenSettings (void)
 {
 	m_bEditing = FALSE;
+	m_bSettingsTitle = FALSE;
 	if (m_pSettings != 0)
 	{
 		m_Mode = ModeSettings;
@@ -1288,6 +1291,22 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 			Result = MenuResultChoiceCancel;
 		}
 
+		// La lista de páginas (ENTER en el título de la configuración): se
+		// vuelve a la configuración, en la página elegida y con la barra en el
+		// título; con ESC, en la misma página
+		if (m_bSettingsPageChoice && (Result == MenuResultChoice || Result == MenuResultChoiceCancel))
+		{
+			m_bSettingsPageChoice = FALSE;
+			m_Mode = ModeSettings;
+			if (Result == MenuResultChoice && m_nChoiceSelected < CSettings::GetPageCount ())
+			{
+				m_nSettingsPage = m_nChoiceSelected;
+				m_nSettingsRow = 0;
+				FixSettingsRow ();
+			}
+			return MenuResultNone;
+		}
+
 		// La lista de valores de una opción (ENTER en la configuración): se
 		// vuelve a la configuración, con el valor elegido como con las flechas
 		if (m_bSettingChoice && (Result == MenuResultChoice || Result == MenuResultChoiceCancel))
@@ -1360,6 +1379,46 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 			return Result;
 		}
 
+		// La barra en el título: izquierda y derecha cambian de página (como
+		// RePág y AvPág) y se queda en el título; abajo vuelve a las opciones y
+		// ENTER abre la lista de páginas. Las demás teclas, como siempre.
+		if (m_bSettingsTitle)
+		{
+			if (nKey == HID_KEY_RIGHT || nKey == HID_KEY_LEFT)
+			{
+				m_nSettingsPage = (m_nSettingsPage + (nKey == HID_KEY_RIGHT ? 1 : nPages - 1)) % nPages;
+				m_nSettingsRow = 0;
+				FixSettingsRow ();
+				return Result;
+			}
+			if (nKey == HID_KEY_DOWN)
+			{
+				m_bSettingsTitle = FALSE;
+				m_nSettingsRow = 0;
+				FixSettingsRow ();	// la primera que se pueda elegir
+				return Result;
+			}
+			if (nKey == HID_KEY_UP)
+			{
+				return Result;
+			}
+			if (nKey == HID_KEY_ENTER || nKey == 0x58)
+			{
+				OpenChoice (T ("Configuración: páginas"));
+				for (unsigned i = 0; i < nPages; i++)
+				{
+					SetChoiceItem (i, CSettings::GetPageTitle (i));
+				}
+				SetChoiceSelected (m_nSettingsPage);
+				m_bSettingsPageChoice = TRUE;
+				return Result;
+			}
+			if (nKey == 0x4E || nKey == HID_KEY_TAB || nKey == 0x4B)
+			{
+				m_bSettingsTitle = FALSE;	// RePág y AvPág: a la primera opción
+			}
+		}
+
 		// Las opciones que no se usan con lo elegido (en gris) no se pueden
 		// elegir ni cambiar: el cursor se las salta
 		boolean bApplies =    m_nSettingsRow < nRows
@@ -1367,13 +1426,19 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 
 		if (nKey == HID_KEY_UP)
 		{
+			boolean bMoved = FALSE;
 			for (unsigned i = m_nSettingsRow; i > 0; i--)
 			{
 				if (m_pSettings->IsApplicable (Index[i - 1]))
 				{
 					m_nSettingsRow = i - 1;
+					bMoved = TRUE;
 					break;
 				}
+			}
+			if (!bMoved)
+			{
+				m_bSettingsTitle = TRUE;	// desde la primera opción, al título
 			}
 		}
 		else if (nKey == HID_KEY_DOWN)
@@ -2025,7 +2090,19 @@ void CMenu::Draw (TPixel *pScreen)
 		CString Title;
 		Title.Format (T ("Configuración %u/%u: %s"), m_nSettingsPage + 1, CSettings::GetPageCount (),
 			      CSettings::GetPageTitle (m_nSettingsPage));
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		if (m_bSettingsTitle && !m_bEditing)
+		{
+			// la barra en el título, de borde a borde, con < y > en los
+			// márgenes (el título ya ocupa casi toda la fila)
+			m_pVideo->FillRect (pScreen, x0, ROW_Y (1) - 1, PANEL_COLS * 8, 10, COLOR_UI_HILITE);
+			m_pVideo->DrawText (pScreen, x0, ROW_Y (1), "<", COLOR_UI_PANEL, COLOR_UI_HILITE, 1);
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_PANEL, COLOR_UI_HILITE, TEXT_COLS);
+			m_pVideo->DrawText (pScreen, tx + TEXT_COLS * 8, ROW_Y (1), ">", COLOR_UI_PANEL, COLOR_UI_HILITE, 1);
+		}
+		else
+		{
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		}
 
 		unsigned Index[SETTINGS_MAX];
 		unsigned nRows = SettingsOnPage (Index, SETTINGS_MAX);
@@ -2049,7 +2126,7 @@ void CMenu::Draw (TPixel *pScreen)
 				Value = m_pSettings->GetValueName (Index[i]);
 			}
 			bRestart |= !Def.bLive;
-			boolean bSel = i == m_nSettingsRow;
+			boolean bSel = i == m_nSettingsRow && !m_bSettingsTitle;
 			// en gris lo que no se usa con lo elegido (se puede cambiar igual)
 			boolean bApplies = m_pSettings->IsApplicable (Index[i]);
 			if (bSel)
@@ -2128,7 +2205,9 @@ void CMenu::Draw (TPixel *pScreen)
 					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		}
 		else
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 4), T ("<- -> cambiar   RePág/AvPág página"),
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 4),
+				    m_bSettingsTitle ? T ("<- -> página   ENTER lista de páginas")
+						     : T ("<- -> cambiar   RePág/AvPág página"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("G guardar  R reiniciar la Pi  ESC volver"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
