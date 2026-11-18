@@ -343,6 +343,24 @@ void CSettings::SetValue (unsigned nIndex, const char *pValue)
 			else if (   strcasecmp (pValue, "plus2a") == 0 || strcasecmp (pValue, "+3") == 0
 				 || strcasecmp (pValue, "+2a") == 0)				pValue = "plus3";
 		}
+		else if (strncmp (Settings[nIndex].pKey, "rom", 3) == 0)
+		{
+			// la ROM de por defecto con su nombre (romplus2a=plus2a.rom): es la
+			// primera de la lista, "default"
+			static const char *Defaults[][2] =
+			{
+				{"romplus2", "plus2.rom"}, {"romplus2a", "plus2a.rom"}, {"romplus3", "plus3.rom"},
+				{"romif1", "if1.rom"}, {"romesx", "esxmmc.bin"}, {"romsnet", "spectranet.rom"},
+			};
+			for (unsigned i = 0; i < sizeof Defaults / sizeof Defaults[0]; i++)
+			{
+				if (   strcmp (Settings[nIndex].pKey, Defaults[i][0]) == 0
+				    && strcasecmp (pValue, Defaults[i][1]) == 0)
+				{
+					pValue = "default";
+				}
+			}
+		}
 		else if (strcmp (Settings[nIndex].pKey, "net") == 0 && strcasecmp (pValue, "off") == 0)
 		{
 			pValue = "0";

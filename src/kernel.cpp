@@ -3299,8 +3299,18 @@ void CKernel::SetupROMLists (void)
 			{
 				if (   (Info.fattrib & AM_DIR) || Info.fsize != ROMs[i].nSize
 				    || strchr (Info.fname, ' ') != 0 || strlen (Info.fname) > 60
-				    || strcasecmp (Info.fname, ZX81_ROM_NAME) == 0)	// el ZX81 va por F7
+				    || strcasecmp (Info.fname, ZX81_ROM_NAME) == 0	// el ZX81 va por F7
+				    || strcasecmp (Info.fname, ROMs[i].pDefaultName) == 0)	// ya es la primera
+				{
+					continue;
+				}
 
+				// las de 8 KB: en la de esxDOS no salen las del Interface 1 ni
+				// las del Multiface, y en la del Interface 1, ni las de esxDOS
+				// ni las del Multiface
+				if (   ROMs[i].nSize == 0x2000
+				    && (   strncasecmp (Info.fname, "mf", 2) == 0
+					|| strncasecmp (Info.fname, strcmp (ROMs[i].pKey, "romesx") == 0 ? "if1" : "esx", 3) == 0))
 				{
 					continue;
 				}
