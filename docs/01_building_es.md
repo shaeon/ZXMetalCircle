@@ -138,6 +138,7 @@ Opciones útiles:
 | --- | --- |
 | `JOBS=4 ./build.sh` | compilar con 4 procesos (por defecto, todos los del ordenador) |
 | `QEMU=1 ./build.sh 3-64` | kernels para probar en QEMU (en la carpeta `qemu/`; no van a la SD) |
+| `LIMPIO=1 ./build.sh` | compilar desde cero. Sin ella, solo se recompila lo que ha cambiado desde la última vez (y lo que usa una cabecera que se haya tocado) |
 
 ---
 

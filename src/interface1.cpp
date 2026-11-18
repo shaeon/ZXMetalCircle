@@ -14,8 +14,16 @@
 #include <circle/util.h>
 
 #define RAW_SECTOR_SIZE		792	// cartucho en blanco (valor empírico de JSpeccy)
-#define MDR_SECTOR_SIZE		587	// 543 + 2 * preámbulo + 2 * 10 de hueco
-#define MDR_GAP_LENGTH		10
+#define MDR_SECTOR_SIZE		587	// los .MDV de JSpeccy que vienen de un .MDR: 543 + 2 * preámbulo + 2 * 10 de hueco
+// Un .MDR se coloca en la cinta como lo deja FORMAT, con sectores de 792 bytes
+// (RAW_SECTOR_SIZE): hueco, cabecera, hueco, registro y hueco. Al grabar un
+// registro, el Interface 1 deja tras la cabecera unos 57 bytes de hueco (por
+// tiempo); con huecos más cortos, el registro nuevo pisaría la cabecera del
+// sector siguiente y ese sector se perdería.
+#define MDR_GAP_BEFORE_HEADER	48
+#define MDR_GAP_BEFORE_RECORD	57
+#define MDR_GAP_AFTER_RECORD	(RAW_SECTOR_SIZE - MDR_GAP_BEFORE_HEADER - MDR_GAP_BEFORE_RECORD \
+				 - 2 * sizeof Preamble - MDR_HEADER_SIZE - MDR_RECORD_SIZE)	// 120
 
 #define CLOCK_DATA		0
 #define CLOCK_GAP		4
@@ -111,19 +119,20 @@ boolean CMicrodrive::InsertMDR (const u8 *pData, unsigned nSize)
 		return FALSE;
 	}
 
-	if (!Allocate (nSectors * MDR_SECTOR_SIZE))
+	if (!Allocate (nSectors * RAW_SECTOR_SIZE))
 	{
 		return FALSE;
 	}
 
-	// hueco, preámbulo, cabecera, hueco, preámbulo, registro
+	// por sector: hueco, preámbulo, cabecera, hueco, preámbulo, registro, hueco
 	unsigned nPos = 0;
 	const u8 *pIn = pData;
 	for (unsigned nSector = 0; nSector < nSectors; nSector++)
 	{
 		for (unsigned nPart = 0; nPart < 2; nPart++)
 		{
-			for (unsigned i = 0; i < MDR_GAP_LENGTH; i++, nPos++)
+			unsigned nGap = nPart == 0 ? MDR_GAP_BEFORE_HEADER : MDR_GAP_BEFORE_RECORD;
+			for (unsigned i = 0; i < nGap; i++, nPos++)
 			{
 				m_pData[nPos] = DATA_FILLER;
 				m_pGap[nPos] = CLOCK_GAP;
@@ -140,6 +149,11 @@ boolean CMicrodrive::InsertMDR (const u8 *pData, unsigned nSize)
 				m_pData[nPos] = *pIn++;
 				m_pGap[nPos] = CLOCK_DATA;
 			}
+		}
+		for (unsigned i = 0; i < MDR_GAP_AFTER_RECORD; i++, nPos++)
+		{
+			m_pData[nPos] = DATA_FILLER;
+			m_pGap[nPos] = CLOCK_GAP;
 		}
 	}
 
@@ -215,10 +229,13 @@ unsigned CMicrodrive::ExportMDR (u8 *pBuffer, unsigned nBufferSize) const
 		}
 		memset (pOut + MDR_HEADER_SIZE, 0, MDR_RECORD_SIZE);
 
-		// el registro de datos viene después del siguiente hueco
+		// el registro de datos viene después del siguiente hueco (unos 57 bytes
+		// tras la cabecera; algo más en el sector que pisa FORMAT al dar la
+		// vuelta la cinta). Se para en el primer preámbulo: si es otra
+		// cabecera, este sector no tiene registro.
 		unsigned nAfter = (nHeader + MDR_HEADER_SIZE) % m_nLength;
 		unsigned nStep = MDR_HEADER_SIZE + sizeof Preamble;
-		for (unsigned j = 0; j < 64; j++)
+		for (unsigned j = 0; j < 256; j++)
 		{
 			unsigned r = (nAfter + j) % m_nLength;
 			if (IsPreamble (r))
@@ -264,10 +281,23 @@ unsigned CMicrodrive::CountSectors (void) const
 	return nSize > 0 ? (nSize - 1) / (MDR_HEADER_SIZE + MDR_RECORD_SIZE) : 0;
 }
 
-// Compara la secuencia de bloques de datos (lo que hay entre huecos) de la cinta
-// con la que resulta de guardarla en .MDR y volver a cargarla. Si coinciden, el
-// .MDR conserva todo; si no (como con el CP/M de LEC, que usa otra estructura de
-// sectores), hay que guardar la cinta en bruto (.MDV).
+// ¿Se puede guardar la cinta en .MDR sin perder nada de lo que lee el Interface 1?
+// Se guarda en .MDR, se vuelve a cargar y se comparan los bloques de datos (lo
+// que hay entre huecos), uno a uno:
+// - Cada bloque con preámbulo tiene que ser una cabecera (15 bytes) o un registro
+//   (528) de Sinclair, con la suma de su cabecera bien, y coincidir con el de la
+//   copia. Detrás puede llevar unos bytes de más: el Interface 1 sigue
+//   escribiendo un poco tras cada bloque (1 byte tras la cabecera, unos 115 tras
+//   el registro al formatear), pero nunca los lee, y el .MDR no los guarda.
+// - Los restos sin preámbulo (lo que queda del sector que pisa FORMAT al dar la
+//   vuelta la cinta: uno o dos, menores que un sector) y los registros sin su
+//   cabecera no los puede leer nadie: se ignoran (ExportMDR tampoco los guarda).
+// Cualquier otra cosa (como el CP/M de LEC, con otra estructura de sectores)
+// necesita la cinta en bruto (.MDV).
+#define MDR_HEADER_EXTRA_MAX	16	// bytes de más admitidos tras una cabecera
+#define MDR_RECORD_EXTRA_MAX	256	// y tras un registro
+#define MDR_LEFTOVERS_MAX	2	// restos sin preámbulo admitidos
+
 boolean CMicrodrive::IsSinclairFormat (void) const
 {
 	if (m_pData == 0)
@@ -290,7 +320,7 @@ boolean CMicrodrive::IsSinclairFormat (void) const
 		return FALSE;
 	}
 
-	// primer bloque de cada cinta: el primer preámbulo
+	// las dos cintas, desde el primer preámbulo (donde empieza ExportMDR)
 	unsigned nA = 0, nB = 0;
 	while (nA < m_nLength && !IsPreamble (nA))	nA++;
 	while (nB < Copy.m_nLength && !Copy.IsPreamble (nB))	nB++;
@@ -299,47 +329,108 @@ boolean CMicrodrive::IsSinclairFormat (void) const
 		return FALSE;
 	}
 
-	// recorre las dos cintas bloque a bloque
 	unsigned nScannedA = 0, nScannedB = 0;
+	boolean bAfterHeader = FALSE;		// el bloque anterior era una cabecera
+	unsigned nLeftovers = 0;
 	while (nScannedA < m_nLength)
 	{
-		// salta huecos
+		// salta el hueco
 		while (m_pGap[nA] != CLOCK_DATA && nScannedA < m_nLength)
 		{
 			nA = (nA + 1) % m_nLength;
 			nScannedA++;
 		}
+		if (nScannedA >= m_nLength)
+		{
+			break;
+		}
+
+		// el bloque: dónde empieza y cuánto mide
+		unsigned nStart = nA;
+		unsigned nLen = 0;
+		while (m_pGap[nA] == CLOCK_DATA && nScannedA < m_nLength)
+		{
+			nA = (nA + 1) % m_nLength;
+			nScannedA++;
+			nLen++;
+		}
+
+		if (!IsPreamble (nStart))
+		{
+			// un resto que nadie puede leer: como mucho un par, y menores que un sector
+			if (nLen < RAW_SECTOR_SIZE && ++nLeftovers <= MDR_LEFTOVERS_MAX)
+			{
+				continue;
+			}
+			return FALSE;
+		}
+
+		// cabecera o registro de Sinclair, con sus sumas bien
+		#define AT(i)	m_pData[(nStart + sizeof Preamble + (i)) % m_nLength]
+		boolean bHeader = (AT (0) & 0x01) != 0;
+		if (!bHeader && !bAfterHeader)
+		{
+			continue;		// un registro sin su cabecera: no se puede leer
+		}
+		bAfterHeader = bHeader;
+		unsigned nNeed = sizeof Preamble + (bHeader ? MDR_HEADER_SIZE : MDR_RECORD_SIZE);
+		unsigned nExtraMax = bHeader ? MDR_HEADER_EXTRA_MAX : MDR_RECORD_EXTRA_MAX;
+		if (nLen < nNeed || nLen > nNeed + nExtraMax)
+		{
+			return FALSE;
+		}
+
+		// la suma de la cabecera (o de la descripción del registro): si está
+		// mal, no es un bloque de Sinclair. La de los datos del registro no se
+		// mira: un sector que FORMAT dio por malo puede tenerla mal, y el .MDR
+		// lo guarda igual.
+		unsigned nSum = 0;
+		for (unsigned i = 0; i < 14; i++)
+		{
+			nSum += AT (i);
+		}
+		if (nSum % 255 != AT (14))
+		{
+			return FALSE;
+		}
+		#undef AT
+
+		// el bloque de la copia: igual, y sin bytes de más
 		while (Copy.m_pGap[nB] != CLOCK_DATA && nScannedB < Copy.m_nLength)
 		{
 			nB = (nB + 1) % Copy.m_nLength;
 			nScannedB++;
 		}
-		if (nScannedA >= m_nLength)
-		{
-			break;
-		}
 		if (nScannedB >= Copy.m_nLength)
 		{
 			return FALSE;		// la copia tiene menos bloques
 		}
-
-		// compara el bloque de datos
-		while (m_pGap[nA] == CLOCK_DATA && nScannedA < m_nLength)
+		for (unsigned i = 0; i < nNeed; i++)
 		{
+			unsigned k = (nStart + i) % m_nLength;
 			if (   Copy.m_pGap[nB] != CLOCK_DATA
-			    || Copy.m_pData[nB] != m_pData[nA])
+			    || Copy.m_pData[nB] != m_pData[k])
 			{
 				return FALSE;
 			}
-			nA = (nA + 1) % m_nLength;
 			nB = (nB + 1) % Copy.m_nLength;
-			nScannedA++;
 			nScannedB++;
 		}
 		if (Copy.m_pGap[nB] == CLOCK_DATA)
 		{
 			return FALSE;		// el bloque de la copia es más largo
 		}
+	}
+
+	// la copia no puede tener bloques que la cinta no tenga
+	while (nScannedB < Copy.m_nLength)
+	{
+		if (Copy.m_pGap[nB] == CLOCK_DATA)
+		{
+			return FALSE;
+		}
+		nB = (nB + 1) % Copy.m_nLength;
+		nScannedB++;
 	}
 
 	return TRUE;
@@ -380,8 +471,9 @@ unsigned CMicrodrive::ExportMDV (u8 *pBuffer, unsigned nBufferSize) const
 	pHeader[9] = m_pGap[0] == CLOCK_DATA ? 0 : CLOCK_GAP;
 	p += 12;
 
-	// Tamaño de sector como JSpeccy: 792 en los cartuchos en bruto y 587 en
-	// los que vienen de un .MDR (con el flag y la longitud de hueco, 10). Al
+	// Tamaño de sector como JSpeccy: 792 en los cartuchos en bruto (y en los
+	// .MDR, que se colocan igual) y 587 en los .MDV de JSpeccy que vienen de un
+	// .MDR (con el flag y la longitud de hueco, 10). Al
 	// grabar, JSpeccy escribe siempre ese tamaño con el número de sectores
 	// que leyó: con otro tamaño, la cabecera dejaría de cuadrar con los datos.
 	// Si la cinta no es múltiplo de ninguno, se trocea (16 bits por sector).

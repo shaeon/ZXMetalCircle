@@ -69,9 +69,11 @@ static const char *TapeModeNames[TapeModeCount] =
 // Teclas de función. Para cambiar una asignación basta con tocar esta tabla:
 // la ayuda (F1) se genera a partir de ella.
 #define MULTIKEY_FRAMES		75		// Alt+V: las teclas se mantienen 1,5 s
+#define VOLUME_STEP		10		// Alt + +/-: el volumen, de 10 en 10 %
 
 enum TAction
 {
+	ActionListOnly,			// solo en la lista de teclas
 	ActionHelp,
 	ActionKeyHelp,
 	ActionTapePlayStop,
@@ -104,62 +106,156 @@ enum TAction
 	ActionLEC,
 	ActionSpectranet,
 	ActionDivMMC,
-	ActionUnits
+	ActionUnits,
+	ActionVolumeUp,			// Alt + +: subir el volumen
+	ActionVolumeDown,		// Alt + -: bajarlo
+	ActionMute			// Alt+0: silencio sí/no
 };
 
 static const unsigned Speeds[] = {1, 2, 4, 10};
 
-struct TKeyBinding
+// Grupos de la lista de todas las teclas (T en la ayuda); cada página lleva los
+// suyos (KeyListPages)
+enum TKeyGroup
 {
-	u8 nKey;		// código HID
-	boolean bAlt;		// requiere Alt
-	TAction Action;
-	const char *pKeyName;
-	const char *pDescription;	// NULL: no se muestra en la ayuda (atajo repetido)
+	GroupNone,		// no sale en la lista (atajo repetido)
+	GroupTape,
+	GroupUnits,
+	GroupMachine,
+	GroupPeripherals,
+	GroupJoystick,
+	GroupVideoSound,
+	GroupOther,
+	GroupCount
 };
 
+static const char *KeyGroupNames[GroupCount] =
+{
+	0, N_("Cintas"), N_("Unidades"), N_("Máquina"), N_("Periféricos"),
+	N_("Joystick y mandos"), N_("Imagen y sonido"), N_("Otros")
+};
+
+static const struct
+{
+	const char *pTitle;
+	TKeyGroup Groups[3];		// GroupNone: no hay más
+}
+KeyListPages[] =
+{
+	{N_("Cintas y unidades"),	{GroupTape, GroupUnits, GroupNone}},
+	{N_("Máquina y periféricos"),	{GroupMachine, GroupPeripherals, GroupJoystick}},
+	{N_("Imagen, sonido y otros"),	{GroupVideoSound, GroupOther, GroupNone}},
+};
+
+struct TKeyBinding
+{
+	u8 nKey;		// código HID (0: solo para la lista, no es un atajo)
+	boolean bAlt;		// requiere Alt
+	TAction Action;
+	const char *pKeyName;	// en la lista de todas las teclas
+	TKeyGroup Group;	// GroupNone: no sale en la lista
+	const char *pDescription;
+};
+
+// Todas las teclas del emulador: los atajos y, en el orden de la tabla, la
+// lista de todas las teclas de la ayuda (T). La ayuda corta (F1) va aparte,
+// en ShortHelp.
 static const TKeyBinding KeyBindings[] =
 {
-	{HID_KEY_F1,     FALSE, ActionHelp,         "F1/Alt", N_("Ayuda, cintas / configuración")},
-	{HID_KEY_F1,     TRUE,  ActionSettings,     "Alt+F1", 0},
-	{0x0E,           TRUE,  ActionKeyHelp,      "Alt+K",  N_("Ayuda de teclado")},
-	{HID_KEY_F1 + 1, FALSE, ActionTapePlayStop, "F2/F3",  N_("Cinta: play-stop / bloques")},
-	{HID_KEY_F1 + 2, FALSE, ActionTapeRewind,   "F3",     0},
-	{HID_KEY_F1 + 3, FALSE, ActionJoystick,     "F4",     N_("Cambiar joystick")},
-	{HID_KEY_F1 + 4, FALSE, ActionNMI,          "F5/Alt", N_("NMI-Multiface / ficheros")},	// ver f5=
-	{HID_KEY_F1 + 4, TRUE,  ActionFiles,        "Alt+F5", 0},
-	{HID_KEY_F1 + 5, FALSE, ActionTapeMode,     "F6",     N_("Velocidad de carga")},
-	{HID_KEY_F1 + 6, FALSE, ActionModel,        "F7/Alt", N_("Modelo: lista / siguiente")},
-	{HID_KEY_F1 + 6, TRUE,  ActionModelNext,    "Alt+F7", 0},
-	{HID_KEY_F1 + 7, FALSE, ActionSaveSnapshot, "F8",     N_("Grabar snapshot")},
-	{HID_KEY_F1 + 8, FALSE, ActionAYStereo,     "F9",     N_("Sonido AY: ABC/ACB/BAC/mono")},
-	{HID_KEY_F1 + 9, FALSE, ActionSpeed,        "F10",    N_("Velocidad x1/x2/x4/x10")},
-	// Alt+I (Issue 2/3) se quitó: solo en la configuración (F1, C, página 1), que
-	// la pone en gris fuera del 16K y el 48K. Así cabe la línea de la red en la ayuda.
-	{HID_KEY_F1 + 10, FALSE, ActionEjectCartridge, "F11", N_("Quitar cartucho (IF2)")},
-	{0x18,           TRUE,  ActionUnits,        "Alt+U",  N_("Unidades: montar y vaciar")},
-	{0x05,           TRUE,  ActionBorder,       "Alt+B/S", N_("Borde / scanlines")},
-	{0x16,           TRUE,  ActionScanlines,    "Alt+S",  0},
-	{0x1A,           TRUE,  ActionRecord,       "Alt+W/G", N_("Grabar salida MIC / casete")},
-	{0x0A,           TRUE,  ActionRecordEar,    "Alt+G",  0},
-	{0x11,           TRUE,  ActionBlankMicrodrive, "Alt+N/M", N_("Microdrive: nuevo / sacar todos")},
-	{0x10,           TRUE,  ActionEjectMicrodrives, "Alt+M", 0},
-	{0x0F,           TRUE,  ActionLEC,          "Alt+L/T/X", N_("LEC/Spectranet/divMMC sí/no")},
-	{0x17,           TRUE,  ActionSpectranet,   "Alt+T",  0},
-	{0x1B,           TRUE,  ActionDivMMC,       "Alt+X",  0},
-	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D/V", N_("Diagnóstico / varias teclas")},
-	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",  0},
-	{0x09,           TRUE,  ActionBlankDisk,    "Alt+F/E", N_("Disco +3: nuevo / expulsar")},
-	{0x08,           TRUE,  ActionEjectDisks,   "Alt+E",  0},
-	{HID_KEY_F12,    FALSE, ActionReset,        "F12",    N_("Reset (también Alt+R)")},
-	{0x15,           TRUE,  ActionReset,        "Alt+R",  0},
-	{HID_KEY_PAUSE,  FALSE, ActionPause,        "Pausa",  N_("Pausa (también Alt+P)")},
-	{0x13,           TRUE,  ActionPause,        "Alt+P",  0},
-	{KEY_PAD_SELECT, FALSE, ActionJoystick,     "Select", 0},	// botón del mando
-	{KEY_PAD_SELECT2, FALSE, ActionJoystick2,   "Select", 0},	// botón de un mando del jugador 2
-	{KEY_PAD_FILES,   FALSE, ActionFiles,       "Select", 0},	// navegador de ficheros, desde un mando
-	{KEY_PAD_SETTINGS, FALSE, ActionSettings,   "Start",  0},	// configuración, desde un mando
+	// Cintas
+	{0,              FALSE, ActionListOnly,         "F1 ENTER",  GroupTape,  N_("Elegir cinta, disco...")},
+	{HID_KEY_F1 + 1, FALSE, ActionTapePlayStop, "F2",        GroupTape,  N_("Cinta: play / stop")},
+	{HID_KEY_F1 + 2, FALSE, ActionTapeRewind,   "F3",        GroupTape,  N_("Cinta: lista de bloques")},
+	{HID_KEY_F1 + 5, FALSE, ActionTapeMode,     "F6",        GroupTape,  N_("Velocidad de carga")},
+	{0x1A,           TRUE,  ActionRecord,       "Alt+W",     GroupTape,  N_("Grabar la salida MIC")},
+	{0x0A,           TRUE,  ActionRecordEar,    "Alt+G",     GroupTape,  N_("Grabar la entrada (casete)")},
+	// Unidades
+	{0x18,           TRUE,  ActionUnits,        "Alt+U",     GroupUnits, N_("Ver, montar y vaciar")},
+	{HID_KEY_F1 + 4, TRUE,  ActionFiles,        "Alt+F5",    GroupUnits, N_("Navegador de ficheros")},	// ver f5=
+	{0x09,           TRUE,  ActionBlankDisk,    "Alt+F",     GroupUnits, N_("Disco +3: nuevo")},
+	{0x08,           TRUE,  ActionEjectDisks,   "Alt+E",     GroupUnits, N_("Disco +3: expulsar")},
+	{0x11,           TRUE,  ActionBlankMicrodrive, "Alt+N",  GroupUnits, N_("Microdrive: cartucho nuevo")},
+	{0x10,           TRUE,  ActionEjectMicrodrives, "Alt+M", GroupUnits, N_("Microdrives: grabar y sacar")},
+	{HID_KEY_F1 + 10, FALSE, ActionEjectCartridge, "F11",    GroupUnits, N_("Quitar cartucho (IF2)")},
+	{HID_KEY_F1 + 7, FALSE, ActionSaveSnapshot, "F8",        GroupUnits, N_("Grabar snapshot")},
+	// Máquina
+	{HID_KEY_F1 + 6, FALSE, ActionModel,        "F7",        GroupMachine, N_("Lista de modelos (y ZX81)")},
+	{HID_KEY_F1 + 6, TRUE,  ActionModelNext,    "Alt+F7",    GroupMachine, N_("Siguiente modelo")},
+	{HID_KEY_F1 + 9, FALSE, ActionSpeed,        "F10",       GroupMachine, N_("Velocidad x1/x2/x4/x10")},
+	{HID_KEY_F12,    FALSE, ActionReset,        "F12/Alt+R", GroupMachine, N_("Reset")},
+	{0x15,           TRUE,  ActionReset,        "Alt+R",     GroupNone,  0},
+	{HID_KEY_PAUSE,  FALSE, ActionPause,        N_("Pausa/Alt+P"), GroupMachine, N_("Pausa")},
+	{0x13,           TRUE,  ActionPause,        "Alt+P",     GroupNone,  0},
+	// Periféricos
+	{HID_KEY_F1 + 4, FALSE, ActionNMI,          "F5",        GroupPeripherals, N_("NMI (Multiface)")},	// ver f5=
+	{0x0F,           TRUE,  ActionLEC,          "Alt+L",     GroupPeripherals, N_("Memoria LEC sí/no (reset)")},
+	{0x17,           TRUE,  ActionSpectranet,   "Alt+T",     GroupPeripherals, N_("Spectranet sí/no (reset)")},
+	{0x1B,           TRUE,  ActionDivMMC,       "Alt+X",     GroupPeripherals, N_("divMMC sí/no (reset)")},
+	// Joystick y mandos
+	{HID_KEY_F1 + 3, FALSE, ActionJoystick,     "F4",        GroupJoystick, N_("Cambiar joystick")},
+	{KEY_PAD_SELECT, FALSE, ActionJoystick,     "Select",    GroupJoystick, N_("Joystick (desde el mando)")},	// botón del mando
+	{KEY_PAD_SELECT2, FALSE, ActionJoystick2,   "Select",    GroupNone,  0},	// botón de un mando del jugador 2
+	{KEY_PAD_FILES,   FALSE, ActionFiles,       "Select",    GroupNone,  0},	// navegador de ficheros, desde un mando
+	{KEY_PAD_SETTINGS, FALSE, ActionSettings,   "Start",     GroupJoystick, N_("Configuración (mando)")},
+	// Imagen y sonido. Volumen: + y - del teclado numérico, y las teclas + y -
+	// del teclado español (y = y - del inglés); 0 es el silencio
+	{HID_KEY_F1 + 8, FALSE, ActionAYStereo,     "F9",        GroupVideoSound, N_("Sonido AY: ABC/ACB/BAC/mono")},
+	{0x30,           TRUE,  ActionVolumeUp,     "Alt+ +",    GroupVideoSound, N_("Subir el volumen")},
+	{0x57,           TRUE,  ActionVolumeUp,     "Alt+ +",    GroupNone,  0},
+	{0x2E,           TRUE,  ActionVolumeUp,     "Alt+ +",    GroupNone,  0},
+	{0x38,           TRUE,  ActionVolumeDown,   "Alt+ -",    GroupVideoSound, N_("Bajar el volumen")},
+	{0x56,           TRUE,  ActionVolumeDown,   "Alt+ -",    GroupNone,  0},
+	{0x2D,           TRUE,  ActionVolumeDown,   "Alt+ -",    GroupNone,  0},
+	{0x27,           TRUE,  ActionMute,         "Alt+0",     GroupVideoSound, N_("Silencio sí/no")},
+	{0x62,           TRUE,  ActionMute,         "Alt+0",     GroupNone,  0},
+	{0x05,           TRUE,  ActionBorder,       "Alt+B",     GroupVideoSound, N_("Tamaño del borde")},
+	{0x16,           TRUE,  ActionScanlines,    "Alt+S",     GroupVideoSound, N_("Scanlines sí/no")},
+	// Otros
+	{HID_KEY_F1,     FALSE, ActionHelp,         "F1",        GroupNone,  0},
+	{HID_KEY_F1,     TRUE,  ActionSettings,     "Alt+F1",    GroupOther, N_("Configuración directamente")},
+	{0x0E,           TRUE,  ActionKeyHelp,      "Alt+K",     GroupOther, N_("Teclado del Spectrum/ZX81")},
+	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D",     GroupOther, N_("Diagnóstico del teclado")},
+	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",     GroupOther, N_("Pulsar teclas simultáneas")},
 };
+
+// Ayuda corta (F1): las teclas de todos los días. Las demás, en la lista (T).
+// Alt+I (Issue 2/3) se quitó: solo en la configuración (F1, C, página 1).
+static const struct { const char *pKey; const char *pDescription; } ShortHelp[] =
+{
+	{"F1",      N_("Ayuda, cintas / configuración")},
+	{"F2/F3",   N_("Cinta: play-stop / bloques")},
+	{"F4",      N_("Cambiar joystick")},
+	{"F5",      N_("NMI (Multiface)")},		// con f5=files, "Ficheros"
+	{"F6",      N_("Velocidad de carga")},
+	{"F7",      N_("Modelo")},
+	{"F8",      N_("Grabar snapshot")},
+	{"F9",      N_("Sonido AY: ABC/ACB/BAC/mono")},
+	{"F10",     N_("Velocidad x1/x2/x4/x10")},
+	{"F11",     N_("Quitar cartucho (IF2)")},
+	{"F12",     N_("Reset")},
+	{N_("Pausa"), N_("Pausa")},
+};
+
+// ROMs de los modelos: opción de la configuración, fichero por defecto, tamaño
+// y modelo. Las del 48K y el 128K, si no están en roms/, van en el kernel.
+static const struct
+{
+	const char *pOption;
+	const char *pDefault;
+	unsigned nSize;
+	TModel Model;
+	const char *pShort;	// nombre para el aviso (0 = ROM opcional)
+}
+s_ModelROMs[] =
+{
+	{"rom48",     "48.rom",     0x4000,  Model48K,    0},
+	{"rom128",    "128.rom",    0x8000,  Model128K,   0},
+	{"romplus2",  "plus2.rom",  0x8000,  ModelPlus2,  "+2"},
+	{"romplus2a", "plus2a.rom", 0x10000, ModelPlus2A, "+2A"},
+	{"romplus3",  "plus3.rom",  0x10000, ModelPlus3,  "+3"},
+	{"romplus3e", 0,            0x10000, ModelPlus3E, "+3e"},
+};
+#define MODEL_ROMS	(sizeof s_ModelROMs / sizeof s_ModelROMs[0])
 
 CKernel *CKernel::s_pThis = 0;
 
@@ -213,7 +309,15 @@ CKernel::CKernel (void)
 	m_bUpdateBootChecked = FALSE;
 	m_bUpdateBootRunning = FALSE;
 	m_pTKROM = 0;
+	for (unsigned i = 0; i < sizeof m_pModelROMFile / sizeof m_pModelROMFile[0]; i++)
+	{
+		m_pModelROMFile[i] = 0;
+	}
+	m_bSettingsLoaded = FALSE;
 	m_pTK95ROM = 0;
+	m_pZX81ROM = 0;
+	m_bZX81 = FALSE;
+	m_bStartZX81 = FALSE;
 	m_bIndicators = TRUE;
 	m_pZipData = 0;
 	m_pZipEntry = 0;
@@ -276,6 +380,8 @@ CKernel::CKernel (void)
 	m_nNMIReleased = 0;
 	m_pAudioGPIO = 0;
 	m_bMonoAudio = FALSE;
+	m_nVolume = 100;
+	m_bMute = FALSE;
 	memset (m_PrevGPIOMatrix, 0, sizeof m_PrevGPIOMatrix);
 	s_pThis = this;
 
@@ -457,6 +563,10 @@ void CKernel::ParseOptions (void)
 	{
 		Model = ModelTK95;
 	}
+	else if (strcasecmp (pModel, "zx81") == 0)
+	{
+		m_bStartZX81 = TRUE;		// el 128K, y el ZX81 al empezar (Run)
+	}
 
 	// Idioma (lang=, SD:/locales): antes de los avisos de las opciones
 	SetupLanguages ();
@@ -569,6 +679,7 @@ void CKernel::ParseOptions (void)
 		}
 	}
 	m_pSpectrum->GetAudio ()->SetTapeSound (m_Options.GetAppOptionDecimal ("tapesound", 1) != 0);
+	SetVolume (m_Options.GetAppOptionDecimal ("volume", 100));
 	m_pSpectrum->GetAudio ()->SetBeeperFilter (m_Options.GetAppOptionDecimal ("beeperfilter", 1) != 0);
 	strncpy (m_Speaker, m_Options.GetAppOptionString ("speaker", "auto"), sizeof m_Speaker - 1);
 	m_Speaker[sizeof m_Speaker - 1] = '\0';
@@ -1361,20 +1472,47 @@ void CKernel::UpdateStatusLines (void)
 
 	CString Line;
 
+	// ayuda corta (F1)
 	unsigned nHelpLine = 0;
-	for (unsigned i = 0; i < sizeof KeyBindings / sizeof KeyBindings[0]; i++)
+	for (unsigned i = 0; i < sizeof ShortHelp / sizeof ShortHelp[0]; i++)
 	{
-		if (KeyBindings[i].pDescription == 0)
+		const char *pDescription = T (ShortHelp[i].pDescription);
+		if (strcmp (ShortHelp[i].pKey, "F5") == 0 && m_bF5Files)
 		{
-			continue;
+			pDescription = T ("Navegador de ficheros");	// f5=files
 		}
-		const char *pDescription = T (KeyBindings[i].pDescription);
-		if (KeyBindings[i].Action == ActionNMI && m_bF5Files)
-		{
-			pDescription = T ("Ficheros / NMI-Multiface");	// f5=files
-		}
-		Line.Format ("%-7s %s", KeyBindings[i].pKeyName, pDescription);
+		Line.Format ("%-7s %s", T (ShortHelp[i].pKey), pDescription);
 		m_Menu.SetHelpLine (nHelpLine++, Line);
+	}
+
+	// todas las teclas (T en la ayuda), por páginas y grupos
+	m_Menu.ClearKeyList ();
+	for (unsigned nPage = 0; nPage < sizeof KeyListPages / sizeof KeyListPages[0]; nPage++)
+	{
+		m_Menu.AddKeyListPage (T (KeyListPages[nPage].pTitle));
+		for (unsigned g = 0; g < 3 && KeyListPages[nPage].Groups[g] != GroupNone; g++)
+		{
+			TKeyGroup Group = KeyListPages[nPage].Groups[g];
+			if (g > 0)
+			{
+				m_Menu.AddKeyListLine ("", "");			// separación
+			}
+			m_Menu.AddKeyListLine (0, T (KeyGroupNames[Group]));	// título del grupo
+			for (unsigned i = 0; i < sizeof KeyBindings / sizeof KeyBindings[0]; i++)
+			{
+				if (KeyBindings[i].Group != Group || KeyBindings[i].pDescription == 0)
+				{
+					continue;
+				}
+				const char *pDescription = T (KeyBindings[i].pDescription);
+				if (KeyBindings[i].nKey == HID_KEY_F1 + 4 && m_bF5Files)	// f5=files: al revés
+				{
+					pDescription = KeyBindings[i].Action == ActionNMI ? T ("Navegador de ficheros")
+											 : T ("NMI (Multiface)");
+				}
+				m_Menu.AddKeyListLine (T (KeyBindings[i].pKeyName), pDescription);
+			}
+		}
 	}
 
 	Line.Format (T ("Modelo: |%s%s|  Vel. |x%u|"), m_pSpectrum->GetTiming ()->pName,
@@ -1433,8 +1571,17 @@ void CKernel::UpdateStatusLines (void)
 		m_Menu.SetStatusLine (4, "");
 	}
 
-	Line.Format (T ("Sonido: |%s|, AY |%s|"), T (m_pSoundName),
-		     AYStereoNames[m_pSpectrum->GetAY ()->GetStereoMode ()]);
+	CString Volume;
+	if (m_bMute)
+	{
+		Volume = T ("silencio");
+	}
+	else
+	{
+		Volume.Format ("%u%%", m_nVolume);
+	}
+	Line.Format (T ("Sonido: |%s|, AY |%s|, vol. |%s|"), T (m_pSoundName),
+		     AYStereoNames[m_pSpectrum->GetAY ()->GetStereoMode ()], (const char *) Volume);
 	m_Menu.SetStatusLine (5, Line);
 
 	if (m_pSpectrum->IsCartridgeInserted ())
@@ -1770,6 +1917,23 @@ void CKernel::StartEarInput (void)
 }
 
 // Red: net=auto (WiFi si hay wpa_supplicant.conf, si no cable), wifi, eth o 0;
+// tz= en minutos, con signo (por ejemplo tz=-300 para Nueva York)
+int CKernel::ParseTimeZone (const char *pTZ)
+{
+	int nSign = 1;
+	if (*pTZ == '-' || *pTZ == '+')
+	{
+		nSign = *pTZ == '-' ? -1 : 1;
+		pTZ++;
+	}
+	int nTimeZone = 0;
+	while (*pTZ >= '0' && *pTZ <= '9')
+	{
+		nTimeZone = nTimeZone * 10 + (*pTZ++ - '0');
+	}
+	return nTimeZone * nSign;
+}
+
 // tz= diferencia horaria en minutos (60 = España peninsular); dst=1 horario de verano europeo
 void CKernel::StartNetwork (void)
 {
@@ -1784,21 +1948,8 @@ void CKernel::StartNetwork (void)
 	else if (strcasecmp (pMode, "wifi") == 0)				Mode = NetModeWiFi;
 	else if (strcasecmp (pMode, "eth") == 0)				Mode = NetModeEthernet;
 
-	// tz admite signo (por ejemplo tz=-300 para Nueva York)
-	const char *pTZ = m_Options.GetAppOptionString ("tz", "60");
-	int nSign = 1;
-	if (*pTZ == '-' || *pTZ == '+')
-	{
-		nSign = *pTZ == '-' ? -1 : 1;
-		pTZ++;
-	}
-	int nTimeZone = 0;
-	while (*pTZ >= '0' && *pTZ <= '9')
-	{
-		nTimeZone = nTimeZone * 10 + (*pTZ++ - '0');
-	}
-	nTimeZone *= nSign;
-	boolean bDST = m_Options.GetAppOptionDecimal ("dst", 1) != 0;
+	int nTimeZone = ParseTimeZone (m_Options.GetAppOptionString ("tz", "60"));
+	CNetworkManager::TSummerTime DST = CNetworkManager::ParseSummerTime (m_Options.GetAppOptionString ("dst", "1"));
 
 	// IP fija opcional: ip=192.168.1.50 mask=255.255.255.0 gw=192.168.1.1 dns=192.168.1.1
 	u8 IP[4], Mask[4] = {255, 255, 255, 0}, Gateway[4], DNS[4];
@@ -1827,7 +1978,7 @@ void CKernel::StartNetwork (void)
 	m_Network.SetWebOptions (strcmp (pWeb, "0") == 0 ? 0 : (strcasecmp (pWeb, "ro") == 0 ? 2 : 1),
 				 m_Options.GetAppOptionString ("webpass", ""));
 	m_Network.SetWebProtect (strcmp (m_Options.GetAppOptionString ("webprotect", "1"), "0") != 0);
-	m_Network.Start (Mode, "zxmetalcircle", nTimeZone, bDST,
+	m_Network.Start (Mode, "zxmetalcircle", nTimeZone, DST,
 			 bStatic ? IP : 0, Mask, Gateway, DNS);
 
 	if (   m_Network.IsWiFi ()
@@ -1902,8 +2053,13 @@ void CKernel::LoadAnyFile (const char *pPath)
 
 	size_t nLen = strlen (pPath);
 	const char *pExt = nLen > 4 ? pPath + nLen - 4 : "";
-	if (   strcasecmp (pExt, ".z80") == 0 || strcasecmp (pExt, ".sna") == 0
-	    || strcasecmp (pExt, ".szx") == 0)
+	if (nLen > 2 && strcasecmp (pPath + nLen - 2, ".p") == 0)
+	{
+		StartZX81 (pPath);		// programa del ZX81
+	}
+	else if (   strcasecmp (pExt, ".z80") == 0 || strcasecmp (pExt, ".sna") == 0
+		 || strcasecmp (pExt, ".szx") == 0
+		 || (nLen > 3 && strcasecmp (pPath + nLen - 3, ".sp") == 0))	// .SP de Pedro Gimeno
 	{
 		LoadSnapshot (pPath);
 	}
@@ -1950,6 +2106,15 @@ static boolean ZipLoadable (const char *pName, boolean *pWritable)
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx", ".rom",
 				    ".dsk", ".mdr", ".mdv"};
 	unsigned nLen = strlen (pName);
+	if (   (nLen > 2 && strcasecmp (pName + nLen - 2, ".p") == 0)	// programa del ZX81
+	    || (nLen > 3 && strcasecmp (pName + nLen - 3, ".sp") == 0))	// snapshot .SP
+	{
+		if (pWritable != 0)
+		{
+			*pWritable = FALSE;
+		}
+		return TRUE;
+	}
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (nLen > 4 && strcasecmp (pName + nLen - 4, Ext[i]) == 0)
@@ -2509,6 +2674,7 @@ void CKernel::LoadSettings (void)
 		}
 	}
 	m_Settings.ClearDirty ();
+	m_bSettingsLoaded = TRUE;
 	m_Menu.SetSettings (&m_Settings);
 	UpdateRows ();				// lo que dicen las filas de la página 10
 }
@@ -2566,6 +2732,10 @@ void CKernel::SyncSetting (const char *pKey)
 				pValue = Models[i];
 			}
 		}
+		if (IsZX81Active ())
+		{
+			pValue = "zx81";
+		}
 	}
 	else if (strcmp (pKey, "issue") == 0)		pValue = m_pSpectrum->IsIssue2 () ? "2" : "3";
 	else if (strcmp (pKey, "speed") == 0)
@@ -2581,6 +2751,11 @@ void CKernel::SyncSetting (const char *pKey)
 	else if (strcmp (pKey, "scanlines") == 0)	pValue = m_bScanlines ? "1" : "0";
 	else if (strcmp (pKey, "pureblack") == 0)	pValue = m_pSpectrum->IsPureBlack () ? "1" : "0";
 	else if (strcmp (pKey, "indicators") == 0)	pValue = m_bIndicators ? "1" : "0";
+	else if (strcmp (pKey, "volume") == 0)
+	{
+		Value.Format ("%u", m_nVolume);
+		pValue = Value;
+	}
 	else if (strcmp (pKey, "aystereo") == 0)
 	{
 		static const char *Stereo[] = {"abc", "acb", "bac", "mono"};
@@ -2672,6 +2847,10 @@ void CKernel::ApplySetting (unsigned nIndex)
 				}
 			}
 		}
+		if (strcmp (pValue, "zx81") == 0 && !IsZX81Active ())
+		{
+			StartZX81 (0);		// (si falta la ROM, lo avisa)
+		}
 	}
 	else if (strcmp (pKey, "issue") == 0)		m_pSpectrum->SetIssue2 (strcmp (pValue, "2") == 0);
 	else if (strcmp (pKey, "speed") == 0)		m_nSpeed = atoi (pValue);
@@ -2697,6 +2876,11 @@ void CKernel::ApplySetting (unsigned nIndex)
 			ShowMessage (T ("Scanlines: pantalla demasiado pequeña"));
 		}
 	}
+	else if (strcmp (pKey, "volume") == 0)
+	{
+		SetVolume (atoi (pValue));
+		m_bMute = FALSE;
+	}
 	else if (strcmp (pKey, "aystereo") == 0)
 	{
 		static const char *Stereo[] = {"abc", "acb", "bac", "mono"};
@@ -2711,6 +2895,53 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "tapesound") == 0)	m_pSpectrum->GetAudio ()->SetTapeSound (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "tapeaccel") == 0)	m_pSpectrum->SetLoaderAcceleration (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "diskaccel") == 0)	m_pSpectrum->SetDiskAcceleration (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "p3elang") == 0 || strncmp (pKey, "rom", 3) == 0)
+	{
+		// ROMs: se cargan ya; la del modelo en uso reinicia el Spectrum
+		if (strcmp (pKey, "romif1") == 0 || strcmp (pKey, "romesx") == 0)
+		{
+			ReloadPeripheralROM (pKey);
+		}
+		for (unsigned i = 0; i < MODEL_ROMS; i++)
+		{
+			if (   strcmp (pKey, s_ModelROMs[i].pOption) == 0
+			    || (strcmp (pKey, "p3elang") == 0 && s_ModelROMs[i].Model == ModelPlus3E))
+			{
+				ReloadModelROM (i);
+			}
+		}
+	}
+	else if (strcmp (pKey, "hdd") == 0)
+	{
+		// disco duro: se monta ya (como al arrancar); "ninguno" no desmonta el
+		// que haya (eso, con Alt+U)
+		if (m_bSDMounted && *pValue != '\0' && strcmp (pValue, "none") != 0 && strcmp (pValue, "0") != 0)
+		{
+			if (m_HDDPath[0] != '\0')
+			{
+				m_pSpectrum->GetSDCard ()->Insert (0);
+				m_HardDisk.Flush ();
+				m_HardDisk.Close ();
+				m_HDDPath[0] = '\0';
+			}
+			CString Path;
+			Path.Format (strncmp (pValue, "SD:", 3) == 0 ? "%s" : "SD:/%s", pValue);
+			MountHardDisk (Path);
+		}
+	}
+	else if (strcmp (pKey, "tz") == 0 || strcmp (pKey, "dst") == 0)
+	{
+		m_Network.SetTimeZone (ParseTimeZone (m_Settings.GetValue (m_Settings.Find ("tz"))),
+				       CNetworkManager::ParseSummerTime (m_Settings.GetValue (m_Settings.Find ("dst"))));
+	}
+	else if (strcmp (pKey, "tlsverify") == 0)	m_Network.SetTLSVerify (strcmp (pValue, "0") != 0);
+	else if (strcmp (pKey, "earinvert") == 0)
+	{
+		if (m_pEarSource != 0)
+		{
+			m_pEarSource->SetInvert (strcmp (pValue, "1") == 0);	// (solo la del GPIO)
+		}
+	}
 	else if (strcmp (pKey, "tkrom") == 0 || strcmp (pKey, "tklang") == 0)
 	{
 		// la ROM o su idioma: se cargan ya y, con un TK, se reinicia con ella
@@ -2782,6 +3013,14 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "f5") == 0)
 	{
 		m_bF5Files = strcmp (pValue, "files") == 0;
+	}
+	else if (strcmp (pKey, "zx81kbd") == 0)
+	{
+		// la ROM lo mira al arrancar; con el ZX81 puesto, PRINT USR 8255/8252
+		if (IsZX81Active ())
+		{
+			ShowMessage (T ("Teclado del ZX81: al volver a arrancarlo"));
+		}
 	}
 	else if (strcmp (pKey, "cursors") == 0)
 	{
@@ -2957,14 +3196,79 @@ void CKernel::OpenTapeSelect (void)
 }
 
 // Nombre de la ROM de una opción (rom...=): "default" (o nada) es la de siempre
+// Una opción: la de cmdline.txt hasta leer la configuración y, desde entonces,
+// la de la configuración (que se puede cambiar en marcha)
+const char *CKernel::CurrentOption (const char *pKey, const char *pDefault)
+{
+	int nIndex = m_bSettingsLoaded ? m_Settings.Find (pKey) : -1;
+	return nIndex >= 0 ? m_Settings.GetValue (nIndex) : m_Options.GetAppOptionString (pKey, pDefault);
+}
+
 const char *CKernel::ROMOption (const char *pKey, const char *pDefault)
 {
-	const char *pName = m_Options.GetAppOptionString (pKey, pDefault);
+	const char *pName = CurrentOption (pKey, pDefault);
 	return (pName == 0 || *pName == '\0' || strcasecmp (pName, "default") == 0) ? pDefault : pName;
 }
 
 // Página "ROMs y carpetas" de la configuración: para cada ROM, las de la
 // carpeta roms con su tamaño; para esxDOS, las carpetas de la raíz de la SD
+// Ordena una lista de valores de la configuración ("a|b|c" y sus nombres) por
+// el nombre, sin tildes ni mayúsculas. Las nFirst primeras y las nLast
+// últimas (como "ninguno" o "no") se quedan donde están.
+static void SortValueList (CString &rValues, CString &rNames, unsigned nFirst, unsigned nLast)
+{
+	static char Value[64][72], Name[64][128];
+	unsigned n = 0;
+	const char *pV = rValues, *pN = rNames;
+	while (n < 64 && *pV != '\0')
+	{
+		unsigned k = 0;
+		while (*pV != '\0' && *pV != '|')
+		{
+			if (k < sizeof Value[n] - 1) Value[n][k++] = *pV;
+			pV++;
+		}
+		Value[n][k] = '\0';
+		k = 0;
+		while (*pN != '\0' && *pN != '|')
+		{
+			if (k < sizeof Name[n] - 1) Name[n][k++] = *pN;
+			pN++;
+		}
+		Name[n][k] = '\0';
+		n++;
+		if (*pV == '|') pV++;
+		if (*pN == '|') pN++;
+	}
+	if (n <= nFirst + nLast)
+	{
+		return;
+	}
+
+	for (unsigned i = nFirst + 1; i < n - nLast; i++)
+	{
+		for (unsigned j = i; j > nFirst && CI18n::CompareNames (Name[j - 1], Name[j]) > 0; j--)
+		{
+			char T1[72], T2[128];
+			strcpy (T1, Value[j]);	strcpy (Value[j], Value[j - 1]);	strcpy (Value[j - 1], T1);
+			strcpy (T2, Name[j]);	strcpy (Name[j], Name[j - 1]);		strcpy (Name[j - 1], T2);
+		}
+	}
+
+	rValues = "";
+	rNames = "";
+	for (unsigned i = 0; i < n; i++)
+	{
+		if (i > 0)
+		{
+			rValues.Append ("|");
+			rNames.Append ("|");
+		}
+		rValues.Append (Value[i]);
+		rNames.Append (Name[i]);
+	}
+}
+
 void CKernel::SetupROMLists (void)
 {
 	static const struct { const char *pKey; unsigned nSize; const char *pDefaultName; } ROMs[] =
@@ -2987,23 +3291,47 @@ void CKernel::SetupROMLists (void)
 		FILINFO Info;
 		if (m_bSDMounted && f_opendir (&Dir, "SD:/roms") == FR_OK)
 		{
-			unsigned nCount = 0;
-			while (nCount < 24 && f_readdir (&Dir, &Info) == FR_OK && Info.fname[0] != '\0')
+			// las de ese tamaño, por orden alfabético (en la tarjeta están en
+			// cualquier orden); en la lista caben 24
+			static char Names[64][61];
+			unsigned nFound = 0;
+			while (nFound < 64 && f_readdir (&Dir, &Info) == FR_OK && Info.fname[0] != '\0')
 			{
 				if (   (Info.fattrib & AM_DIR) || Info.fsize != ROMs[i].nSize
-				    || strchr (Info.fname, ' ') != 0 || strlen (Info.fname) > 60)
+				    || strchr (Info.fname, ' ') != 0 || strlen (Info.fname) > 60
+				    || strcasecmp (Info.fname, ZX81_ROM_NAME) == 0	// el ZX81 va por F7
+				    || strcasecmp (Info.fname, ROMs[i].pDefaultName) == 0)	// ya es la primera
 				{
 					continue;
 				}
-				char UTF8[128];
-				CP850ToUTF8 (Info.fname, UTF8, sizeof UTF8);
-				m_ROMValues[i].Append ("|");
-				m_ROMValues[i].Append (Info.fname);
-				m_ROMNames[i].Append ("|");
-				m_ROMNames[i].Append (UTF8);
-				nCount++;
+
+				// las de 8 KB: en la de esxDOS no salen las del Interface 1 ni
+				// las del Multiface, y en la del Interface 1, ni las de esxDOS
+				// ni las del Multiface
+				if (   ROMs[i].nSize == 0x2000
+				    && (   strncasecmp (Info.fname, "mf", 2) == 0
+					|| strncasecmp (Info.fname, strcmp (ROMs[i].pKey, "romesx") == 0 ? "if1" : "esx", 3) == 0))
+				{
+					continue;
+				}
+				unsigned j = nFound++;
+				for (; j > 0 && strcasecmp (Names[j - 1], Info.fname) > 0; j--)
+				{
+					strcpy (Names[j], Names[j - 1]);
+				}
+				strcpy (Names[j], Info.fname);
 			}
 			f_closedir (&Dir);
+
+			for (unsigned j = 0; j < nFound && j < 24; j++)
+			{
+				char UTF8[128];
+				CP850ToUTF8 (Names[j], UTF8, sizeof UTF8);
+				m_ROMValues[i].Append ("|");
+				m_ROMValues[i].Append (Names[j]);
+				m_ROMNames[i].Append ("|");
+				m_ROMNames[i].Append (UTF8);
+			}
 		}
 		CSettings::SetValueList (ROMs[i].pKey, m_ROMValues[i], m_ROMNames[i]);
 	}
@@ -3046,7 +3374,25 @@ void CKernel::SetupROMLists (void)
 	m_EsxDirValues.Append ("|0");
 	m_EsxDirNames.Append ("|");
 	m_EsxDirNames.Append (T ("no"));
+	SortValueList (m_EsxDirValues, m_EsxDirNames, 1, 1);	// esxdos_i primero y "no" al final
 	CSettings::SetValueList ("esxdir", m_EsxDirValues, m_EsxDirNames);
+
+	// idioma de la ROM del TK: "automático" primero y los demás por el nombre
+	// en el idioma del menú (se vuelve a ordenar al cambiarlo)
+	static const char *pTKLangValues = 0, *pTKLangNames = 0;
+	int nTKLang = m_Settings.Find ("tklang");
+	if (nTKLang >= 0)
+	{
+		if (pTKLangValues == 0)
+		{
+			pTKLangValues = m_Settings.GetDef (nTKLang).pValues;	// los de settings.cpp
+			pTKLangNames = m_Settings.GetDef (nTKLang).pNames;
+		}
+		m_TKLangValues = pTKLangValues;
+		m_TKLangNames = T (pTKLangNames);
+		SortValueList (m_TKLangValues, m_TKLangNames, 1, 0);
+		CSettings::SetValueList ("tklang", m_TKLangValues, m_TKLangNames);
+	}
 }
 
 // "Disco duro al arrancar" (hdd=) en la configuración: las imágenes de la
@@ -3087,6 +3433,7 @@ void CKernel::SetupHardDiskList (void)
 		nCount++;
 	}
 	f_closedir (&Dir);
+	SortValueList (m_HDDValues, m_HDDNames, 1, 0);		// "ninguno" primero
 	CSettings::SetValueList ("hdd", m_HDDValues, m_HDDNames);
 }
 
@@ -3206,9 +3553,15 @@ void CKernel::EjectUnit (unsigned nUnit)
 	{
 		if (m_pSpectrum->IsCartridgeInserted ())
 		{
+			boolean bZX81 = IsZX81Active ();
+			StopZX81 ();
 			m_pSpectrum->EjectCartridge ();
 			m_CartridgeName[0] = '\0';
 			ShowMessage (T ("Cartucho retirado"));
+			if (bZX81)
+			{
+				SyncSetting ("model");		// se sale del ZX81: el 128K
+			}
 		}
 	}
 	else if (nUnit < UNIT_COUNT)
@@ -3556,6 +3909,41 @@ const u8 *CKernel::LoadROMFile (const char *pName, unsigned nSize)
 	return pROM;
 }
 
+// Carga la ROM de un modelo según la configuración y se la da al Spectrum (0 si
+// no está: el 48K y el 128K usan entonces la incluida). Devuelve la anterior,
+// para liberarla cuando el Spectrum ya no la use.
+const u8 *CKernel::LoadModelROM (unsigned nROM)
+{
+	const char *pName = CurrentOption (s_ModelROMs[nROM].pOption, s_ModelROMs[nROM].pDefault);
+	if (   pName != 0
+	    && (   strcasecmp (pName, "default") == 0
+		|| strcasecmp (pName, ZX81_ROM_NAME) == 0))	// (el ZX81 no es una ROM de Spectrum)
+	{
+		pName = s_ModelROMs[nROM].pDefault;	// "la incluida" en la configuración
+	}
+	const u8 *pROM = 0;
+
+	if (pName != 0)
+	{
+		pROM = LoadROMFile (pName, s_ModelROMs[nROM].nSize);
+	}
+	else
+	{
+		// +3e: plus3e.rom si existe; si no, la del idioma elegido
+		pROM = LoadROMFile ("plus3e.rom", s_ModelROMs[nROM].nSize);
+		if (pROM == 0)
+		{
+			boolean bEnglish = strcasecmp (CurrentOption ("p3elang", "es"), "en") == 0;
+			pROM = LoadROMFile (bEnglish ? "plus3e-en.rom" : "plus3e-es.rom", s_ModelROMs[nROM].nSize);
+		}
+	}
+
+	const u8 *pOld = m_pModelROMFile[nROM];
+	m_pModelROMFile[nROM] = pROM;
+	m_pSpectrum->SetModelROM (s_ModelROMs[nROM].Model, pROM);
+	return pOld;
+}
+
 void CKernel::LoadROMs (void)
 {
 	m_MissingROMs = "";
@@ -3565,56 +3953,13 @@ void CKernel::LoadROMs (void)
 		return;
 	}
 
-	static const struct
+	for (unsigned i = 0; i < MODEL_ROMS; i++)
 	{
-		const char *pOption;
-		const char *pDefault;
-		unsigned nSize;
-		TModel Model;
-		const char *pShort;	// nombre para el aviso (0 = ROM opcional)
-	}
-	ROMs[] =
-	{
-		{"rom48",     "48.rom",     0x4000,  Model48K,    0},
-		{"rom128",    "128.rom",    0x8000,  Model128K,   0},
-		{"romplus2",  "plus2.rom",  0x8000,  ModelPlus2,  "+2"},
-		{"romplus2a", "plus2a.rom", 0x10000, ModelPlus2A, "+2A"},
-		{"romplus3",  "plus3.rom",  0x10000, ModelPlus3,  "+3"},
-		{"romplus3e", 0,            0x10000, ModelPlus3E, "+3e"},
-	};
-
-	for (unsigned i = 0; i < sizeof ROMs / sizeof ROMs[0]; i++)
-	{
-		const char *pName = m_Options.GetAppOptionString (ROMs[i].pOption, ROMs[i].pDefault);
-		if (pName != 0 && strcasecmp (pName, "default") == 0)
-		{
-			pName = ROMs[i].pDefault;	// "la incluida" en la configuración
-		}
-		const u8 *pROM = 0;
-
-		if (pName != 0)
-		{
-			pROM = LoadROMFile (pName, ROMs[i].nSize);
-		}
-		else
-		{
-			// +3e: plus3e.rom si existe; si no, la del idioma elegido
-			pROM = LoadROMFile ("plus3e.rom", ROMs[i].nSize);
-			if (pROM == 0)
-			{
-				boolean bEnglish = strcasecmp (m_Options.GetAppOptionString ("p3elang", "es"), "en") == 0;
-				pROM = LoadROMFile (bEnglish ? "plus3e-en.rom" : "plus3e-es.rom", ROMs[i].nSize);
-			}
-		}
-
-		if (pROM != 0)
-		{
-			m_pSpectrum->SetModelROM (ROMs[i].Model, pROM);
-		}
-		else if (ROMs[i].pShort != 0)
+		LoadModelROM (i);
+		if (m_pModelROMFile[i] == 0 && s_ModelROMs[i].pShort != 0)
 		{
 			m_MissingROMs.Append (m_MissingROMs.GetLength () > 0 ? " " : "");
-			m_MissingROMs.Append (ROMs[i].pShort);
+			m_MissingROMs.Append (s_ModelROMs[i].pShort);
 		}
 	}
 
@@ -3637,6 +3982,94 @@ void CKernel::LoadROMs (void)
 		m_Logger.Write (FromKernel, LogWarning, "Faltan ROMs en SD:/roms: %s",
 				(const char *) m_MissingROMs);
 	}
+}
+
+// Cambio de una ROM de modelo en la configuración: se carga ya y, si el
+// Spectrum está en ese modelo, se reinicia con ella (como las del TK)
+void CKernel::ReloadModelROM (unsigned nROM)
+{
+	const u8 *pOld = LoadModelROM (nROM);
+
+	TModel Model = s_ModelROMs[nROM].Model;
+	TModel Current = m_pSpectrum->GetModel ();
+	boolean bInUse = Current == Model || (Model == Model48K && Current == Model16K);
+	if (bInUse)
+	{
+		if (m_pSpectrum->IsModelAvailable (Current))
+		{
+			SetModel (Current);		// con la ROM nueva
+			ShowROMChanged (s_ModelROMs[nROM].pOption, TRUE);
+		}
+		else
+		{
+			SetModel (Model48K);		// esa ROM no está en roms/
+			ShowMessage (T ("Falta la ROM de ese modelo (mira el README)"));
+		}
+	}
+	else if (!m_pSpectrum->IsModelAvailable (Model))
+	{
+		ShowMessage (T ("Falta la ROM de ese modelo (mira el README)"));
+	}
+	else
+	{
+		ShowROMChanged (s_ModelROMs[nROM].pOption, FALSE);
+	}
+
+	delete [] pOld;				// el Spectrum ya no la usa
+}
+
+// ROM del Interface 1 o de esxDOS: se carga ya y, si el periférico está
+// conectado, se reinicia el Spectrum con ella. Si no lo está, se usará al
+// conectarlo.
+void CKernel::ReloadPeripheralROM (const char *pKey)
+{
+	boolean bIF1 = strcmp (pKey, "romif1") == 0;
+	const u8 *pROM = LoadROMFile (bIF1 ? ROMOption ("romif1", "if1.rom") : ROMOption ("romesx", "esxmmc.bin"),
+				      0x2000);
+	if (pROM == 0)
+	{
+		ShowMessage (T ("Falta esa ROM en roms/ (o no tiene 8 KB)"));
+		return;
+	}
+
+	boolean bReset;
+	if (bIF1)
+	{
+		m_pSpectrum->SetIF1ROM (pROM);		// (la copia)
+		bReset = m_pSpectrum->IsIF1Connected () || m_pSpectrum->IsLECConnected ();
+	}
+	else
+	{
+		if (!m_pSpectrum->IsDivMMCEnabled ())
+		{
+			delete [] pROM;			// se carga al conectar la divMMC
+			ShowROMChanged (pKey, FALSE);
+			return;
+		}
+		m_pSpectrum->SetDivMMCROM (pROM);	// (la copia)
+		bReset = m_pSpectrum->IsDivMMCActive ();
+	}
+	delete [] pROM;
+
+	if (bReset)
+	{
+		SetModel (m_pSpectrum->GetModel ());
+	}
+	ShowROMChanged (pKey, bReset);
+}
+
+// Aviso: "ROM 128K: 128-es.rom" y, si se ha reiniciado, que se ha reiniciado
+void CKernel::ShowROMChanged (const char *pKey, boolean bReset)
+{
+	int nIndex = m_Settings.Find (pKey);
+	if (nIndex < 0)
+	{
+		return;
+	}
+	CString Message;
+	Message.Format (bReset ? T ("%s: %s (Spectrum reiniciado)") : "%s: %s",
+			T (m_Settings.GetDef (nIndex).pLabel), m_Settings.GetValueName (nIndex));
+	ShowMessage (Message);
 }
 
 // Disco duro del +3e (tarjeta de la ZXMMC): abre la imagen y arranca el +3e
@@ -4250,6 +4683,7 @@ void CKernel::SaveMicrodrives (boolean bForce)
 			continue;
 		}
 		const char *pExt = bSinclair ? "mdr" : "mdv";
+		boolean bToMDV = FALSE;		// era un .mdr y ahora va a .mdv
 
 		if (m_MDRPath[i][0] == '\0')
 		{
@@ -4270,6 +4704,7 @@ void CKernel::SaveMicrodrives (boolean bForce)
 			size_t nLen = strlen (m_MDRPath[i]);
 			if (nLen > 4 && m_MDRPath[i][nLen - 4] == '.')
 			{
+				bToMDV = strcasecmp (m_MDRPath[i] + nLen - 3, "mdr") == 0 && !bSinclair;
 				strcpy (m_MDRPath[i] + nLen - 3, pExt);
 			}
 		}
@@ -4278,7 +4713,14 @@ void CKernel::SaveMicrodrives (boolean bForce)
 		if (WriteFile (m_MDRPath[i], Buffer, nSize, FALSE))
 		{
 			pDrive->ClearModified ();
-			Message.Format (T ("Microdrive %u grabado en %s"), i + 1, m_MDRPath[i] + 4);
+			if (bToMDV)		// el .mdr de antes se queda como estaba: avisarlo
+			{
+				Message.Format (T ("Microdrive %u: no cabe en .MDR, grabado en %s"), i + 1, m_MDRPath[i] + 4);
+			}
+			else
+			{
+				Message.Format (T ("Microdrive %u grabado en %s"), i + 1, m_MDRPath[i] + 4);
+			}
 		}
 		else
 		{
@@ -4333,6 +4775,8 @@ boolean CKernel::LoadCartridge (const char *pPath)
 		ShowMessage (T ("Cartucho no válido (máximo 16 KB)"));
 		return FALSE;
 	}
+	m_bZX81 = FALSE;		// otro cartucho en lugar del ZX81
+	m_ZX81Loader.Cancel (&m_Keyboard);
 
 	const char *pName = pPath;
 	for (const char *p = pPath; *p != '\0'; p++)
@@ -4385,6 +4829,14 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 
 	ApplySpeaker ();		// el snapshot puede haber cambiado de máquina
 	m_nNextFrameTime = 0;
+	if (m_pSpectrum->IsCartridgeInserted ())
+	{
+		strcpy (m_CartridgeName, ".SP (ROM)");	// un .SP con su propia ROM
+	}
+	else
+	{
+		m_CartridgeName[0] = '\0';
+	}
 
 	const char *pName = pPath;
 	for (const char *p = pPath; *p != '\0'; p++)
@@ -4680,6 +5132,7 @@ void CKernel::ApplySpeaker (void)
 
 void CKernel::SetModel (TModel Model)
 {
+	StopZX81 ();			// cambiar de modelo vuelve al Spectrum
 	EsxFolderToImage (TRUE);
 	m_pSpectrum->SetModel (Model);
 	ApplySpeaker ();
@@ -4838,7 +5291,15 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		else if ((Result == MenuResultChoice || Result == MenuResultChoiceCancel) && m_bModelList)
 		{
 			m_bModelList = FALSE;
-			if (Result == MenuResultChoice && m_Menu.GetChoice () < ModelCount)
+			if (Result == MenuResultChoice && m_Menu.GetChoice () == ModelCount)
+			{
+				m_Menu.Close ();
+				if (StartZX81 (0))
+				{
+					SyncSetting ("model");
+				}
+			}
+			else if (Result == MenuResultChoice && m_Menu.GetChoice () < ModelCount)
 			{
 				TModel Model = ModelCycle[m_Menu.GetChoice ()];
 				m_Menu.Close ();
@@ -4846,7 +5307,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 				{
 					ShowMessage (T ("Falta la ROM de ese modelo (mira el README)"));
 				}
-				else if (Model != m_pSpectrum->GetModel ())
+				else if (Model != m_pSpectrum->GetModel () || IsZX81Active ())
 				{
 					SetModel (Model);
 					SyncSetting ("model");
@@ -4982,7 +5443,8 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	const TKeyBinding *pBinding = 0;
 	for (unsigned i = 0; i < sizeof KeyBindings / sizeof KeyBindings[0]; i++)
 	{
-		if (KeyBindings[i].nKey == rEvent.nKey && KeyBindings[i].bAlt == bAlt)
+		if (   KeyBindings[i].nKey == rEvent.nKey && KeyBindings[i].bAlt == bAlt
+		    && KeyBindings[i].Action != ActionListOnly)
 		{
 			pBinding = &KeyBindings[i];
 			break;
@@ -5005,6 +5467,9 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 
 	switch (Action)
 	{
+	case ActionListOnly:
+		break;
+
 	case ActionHelp:
 		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		UpdateStatusLines ();
@@ -5030,7 +5495,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	case ActionKeyHelp:
 		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
-		m_Menu.OpenKeyHelp ();
+		m_Menu.OpenKeyHelp (IsZX81Active ());
 		m_Keyboard.SetCaptured (TRUE);
 		break;
 
@@ -5114,9 +5579,22 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 				Item.Append (T (" (falta la ROM)"));
 			}
 			m_Menu.SetChoiceItem (i, Item);
-			if (ModelCycle[i] == m_pSpectrum->GetModel ())
+			if (ModelCycle[i] == m_pSpectrum->GetModel () && !IsZX81Active ())
 			{
 				m_Menu.SetChoiceSelected (i);
+			}
+		}
+		{
+			// el ZX81, con el emulador de Paul Farrow (cartucho del IF2 en el 128K)
+			CString Item (T ("ZX81 (emulador de Paul Farrow)"));
+			if (!IsZX81ROMPresent ())
+			{
+				Item.Append (T (" (falta la ROM)"));
+			}
+			m_Menu.SetChoiceItem (ModelCount, Item);
+			if (IsZX81Active ())
+			{
+				m_Menu.SetChoiceSelected (ModelCount);
 			}
 		}
 		break;
@@ -5140,6 +5618,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		break;
 
 	case ActionReset:
+		m_ZX81Loader.Cancel (&m_Keyboard);	// una carga de .P a medias se abandona
 		EsxFolderToImage (TRUE);	// esxDOS: lo nuevo de la carpeta, antes de arrancar
 		m_pSpectrum->Reset ();
 		ShowMessage (T ("Reset"));
@@ -5210,7 +5689,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			OpenMenu ();
 			m_Keyboard.SetCaptured (TRUE);
 		}
-		m_Menu.OpenInput (T ("Pulsar varias teclas a la vez"),
+		m_Menu.OpenInput (T ("Pulsar teclas simultáneas"),
 				  T ("Teclas que se pulsan a la vez (1,5 s):"),
 				  T ("letras, números y espacio. Ej.: VICTOR"));
 		break;
@@ -5267,9 +5746,15 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	case ActionEjectCartridge:
 		if (m_pSpectrum->IsCartridgeInserted ())
 		{
+			boolean bZX81 = IsZX81Active ();
+			StopZX81 ();
 			m_pSpectrum->EjectCartridge ();
 			m_CartridgeName[0] = '\0';
 			ShowMessage (T ("Cartucho retirado"));
+			if (bZX81)
+			{
+				SyncSetting ("model");		// se sale del ZX81: el 128K
+			}
 		}
 		else
 		{
@@ -5293,7 +5778,41 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		SyncSetting ("aystereo");
 		break;
 	}
+
+	case ActionVolumeUp:
+	case ActionVolumeDown:
+		if (!m_bMute)			// con silencio, la primera pulsación solo lo quita
+		{
+			int nVolume = (int) m_nVolume + (Action == ActionVolumeUp ? VOLUME_STEP : -VOLUME_STEP);
+			SetVolume (nVolume < 0 ? 0 : nVolume);
+		}
+		m_bMute = FALSE;
+		Message.Format (T ("Volumen: %u %%"), m_nVolume);
+		ShowMessage (Message);
+		SyncSetting ("volume");
+		break;
+
+	case ActionMute:
+		m_bMute = !m_bMute;		// (no se guarda)
+		if (m_bMute)
+		{
+			ShowMessage (T ("Sonido: silencio (Alt+0 lo quita)"));
+		}
+		else
+		{
+			Message.Format (T ("Volumen: %u %%"), m_nVolume);
+			ShowMessage (Message);
+		}
+		break;
 	}
+}
+
+// Volumen de 0 a 100, en pasos de VOLUME_STEP
+void CKernel::SetVolume (int nVolume)
+{
+	if (nVolume < 0)		nVolume = 0;
+	if (nVolume > 100)		nVolume = 100;
+	m_nVolume = (unsigned) ((nVolume + VOLUME_STEP / 2) / VOLUME_STEP * VOLUME_STEP);
 }
 
 // Teclado real por GPIO:
@@ -5668,17 +6187,27 @@ void CKernel::OutputAudio (void)
 
 	if (m_pSound != 0 && !IsAccelerating () && !bQueueFull)
 	{
-		if (m_bMonoAudio)
+		// Volumen: el factor va al cuadrado (como el oído: el 50 % suena a la
+		// mitad), en 1/4096. El 100 % deja las muestras como están.
+		unsigned nVolume = m_bMute ? 0 : m_nVolume;
+		int nGain = (int) (nVolume * nVolume * 4096 / 10000);
+		if (m_bMonoAudio || nVolume < 100)
 		{
-			static s16 Mono[AUDIO_MAX_FRAME_SAMPLES * 2];
+			static s16 Out[AUDIO_MAX_FRAME_SAMPLES * 2];
 			const s16 *pIn = pAudio->GetBuffer ();
 			unsigned nFrames = pAudio->GetFrameCount ();
 			for (unsigned i = 0; i < nFrames; i++)
 			{
-				s16 nSample = (s16) (((int) pIn[2 * i] + pIn[2 * i + 1]) / 2);
-				Mono[2 * i] = Mono[2 * i + 1] = nSample;
+				int nLeft = pIn[2 * i];
+				int nRight = pIn[2 * i + 1];
+				if (m_bMonoAudio)
+				{
+					nLeft = nRight = (nLeft + nRight) / 2;
+				}
+				Out[2 * i] = (s16) (nLeft * nGain / 4096);
+				Out[2 * i + 1] = (s16) (nRight * nGain / 4096);
 			}
-			m_pSound->Write (Mono, nFrames * 2 * sizeof (s16));
+			m_pSound->Write (Out, nFrames * 2 * sizeof (s16));
 		}
 		else
 		{
@@ -5796,6 +6325,11 @@ TShutdownMode CKernel::Run (void)
 
 	StartEarInput ();
 
+	if (m_bStartZX81)
+	{
+		StartZX81 (0);			// model=zx81 (los avisos de abajo van después)
+	}
+
 	if (UpdateInit ())
 	{
 		// una actualización no terminó: es lo primero que hay que decir
@@ -5907,6 +6441,7 @@ TShutdownMode CKernel::Run (void)
 
 			m_pSpectrum->RunFrame ();
 			m_Keyboard.TickHeld ();			// Alt+V: teclas mantenidas
+			ZX81Frame ();				// la carga de un .P, si hay una en marcha
 
 			// Reloj para esxDOS (RTC.SYS): la hora de la Pi, si ya la tiene (NTP)
 			if (m_pSpectrum->IsDivMMCActive ())

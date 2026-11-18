@@ -20,6 +20,7 @@ Autor: **Shaeon (Carlos Palmero)**, © 2026.
 - A **Jordi** (https://jbinary.itch.io), por sus consejos sobre el Spectrum.
 - A **Víctor Iborra (EremusOne)**, por **ESPectrum** (https://github.com/EremusOne/ESPectrum), el emulador de Spectrum para ESP32.
 - A **Rodolfo Guerra**, por las ROM v3 del TK90X en 17 idiomas, que incluimos con su permiso, y por su ayuda con los TK90X y TK95 (https://sites.google.com/view/rodolfoguerra).
+- A **Paul Farrow** (http://www.fruitcake.plus.com), por su emulador de ZX81 para el Spectrum 128 (ZX81+), que incluimos con su permiso.
 
 La licencia y los créditos también se ven en el propio emulador: F1 y luego **A**.
 
@@ -39,6 +40,7 @@ La licencia y los créditos también se ven en el propio emulador: F1 y luego **
 - **Mbed TLS** 3.6 (Apache-2.0), **jsmn** (MIT, Serge Zaitsev), **ZXInfo API** (api.zxinfo.dk) y **Spectrum Computing** (ZXDB). Lista de certificados raíz de **Mozilla** (MPL-2.0).
 
 - **ROMs del Multiface** © Romantic Robot UK Ltd (`roms/mf1.rom`, `mf128.rom`, `mfplus3.rom`).
+- **ZX81+** © Paul Farrow (http://www.fruitcake.plus.com): emulador de ZX81 para el Spectrum 128 como cartucho del Interface 2, versión 3.13 (`roms/zx81.rom`), sin modificar, incluido con su permiso; la forma de cargar los .P sigue a ESPectrum.
 
 - **ROMs del +3e** de Garry Lancaster (https://worldofspectrum.org/zxplus3e/), versión 1.43 para ZXMMC; distribución gratuita con permiso de Amstrad.
 - **zxp3** de Kyp (https://github.com/Kyp069/zxp3) y **MiST** (`sd_card.v`): referencia para la ZXMMC y la tarjeta SD.
@@ -62,7 +64,7 @@ Este programa es software libre: puede redistribuirse y/o modificarse bajo los t
 
 Hace falta la versión 3 porque la librería Circle y z80cpp tienen licencia GPL v3. El código de terceros conserva sus avisos de copyright y sus licencias, todas compatibles con la GPL v3: Fuse (GPL v2 o posterior), SpectRusty (LGPL v3 o posterior), uPD765 y PLL de disquete de MAME (BSD-3-Clause), Mbed TLS (Apache-2.0), jsmn (MIT), firmware de la Spectranet (MIT).
 
-Las ROMs y los ficheros de sistema que acompañan al emulador no están cubiertos por la GPL y son de sus respectivos dueños: las ROMs de Sinclair y Amstrad se distribuyen con permiso de Amstrad para su uso en emuladores; las del +3e, con permiso de Garry Lancaster; esxDOS (Papaya Dezign), para uso no comercial; el CP/M del LEC de Jiří Lamač, gratuito sin ánimo de lucro y citando al autor. El firmware de la Raspberry Pi y el de la WiFi los descarga `build.sh` y conservan sus licencias (`LICENCE.broadcom` y los ficheros de `firmware/`).
+Las ROMs y los ficheros de sistema que acompañan al emulador no están cubiertos por la GPL y son de sus respectivos dueños: las ROMs de Sinclair y Amstrad se distribuyen con permiso de Amstrad para su uso en emuladores; las del +3e, con permiso de Garry Lancaster; el emulador de ZX81 de Paul Farrow, con su permiso, mientras el emulador no se venda; esxDOS (Papaya Dezign), para uso no comercial; el CP/M del LEC de Jiří Lamač, gratuito sin ánimo de lucro y citando al autor. El firmware de la Raspberry Pi y el de la WiFi los descarga `build.sh` y conservan sus licencias (`LICENCE.broadcom` y los ficheros de `firmware/`).
 
 ## Aviso legal
 
@@ -70,7 +72,7 @@ Este proyecto se ofrece **"tal cual", sin garantía de ningún tipo**, expresa o
 
 ZX Spectrum y Sinclair son marcas de sus respectivos propietarios; Raspberry Pi es una marca de Raspberry Pi Ltd. Este proyecto no está afiliado a ellos ni cuenta con su respaldo.
 
-## Estado (versión 1.10)
+## Estado (versión 1.11)
 
 Hecho:
 
@@ -104,10 +106,11 @@ Hecho:
 - Ficheros .PZX (Perfect ZX Tape): pulsos (PULS), datos con su nivel inicial (DATA), pausas (PAUS), textos (BRWS) y paradas (STOP). Guardan la polaridad real de la señal, que el TZX no guarda: hay cargadores que la necesitan (Forbidden Planet). Los bloques de datos con los tiempos de la ROM se cargan también al instante.
 - **Polaridad**: en el navegador de bloques (F3), la tecla **P** invierte la señal de la cinta. Sirve para los TZX que la tienen al revés (con el de Forbidden Planet, el cargador desajusta medio bit y no termina nunca). Vuelve a la normal al poner otra cinta.
 - Cartuchos del Interface 2 (.ROM).
+- ZX81, con el emulador ZX81+ de Paul Farrow (en el 128K): F7, o cargando un programa .P desde el navegador o la web.
 - Interface 1 con hasta 8 microdrives (cartuchos .MDR y .MDV, lectura y escritura), RS232 y red ZX Net.
 - Ampliación de memoria LEC de 528 KB (48K, y en los 128K desde 48 BASIC), con la que funciona el CP/M 2.2 de LEC sobre microdrives (incluido en `cpm/`).
 - Grabación con SAVE: los bloques que graba la ROM van a ficheros .TAP en la carpeta `saves` de la SD.
-- Snapshots: carga de .Z80 (versiones 1, 2 y 3), .SNA (48K y 128K) y .SZX; grabación en .Z80 v3, .SNA o .SZX con F8.
+- Snapshots: carga de .Z80 (versiones 1, 2 y 3), .SNA (48K y 128K), .SZX y .SP; grabación en .Z80 v3, .SNA o .SZX con F8.
 - Grabación de la señal de cinta (salida MIC) con Alt+W, para programas con rutinas de grabación propias.
 - Spectrum +3 con disquetera: discos .DSK (normales y extendidos, con protecciones: sectores débiles, Speedlock, pistas largas, errores de CRC) y discos de 720K (la unidad pasa sola a ser de 3,5"), con el controlador uPD765 de MAME.
 - Spectrum +3e (ROMs de Garry Lancaster) con disco duro en una tarjeta ZXMMC: imágenes .VHD, .IMG, .RAW y .HDF.
@@ -189,13 +192,13 @@ Todo lo que explica cómo usar el emulador está en la carpeta [`docs`](docs/REA
 | 03 | [Pines GPIO](docs/03_gpio_es.md) | pines, teclado real y joysticks por GPIO, casete real |
 | 04 | [Joysticks y mandos USB](docs/04_usb_gamepads_es.md) | dos jugadores, qué mando es de cada uno, perfiles de los botones |
 | 05 | [Configuración](docs/05_settings_es.md) | opciones de `cmdline.txt`, la configuración (Alt+F1), idiomas, `excluir.txt` |
-| 06 | [Teclado y ratón](docs/06_keyboard_and_mouse_es.md) | teclas, varias teclas a la vez, diagnóstico, Recreated ZX, ratón Kempston |
+| 06 | [Teclado y ratón](docs/06_keyboard_and_mouse_es.md) | teclas, teclas simultáneas, diagnóstico, Recreated ZX, ratón Kempston |
 | 07 | [Ficheros y cintas](docs/07_files_and_tapes_es.md) | unidades, ficheros ZIP, snapshots, cartuchos del Interface 2 |
 | 08 | [Discos](docs/08_disks_es.md) | +3 y discos .DSK, +3e y disco duro, divMMC con esxDOS |
 | 09 | [Periféricos](docs/09_peripherals_es.md) | Spectranet, Interface 1 y Microdrives, LEC y CP/M, Multiface, ULAplus |
 | 10 | [Red](docs/10_network_es.md) | WiFi, servidor web y hora, buscar y descargar programas, TNFS |
 | 11 | [Imagen y sonido](docs/11_picture_and_sound_es.md) | borde y scanlines, sonido, Issue 2/3 y velocidad, varios núcleos |
-| 12 | [Modelos y ROM](docs/12_models_and_roms_es.md) | TK90X y TK95, las ROM |
+| 12 | [Modelos y ROM](docs/12_models_and_roms_es.md) | TK90X y TK95, ZX81, las ROM |
 | 13 | [Actualizar el emulador](docs/13_updating_es.md) | la actualización desde GitHub (página 10 de la configuración) |
 
 ## Estructura
@@ -209,7 +212,7 @@ src/audiomixer.*  generación de muestras (beeper + AY) por t-states
 src/tape.*        cinta TAP/TZX/PZX/CSW (pulsos, carga instantánea y bloques)
 src/inflate.*     descompresor zlib (bloques CSW Z-RLE y páginas de .SZX)
 src/zipfile.*     lector de ficheros ZIP (directorio central, deflate y CRC)
-src/snapshot.*    snapshots .Z80/.SNA/.SZX
+src/snapshot.*    snapshots .Z80/.SNA/.SZX/.SP
 src/interface1.*  Interface 1, microdrives (.MDR y .MDV) y RS232
 src/zxnet.*       red ZX Net del Interface 1 (de SpectRusty)
 src/if1link.*     RS232 (TCP 2323) y ZX Net (UDP 5050) por la red de la Pi

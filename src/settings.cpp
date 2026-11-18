@@ -30,17 +30,17 @@ static TSettingDef Settings[] =
 {
 	// 0 Máquina
 	{"lang",	N_("Idioma"),		0, "es", "Español",					"es",	TRUE},
-	{"model",	N_("Modelo"),		0, "16k|48k|128k|plus2|plus2a|plus3|plus3e|tk90x|tk95",
-					   "16K|48K|128K|+2|+2A|+3|+3e|TK90X|TK95",			"128k",	TRUE},
+	{"model",	N_("Modelo"),		0, "16k|48k|128k|plus2|plus2a|plus3|plus3e|tk90x|tk95|zx81",
+					   "16K|48K|128K|+2|+2A|+3|+3e|TK90X|TK95|ZX81",		"128k",	TRUE},
 	{"issue",	N_("Teclado"),		0, "3|2", "Issue 3|Issue 2",				"3",	TRUE},
 	{"speed",	N_("Velocidad"),	0, "1|2|4|10", "x1|x2|x4|x10",				"1",	TRUE},
 	{"ulaplus",	N_("ULAplus (64 colores)"), 0, "1|0", N_("sí|no"),			"1",	TRUE},
-	{"p3elang",	N_("Idioma del +3e"),	0, "es|en", N_("español|inglés"),		"es",	FALSE},
+	{"p3elang",	N_("Idioma del +3e"),	0, "es|en", N_("español|inglés"),		"es",	TRUE},
 	{"tkula",	N_("ULA del TK"),		0, "50|60|ferranti", N_("Microdigital 50Hz|Microdigital 60Hz|Ferranti"), "50", TRUE},
 	{"tkrom",	N_("ROM del TK90X"),	0, "v3|v1|v2", N_("Rodolfo Guerra v3|original v1|original v2"), "v3", TRUE},
 	{"tklang",	N_("Idioma ROM del TK"),	0, "auto|es|en|pt|ca|cs|de|eo|eu|gl|it|nl|no|pl|ro|ru|sv|vl",
 					   N_("automático|español|inglés|portugués|catalán|checo|alemán|esperanto|euskera|gallego|italiano|neerlandés|noruego|polaco|rumano|ruso|sueco|valenciano"), "auto", TRUE},
-	{"hdd",		N_("Disco duro al inicio"), 0, "none", N_("ninguno"),			"none",	FALSE},
+	{"hdd",		N_("Disco duro al inicio"), 0, "none", N_("ninguno"),			"none",	TRUE},
 
 	// 1 Imagen y sonido
 	{"border",	N_("Borde"),		1, "none|standard|full|huge", N_("sin borde|estándar|completo|enorme"), "full", TRUE},
@@ -48,7 +48,8 @@ static TSettingDef Settings[] =
 	{"pureblack",	N_("Negro puro (48K)"), 1, "0|1", N_("no|sí"),			"0",	TRUE},
 	{"indicators",	N_("Indicadores de unidad"), 1, "1|0", N_("sí|no"),			"1",	TRUE},
 	{"aystereo",	N_("Sonido AY"),	1, "abc|acb|bac|mono", "ABC|ACB|BAC|mono",		"abc",	TRUE},
-	{"tapesound",	N_("Oír la carga"),	1, "1|0", N_("sí|no"),					"1",	TRUE},
+	{"volume",	N_("Volumen"),		1, "100|90|80|70|60|50|40|30|20|10|0",
+					   "100 %|90 %|80 %|70 %|60 %|50 %|40 %|30 %|20 %|10 %|0 %",	"100",	TRUE},
 	{"speaker",	N_("Altavoz"),		1, "auto|beeper|tv|off", N_("automático|el del 48K|televisor|sin modelo"), "auto", TRUE},
 	{"beeperfilter", N_("Quitar pitido 1 bit"), 1, "1|0", N_("sí|no"),			"1",	TRUE},
 	{"sounddev",	N_("Salida de sonido"),	1, "sndhdmi|sndpwm|sndusb|none", N_("HDMI|jack (PWM)|USB|ninguna"), "sndhdmi", FALSE},
@@ -57,6 +58,7 @@ static TSettingDef Settings[] =
 
 	// 2 Cintas y grabación
 	{"tape",	N_("Carga de cintas"),	2, "flash|fast|normal", N_("instantánea|rápida|real"), "flash", TRUE},
+	{"tapesound",	N_("Oír la carga"),	2, "1|0", N_("sí|no"),					"1",	TRUE},
 	{"tapeaccel",	N_("Acelerar cargadores"), 2, "1|0", N_("sí|no"),				"1",	TRUE},
 	{"diskaccel",	N_("Acelerar discos"),	2, "0|1", N_("no|sí"),					"0",	TRUE},
 	{"savetrap",	N_("SAVE a la SD"),	2, "1|0", N_("sí|no"),					"1",	TRUE},
@@ -77,6 +79,7 @@ static TSettingDef Settings[] =
 	{"f5",		N_("F5 / Alt+F5"),	3, "nmi|files", N_("NMI / ficheros|ficheros / NMI"),	"nmi",	TRUE},
 	{"recreated",	N_("Recreated ZX"),	3, "0|auto|1", N_("no|automático|sí"),			"auto",	TRUE},
 	{"gpiokbd",	N_("Teclado por GPIO"),	3, "48|plus3|0", N_("48K/128|+2A/+3|ninguno"),		"48",	FALSE},
+	{"zx81kbd",	N_("Teclado del ZX81"),	3, "zx81|128", N_("el del ZX81|el del 128"),		"zx81",	TRUE},
 
 	// 4 Periféricos
 	{"spectranet",	N_("Spectranet"),	5, "0|1", N_("no|sí"),					"0",	TRUE},
@@ -90,28 +93,28 @@ static TSettingDef Settings[] =
 	// 5 Red, hora y casete
 	{"net",		N_("Red"),		6, "auto|wifi|eth|0", N_("automática|WiFi|cable|no"),	"auto",	FALSE},
 	{"tz",		N_("Zona horaria"),	6, "-480|-300|-240|-180|0|60|120|180|240|330|480|540|600",
-				   "UTC-8|UTC-5|UTC-4|UTC-3|UTC|UTC+1|UTC+2|UTC+3|UTC+4|UTC+5:30|UTC+8|UTC+9|UTC+10", "60", FALSE},
-	{"dst",		N_("Horario de verano"), 6, "1|0", N_("sí|no"),				"1",	FALSE},
+				   "UTC-8|UTC-5|UTC-4|UTC-3|UTC|UTC+1|UTC+2|UTC+3|UTC+4|UTC+5:30|UTC+8|UTC+9|UTC+10", "60", TRUE},
+	{"dst",		N_("Horario de verano"), 6, "1|on|0", N_("automático|sí|no"),		"1",	TRUE},
 	{"ip",		N_("IP fija"),		6, "*ip", N_("no (DHCP)"),				"",	FALSE},
 	{"mask",	N_("Máscara de red"),	6, "*ip", "255.255.255.0",				"",	FALSE},
 	{"gw",		N_("Puerta de enlace"),	6, "*ip", N_("automática"),			"",	FALSE},
 	{"dns",		N_("Servidor DNS"),	6, "*ip", N_("automático"),			"",	FALSE},
-	{"tlsverify",	N_("Comprobar HTTPS"),	6, "1|0", N_("sí|no"),					"1",	FALSE},
+	{"tlsverify",	N_("Comprobar HTTPS"),	6, "1|0", N_("sí|no"),					"1",	TRUE},
 	{"ear",		N_("Casete real"),	6, "0|gpio|usb", N_("no|GPIO|USB"),			"0",	FALSE},
-	{"earinvert",	N_("Invertir casete"),	6, "0|1", N_("no|sí"),					"0",	FALSE},
+	{"earinvert",	N_("Invertir casete"),	6, "0|1", N_("no|sí"),					"0",	TRUE},
 	{"earpin",	N_("GPIO del casete"),	6, "auto|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27",
 				   N_("automático|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27"), "auto", FALSE},
 
 	// 6 ROMs y carpetas (las listas se rellenan al arrancar con lo que hay
 	// en roms/ con el tamaño de cada una, y con las carpetas de la SD)
-	{"rom48",	N_("ROM 16K/48K"),	7, "default", N_("la incluida"),			"default", FALSE},
-	{"rom128",	N_("ROM 128K"),		7, "default", N_("la incluida"),			"default", FALSE},
-	{"romplus2",	N_("ROM +2"),		7, "default", "plus2.rom",				"default", FALSE},
-	{"romplus2a",	N_("ROM +2A"),		7, "default", "plus2a.rom",				"default", FALSE},
-	{"romplus3",	N_("ROM +3"),		7, "default", "plus3.rom",				"default", FALSE},
-	{"romplus3e",	N_("ROM +3e"),		7, "default", N_("según el idioma"),			"default", FALSE},
-	{"romif1",	N_("ROM Interface 1"),	7, "default", "if1.rom",				"default", FALSE},
-	{"romesx",	N_("ROM de esxDOS"),	7, "default", "esxmmc.bin",				"default", FALSE},
+	{"rom48",	N_("ROM 16K/48K"),	7, "default", N_("la incluida"),			"default", TRUE},
+	{"rom128",	N_("ROM 128K"),		7, "default", N_("la incluida"),			"default", TRUE},
+	{"romplus2",	N_("ROM +2"),		7, "default", "plus2.rom",				"default", TRUE},
+	{"romplus2a",	N_("ROM +2A"),		7, "default", "plus2a.rom",				"default", TRUE},
+	{"romplus3",	N_("ROM +3"),		7, "default", "plus3.rom",				"default", TRUE},
+	{"romplus3e",	N_("ROM +3e"),		7, "default", N_("según el idioma"),			"default", TRUE},
+	{"romif1",	N_("ROM Interface 1"),	7, "default", "if1.rom",				"default", TRUE},
+	{"romesx",	N_("ROM de esxDOS"),	7, "default", "esxmmc.bin",				"default", TRUE},
 	{"romsnet",	N_("Flash Spectranet"),	7, "default", "spectranet.rom",				"default", FALSE},
 	{"esxdir",	N_("Importar a esxDOS desde"), 7, "esxdos_i|0", N_("esxdos_i|no"),		"esxdos_i", FALSE},
 	{"web",		N_("Página web"),	8, "1|ro|0", N_("sí|solo lectura|no"),			"1",	FALSE},
@@ -340,9 +343,33 @@ void CSettings::SetValue (unsigned nIndex, const char *pValue)
 			else if (   strcasecmp (pValue, "plus2a") == 0 || strcasecmp (pValue, "+3") == 0
 				 || strcasecmp (pValue, "+2a") == 0)				pValue = "plus3";
 		}
+		else if (strncmp (Settings[nIndex].pKey, "rom", 3) == 0)
+		{
+			// la ROM de por defecto con su nombre (romplus2a=plus2a.rom): es la
+			// primera de la lista, "default"
+			static const char *Defaults[][2] =
+			{
+				{"romplus2", "plus2.rom"}, {"romplus2a", "plus2a.rom"}, {"romplus3", "plus3.rom"},
+				{"romif1", "if1.rom"}, {"romesx", "esxmmc.bin"}, {"romsnet", "spectranet.rom"},
+			};
+			for (unsigned i = 0; i < sizeof Defaults / sizeof Defaults[0]; i++)
+			{
+				if (   strcmp (Settings[nIndex].pKey, Defaults[i][0]) == 0
+				    && strcasecmp (pValue, Defaults[i][1]) == 0)
+				{
+					pValue = "default";
+				}
+			}
+		}
 		else if (strcmp (Settings[nIndex].pKey, "net") == 0 && strcasecmp (pValue, "off") == 0)
 		{
 			pValue = "0";
+		}
+		else if (strcmp (Settings[nIndex].pKey, "dst") == 0)
+		{
+			if (strcasecmp (pValue, "auto") == 0)		pValue = "1";	// (1 = automático)
+			else if (strcasecmp (pValue, "off") == 0)	pValue = "0";
+			else if (strcasecmp (pValue, "on") == 0)	pValue = "on";	// (ON, On...)
 		}
 		else if (strcmp (Settings[nIndex].pKey, "hdd") == 0 && (*pValue == '\0' || strcmp (pValue, "0") == 0))
 		{

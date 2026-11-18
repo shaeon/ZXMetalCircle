@@ -42,6 +42,7 @@ static char ToLower (char ch)
 CMenu::CMenu (CVideo *pVideo)
 :	m_pVideo (pVideo),
 	m_Mode (ModeClosed),
+	m_bKeyHelpZX81 (FALSE),
 	m_pEntries (new TEntry[MENU_MAX_ENTRIES]),
 	m_nEntries (0),
 	m_nSelected (0),
@@ -63,6 +64,8 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nListTop = 0;
 	m_nListKey = 0;
 	m_bSettingChoice = FALSE;
+	m_bSettingsTitle = FALSE;
+	m_bSettingsPageChoice = FALSE;
 	m_nSettingChoiceIndex = 0;
 	m_nSettingChoiceItems = 0;
 	m_InputFooter[0] = '\0';
@@ -74,6 +77,8 @@ CMenu::CMenu (CVideo *pVideo)
 	m_bUnitsFromShortcut = FALSE;
 	m_bSettingsFromShortcut = FALSE;
 	m_nAboutTop = 0;
+	m_nKeyListPages = 0;
+	m_nKeyListPage = 0;
 	m_nUnitSelected = 0;
 	m_nUnitTarget = -1;
 	m_pTape = 0;
@@ -278,6 +283,17 @@ void CMenu::SetUnitLine (unsigned nUnit, const char *pName)
 	}
 }
 
+// Tecla de cada opción de una lista de hasta 36: 1-9, 0 para la décima y de
+// la A a la Z para las siguientes (0 si no tiene: en las más largas, ninguna)
+char CMenu::ChoiceKey (unsigned nItem) const
+{
+	if (m_nChoices > MENU_CHOICE_KEYS || nItem >= MENU_CHOICE_KEYS)
+	{
+		return 0;
+	}
+	return nItem < 9 ? '1' + nItem : nItem == 9 ? '0' : 'A' + nItem - 10;
+}
+
 void CMenu::OpenChoice (const char *pTitle)
 {
 	m_nScrollTick = 0;			// el nombre elegido, desde el principio
@@ -396,6 +412,7 @@ void CMenu::SetChoiceItem (unsigned nItem, const char *pText)
 void CMenu::OpenSettings (void)
 {
 	m_bEditing = FALSE;
+	m_bSettingsTitle = FALSE;
 	if (m_pSettings != 0)
 	{
 		m_Mode = ModeSettings;
@@ -508,6 +525,48 @@ boolean CMenu::OpenBrowser (void)
 	return TRUE;
 }
 
+void CMenu::ClearKeyList (void)
+{
+	m_nKeyListPages = 0;
+}
+
+void CMenu::AddKeyListPage (const char *pTitle)
+{
+	if (m_nKeyListPages < MENU_KEYLIST_PAGES)
+	{
+		strncpy (m_KeyListTitle[m_nKeyListPages], pTitle, sizeof m_KeyListTitle[0] - 1);
+		m_KeyListTitle[m_nKeyListPages][sizeof m_KeyListTitle[0] - 1] = '\0';
+		m_nKeyListLines[m_nKeyListPages] = 0;
+		m_nKeyListPages++;
+	}
+}
+
+void CMenu::AddKeyListLine (const char *pKey, const char *pText)
+{
+	if (m_nKeyListPages == 0)
+	{
+		return;
+	}
+	unsigned nPage = m_nKeyListPages - 1;
+	unsigned n = m_nKeyListLines[nPage];
+	if (n >= MENU_KEYLIST_LINES)
+	{
+		return;
+	}
+	if (pKey == 0)
+	{
+		strcpy (m_KeyListKey[nPage][n], "\x01");		// título de grupo
+	}
+	else
+	{
+		strncpy (m_KeyListKey[nPage][n], pKey, sizeof m_KeyListKey[0][0] - 1);
+		m_KeyListKey[nPage][n][sizeof m_KeyListKey[0][0] - 1] = '\0';
+	}
+	strncpy (m_KeyListText[nPage][n], pText, sizeof m_KeyListText[0][0] - 1);
+	m_KeyListText[nPage][n][sizeof m_KeyListText[0][0] - 1] = '\0';
+	m_nKeyListLines[nPage] = n + 1;
+}
+
 void CMenu::OpenHelp (void)
 {
 	m_Mode = ModeHelp;
@@ -515,15 +574,18 @@ void CMenu::OpenHelp (void)
 	m_bSettingsFromShortcut = FALSE;
 }
 
-void CMenu::OpenKeyHelp (void)
+void CMenu::OpenKeyHelp (boolean bZX81)
 {
 	m_Mode = ModeKeyHelp;
+	m_bKeyHelpZX81 = bZX81;
 }
 
 static boolean IsLoadableName (const char *pName)
 {
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".z80", ".sna", ".szx", ".csw", ".rom", ".mdr",
-				    ".mdv", ".dsk", ".vhd", ".img", ".raw", ".hdf", ".zip"};
+				    ".mdv", ".dsk", ".vhd", ".img", ".raw", ".hdf", ".zip",
+				    ".p",	// programas del ZX81
+				    ".sp"};	// snapshots de Pedro Gimeno
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (HasExtension (pName, Ext[i]))
@@ -845,6 +907,13 @@ void CMenu::GoParent (void)
 		}
 	}
 
+	if (pSlash == 0)		// (no pasa: siempre hay una '/'; por si acaso, a la raíz)
+	{
+		strcpy (m_CurrentDir, ROOT_DIR);
+		ReadDirectory ();
+		return;
+	}
+
 	char OldName[MENU_NAME_LEN];
 	strncpy (OldName, pSlash + 1, sizeof OldName - 1);
 	OldName[sizeof OldName - 1] = '\0';
@@ -989,6 +1058,11 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		else if (nKey == 0x18)		// U: unidades (las líneas las rellena el kernel)
 		{
 			Result = MenuResultOpenUnits;
+		}
+		else if (nKey == 0x17 && m_nKeyListPages > 0)	// T: todas las teclas
+		{
+			m_nKeyListPage = 0;
+			m_Mode = ModeKeyList;
 		}
 		else if (nKey == HID_KEY_ESC || nKey == HID_KEY_F1 || nKey == HID_KEY_SPACE)
 		{
@@ -1210,10 +1284,13 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		{
 			SetChoiceSelected (m_nChoices - 1);
 		}
-		else if (   nKey >= 0x1E && nKey <= 0x26 && (unsigned) (nKey - 0x1E) < m_nChoices
-			 && m_nChoices <= MENU_CHOICE_ROWS)		// 1-9: solo en las listas cortas
+		else if (   ((nKey >= 0x1E && nKey <= 0x27) || (nKey >= 0x04 && nKey <= 0x1D))
+			 && m_nChoices <= MENU_CHOICE_KEYS && (rEvent.nModifiers & (HID_MOD_LALT | HID_MOD_RALT)) == 0
+			 && (nKey >= 0x1E ? nKey - 0x1E : 10 + nKey - 0x04) < (int) m_nChoices)
 		{
-			m_nChoiceSelected = nKey - 0x1E;		// 1-9: elegir directamente
+			// 1-9, 0 (la décima) y A-Z (de la 11 a la 36): elegir directamente,
+			// en las listas de hasta 36
+			m_nChoiceSelected = nKey >= 0x1E ? nKey - 0x1E : 10 + nKey - 0x04;
 			m_Mode = ModeClosed;
 			Result = MenuResultChoice;
 		}
@@ -1226,6 +1303,22 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		{
 			m_Mode = ModeClosed;
 			Result = MenuResultChoiceCancel;
+		}
+
+		// La lista de páginas (ENTER en el título de la configuración): se
+		// vuelve a la configuración, en la página elegida y con la barra en el
+		// título; con ESC, en la misma página
+		if (m_bSettingsPageChoice && (Result == MenuResultChoice || Result == MenuResultChoiceCancel))
+		{
+			m_bSettingsPageChoice = FALSE;
+			m_Mode = ModeSettings;
+			if (Result == MenuResultChoice && m_nChoiceSelected < CSettings::GetPageCount ())
+			{
+				m_nSettingsPage = m_nChoiceSelected;
+				m_nSettingsRow = 0;
+				FixSettingsRow ();
+			}
+			return MenuResultNone;
 		}
 
 		// La lista de valores de una opción (ENTER en la configuración): se
@@ -1300,6 +1393,46 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 			return Result;
 		}
 
+		// La barra en el título: izquierda y derecha cambian de página (como
+		// RePág y AvPág) y se queda en el título; abajo vuelve a las opciones y
+		// ENTER abre la lista de páginas. Las demás teclas, como siempre.
+		if (m_bSettingsTitle)
+		{
+			if (nKey == HID_KEY_RIGHT || nKey == HID_KEY_LEFT)
+			{
+				m_nSettingsPage = (m_nSettingsPage + (nKey == HID_KEY_RIGHT ? 1 : nPages - 1)) % nPages;
+				m_nSettingsRow = 0;
+				FixSettingsRow ();
+				return Result;
+			}
+			if (nKey == HID_KEY_DOWN)
+			{
+				m_bSettingsTitle = FALSE;
+				m_nSettingsRow = 0;
+				FixSettingsRow ();	// la primera que se pueda elegir
+				return Result;
+			}
+			if (nKey == HID_KEY_UP)
+			{
+				return Result;
+			}
+			if (nKey == HID_KEY_ENTER || nKey == 0x58)
+			{
+				OpenChoice (T ("Configuración: páginas"));
+				for (unsigned i = 0; i < nPages; i++)
+				{
+					SetChoiceItem (i, CSettings::GetPageTitle (i));
+				}
+				SetChoiceSelected (m_nSettingsPage);
+				m_bSettingsPageChoice = TRUE;
+				return Result;
+			}
+			if (nKey == 0x4E || nKey == HID_KEY_TAB || nKey == 0x4B)
+			{
+				m_bSettingsTitle = FALSE;	// RePág y AvPág: a la primera opción
+			}
+		}
+
 		// Las opciones que no se usan con lo elegido (en gris) no se pueden
 		// elegir ni cambiar: el cursor se las salta
 		boolean bApplies =    m_nSettingsRow < nRows
@@ -1307,13 +1440,19 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 
 		if (nKey == HID_KEY_UP)
 		{
+			boolean bMoved = FALSE;
 			for (unsigned i = m_nSettingsRow; i > 0; i--)
 			{
 				if (m_pSettings->IsApplicable (Index[i - 1]))
 				{
 					m_nSettingsRow = i - 1;
+					bMoved = TRUE;
 					break;
 				}
+			}
+			if (!bMoved)
+			{
+				m_bSettingsTitle = TRUE;	// desde la primera opción, al título
 			}
 		}
 		else if (nKey == HID_KEY_DOWN)
@@ -1418,6 +1557,30 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		if (m_Mode == ModeSettings)
 		{
 			FixSettingsRow ();	// al cambiar de página o de modelo
+		}
+		return Result;
+	}
+
+	if (m_Mode == ModeKeyList)
+	{
+		if (   (nKey == 0x4E || nKey == HID_KEY_RIGHT || nKey == HID_KEY_DOWN)	// AvPág
+		    && m_nKeyListPage + 1 < m_nKeyListPages)
+		{
+			m_nKeyListPage++;
+		}
+		else if (   (nKey == 0x4B || nKey == HID_KEY_LEFT || nKey == HID_KEY_UP)	// RePág
+			 && m_nKeyListPage > 0)
+		{
+			m_nKeyListPage--;
+		}
+		else if (nKey == HID_KEY_ESC || nKey == 0x17)	// ESC o T: a la ayuda
+		{
+			m_Mode = ModeHelp;
+		}
+		else if (nKey == HID_KEY_F1)
+		{
+			m_Mode = ModeClosed;
+			Result = MenuResultClose;
 		}
 		return Result;
 	}
@@ -1590,7 +1753,34 @@ void CMenu::Draw (TPixel *pScreen)
 			}
 		}
 
+		// las teclas de esta pantalla, en amarillo y separadas por una fila
+		static const struct { const char *pKey; const char *pText; } MenuKeys[] =
+		{
+			{"ENTER", N_("Cintas / ficheros")},
+			{"C",     N_("Configuración")},
+			{"U",     N_("Unidades")},
+			{"T",     N_("Todas las teclas...")},
+		};
 		nRow++;
+		for (unsigned i = 0; i < sizeof MenuKeys / sizeof MenuKeys[0]; i++)
+		{
+			CString Line;
+			Line.Format ("%-7s %s", MenuKeys[i].pKey, T (MenuKeys[i].pText));
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow++), Line,
+					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		}
+
+		// el estado, pegado abajo con una fila libre encima de la barra
+		unsigned nStatusLines = 0;
+		for (unsigned i = 0; i < MENU_STATUS_LINES; i++)
+		{
+			if (m_Status[i][0] != '\0')
+			{
+				nStatusLines++;
+			}
+		}
+		unsigned nStatusRow = PANEL_ROWS - 3 - nStatusLines;
+		nRow = nStatusRow > nRow ? nStatusRow : nRow + 1;
 		for (unsigned i = 0; i < MENU_STATUS_LINES; i++)
 		{
 			if (m_Status[i][0] != '\0')
@@ -1600,7 +1790,44 @@ void CMenu::Draw (TPixel *pScreen)
 			}
 		}
 
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ENTER cintas C conf. U unidades A acerca"),
+		// ESC a la izquierda y A a la derecha
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ESC volver"),
+				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		const char *pAbout = T ("A Acerca del proyecto");
+		unsigned nAboutCols = UTF8Length (pAbout);
+		if (nAboutCols > TEXT_COLS)
+		{
+			nAboutCols = TEXT_COLS;
+		}
+		m_pVideo->DrawText (pScreen, tx + (TEXT_COLS - nAboutCols) * 8, ROW_Y (PANEL_ROWS - 2), pAbout,
+				    COLOR_UI_TITLE, COLOR_UI_PANEL, nAboutCols);
+		return;
+	}
+
+	if (m_Mode == ModeKeyList)
+	{
+		unsigned nPage = m_nKeyListPage < m_nKeyListPages ? m_nKeyListPage : 0;
+		CString Title;
+		Title.Format (T ("Teclas %u/%u: %s"), nPage + 1, m_nKeyListPages, m_KeyListTitle[nPage]);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+
+		const unsigned nKeyCols = 12;
+		for (unsigned i = 0; i < m_nKeyListLines[nPage] && 3 + i < PANEL_ROWS - 3; i++)
+		{
+			int y = ROW_Y (3 + i);
+			if (m_KeyListKey[nPage][i][0] == '\x01')
+			{
+				m_pVideo->DrawText (pScreen, tx, y, m_KeyListText[nPage][i], COLOR_UI_DIR, COLOR_UI_PANEL, TEXT_COLS);
+			}
+			else
+			{
+				m_pVideo->DrawText (pScreen, tx, y, m_KeyListKey[nPage][i], COLOR_UI_VALUE, COLOR_UI_PANEL, nKeyCols - 1);
+				m_pVideo->DrawText (pScreen, tx + nKeyCols * 8, y, m_KeyListText[nPage][i],
+						    COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS - nKeyCols);
+			}
+		}
+
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("RePág/AvPág página    ESC volver"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		return;
 	}
@@ -1830,11 +2057,12 @@ void CMenu::Draw (TPixel *pScreen)
 				m_pVideo->FillRect (pScreen, tx - 2, y - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
 			}
 
-			char Number[4] = {(char) ('1' + i), ' ', '\0', '\0'};
-			if (i >= 9 || bLong)
+			// su tecla (1-9, 0, A-Z); en las listas de más de 36, ninguna
+			char Number[4] = {ChoiceKey (i), ' ', '\0', '\0'};
+			if (Number[0] == 0)
 			{
-				Number[0] = ' ';			// del 10 en adelante y en las
-			}					// listas largas: con los cursores
+				Number[0] = ' ';
+			}
 			m_pVideo->DrawText (pScreen, tx, y, Number, nInk, nPaper, 2);
 
 			// Si el nombre no cabe, el de la opción elegida se desplaza poco a
@@ -1866,7 +2094,12 @@ void CMenu::Draw (TPixel *pScreen)
 		}
 		if (!m_bChoiceInfo)
 		{
-			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), m_nChoices > MENU_CHOICE_ROWS ? T ("ENTER: elegir  RePág/AvPág  ESC: seguir") : T ("ENTER o 1-9: elegir   ESC: seguir"),
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2),
+					      m_nChoices > MENU_CHOICE_KEYS ? T ("ENTER: elegir  RePág/AvPág  ESC: seguir")
+					    : m_nChoices > MENU_CHOICE_ROWS ? T ("0-9 A-Z ENTER  RePág/AvPág  ESC: seguir")
+					    : m_nChoices > 10 ? T ("ENTER, 0-9, A-Z: elegir   ESC: seguir")
+					    : m_nChoices == 10 ? T ("ENTER o 0-9: elegir   ESC: seguir")
+							       : T ("ENTER o 1-9: elegir   ESC: seguir"),
 					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		}
 		return;
@@ -1877,7 +2110,19 @@ void CMenu::Draw (TPixel *pScreen)
 		CString Title;
 		Title.Format (T ("Configuración %u/%u: %s"), m_nSettingsPage + 1, CSettings::GetPageCount (),
 			      CSettings::GetPageTitle (m_nSettingsPage));
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		if (m_bSettingsTitle && !m_bEditing)
+		{
+			// la barra en el título, de borde a borde, con < y > en los
+			// márgenes (el título ya ocupa casi toda la fila)
+			m_pVideo->FillRect (pScreen, x0, ROW_Y (1) - 1, PANEL_COLS * 8, 10, COLOR_UI_HILITE);
+			m_pVideo->DrawText (pScreen, x0, ROW_Y (1), "<", COLOR_UI_PANEL, COLOR_UI_HILITE, 1);
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_PANEL, COLOR_UI_HILITE, TEXT_COLS);
+			m_pVideo->DrawText (pScreen, tx + TEXT_COLS * 8, ROW_Y (1), ">", COLOR_UI_PANEL, COLOR_UI_HILITE, 1);
+		}
+		else
+		{
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		}
 
 		unsigned Index[SETTINGS_MAX];
 		unsigned nRows = SettingsOnPage (Index, SETTINGS_MAX);
@@ -1901,7 +2146,7 @@ void CMenu::Draw (TPixel *pScreen)
 				Value = m_pSettings->GetValueName (Index[i]);
 			}
 			bRestart |= !Def.bLive;
-			boolean bSel = i == m_nSettingsRow;
+			boolean bSel = i == m_nSettingsRow && !m_bSettingsTitle;
 			// en gris lo que no se usa con lo elegido (se puede cambiar igual)
 			boolean bApplies = m_pSettings->IsApplicable (Index[i]);
 			if (bSel)
@@ -1980,7 +2225,9 @@ void CMenu::Draw (TPixel *pScreen)
 					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		}
 		else
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 4), T ("<- -> cambiar   RePág/AvPág página"),
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 4),
+				    m_bSettingsTitle ? T ("<- -> página   ENTER lista de páginas")
+						     : T ("<- -> cambiar   RePág/AvPág página"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("G guardar  R reiniciar la Pi  ESC volver"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
@@ -2018,17 +2265,51 @@ void CMenu::Draw (TPixel *pScreen)
 			N_("joystick no es Kempston)"),
 		};
 
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), T ("ZXMetalCircle - Ayuda de teclado"), COLOR_UI_TITLE, COLOR_UI_PANEL);
+		// Con el ZX81 puesto (emulador de Paul Farrow): sus teclas
+		static const char *ZX81HelpLines[] =
+		{
+			N_("Teclado del PC     ZX81"),
+			"",
+			N_("Mayúsculas         SHIFT"),
+			"Enter              NEWLINE",
+			N_("Retroceso          RUBOUT"),
+			N_("Cursores           SHIFT + 5-8"),
+			N_("Esc o Espacio      BREAK"),
+			N_("Ctrl               . (punto)"),
+			"",
+			N_("Las palabras y los signos van en las"),
+			N_("teclas del ZX81 (signos: SHIFT+tecla);"),
+			N_("los signos del PC (, - +...) no valen"),
+			"",
+			N_("Distribución: la del ZX81 o la del 128"),
+			N_("(configuración, página 4)"),
+			N_("PRINT USR 8255: la del ZX81"),
+			N_("PRINT USR 8252: la del 128"),
+			"",
+			N_("Volver al Spectrum: F11 (quitar el"),
+			N_("cartucho) o F7 (elegir un modelo)"),
+			"",
+			N_("Emulador ZX81+ (C) Paul Farrow"),
+			"www.fruitcake.plus.com",
+		};
+
+		const char **ppLines = m_bKeyHelpZX81 ? ZX81HelpLines : KeyHelpLines;
+		unsigned nLines = m_bKeyHelpZX81 ? sizeof ZX81HelpLines / sizeof ZX81HelpLines[0]
+						 : sizeof KeyHelpLines / sizeof KeyHelpLines[0];
+
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (1),
+				    m_bKeyHelpZX81 ? T ("ZXMetalCircle - Teclado del ZX81") : T ("ZXMetalCircle - Ayuda de teclado"),
+				    COLOR_UI_TITLE, COLOR_UI_PANEL);
 
 		unsigned nRow = 3;
-		for (unsigned i = 0; i < sizeof KeyHelpLines / sizeof KeyHelpLines[0]; i++)
+		for (unsigned i = 0; i < nLines; i++)
 		{
-			m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow++), T (KeyHelpLines[i]),
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (nRow++), T (ppLines[i]),
 					    i == 0 ? COLOR_UI_HILITE : COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS);
 		}
 
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ESC/ENTER: volver"),
-				    COLOR_UI_DIM, COLOR_UI_PANEL);
+				    COLOR_UI_TITLE, COLOR_UI_PANEL);
 		return;
 	}
 
@@ -2161,10 +2442,10 @@ void CMenu::Draw (TPixel *pScreen)
 	}
 
 	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 3), T ("ENTER cargar  ESC salir  BORRAR subir"),
-			    COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+			    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 	// con red, la tecla de la búsqueda en ZXDB (F3)
 	boolean bZXDBKey = m_nUnitTarget < 0 && CNetworkManager::IsNetRunning ();
 	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2),
 			    bZXDBKey ? T ("Letra: saltar  RePág/AvPág  F3: ZXDB") : T ("Letra: saltar  RePág/AvPág: páginas"),
-			    COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+			    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 }

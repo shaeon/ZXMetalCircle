@@ -37,7 +37,7 @@ CNetworkManager::CNetworkManager (void)
 	m_bWiFi (FALSE),
 	m_bServicesStarted (FALSE),
 	m_nTimeZone (60),
-	m_bEUSummerTime (TRUE),
+	m_SummerTime (SummerTimeEU),
 	m_nLastDSTCheck (0),
 	m_pWLAN (0),
 	m_pNet (0),
@@ -93,7 +93,7 @@ static boolean FileExists (const char *pPath)
 }
 
 void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZoneMinutes,
-			     boolean bEUSummerTime, const u8 *pIP, const u8 *pMask,
+			     TSummerTime SummerTime, const u8 *pIP, const u8 *pMask,
 			     const u8 *pGateway, const u8 *pDNS)
 {
 	if (pIP != 0)
@@ -105,8 +105,8 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 	}
 
 	m_nTimeZone = nTimeZoneMinutes;
-	m_bEUSummerTime = bEUSummerTime;
-	CTimer::Get ()->SetTimeZone (m_nTimeZone);
+	m_SummerTime = SummerTime;
+	CTimer::Get ()->SetTimeZone (m_nTimeZone + (m_SummerTime == SummerTimeAlways ? 60 : 0));
 
 	if (Mode == NetModeOff)
 	{
@@ -224,6 +224,30 @@ boolean CNetworkManager::Process (void)
 	return TRUE;
 }
 
+// Zona horaria y horario de verano cambiados en la configuración: se aplican
+// ya (el horario de verano, en la próxima comprobación, si ya hay hora)
+void CNetworkManager::SetTimeZone (int nMinutes, TSummerTime SummerTime)
+{
+	m_nTimeZone = nMinutes;
+	m_SummerTime = SummerTime;
+	m_nLastDSTCheck = 0;
+	CTimer::Get ()->SetTimeZone (m_nTimeZone + (m_SummerTime == SummerTimeAlways ? 60 : 0));
+	if (m_State == NetStateRunning)
+	{
+		UpdateSummerTime ();
+	}
+}
+
+// dst=: 0 no, on siempre; 1 (y auto), el europeo automático, como hasta ahora
+CNetworkManager::TSummerTime CNetworkManager::ParseSummerTime (const char *pValue)
+{
+	if (strcmp (pValue, "0") == 0 || strcasecmp (pValue, "off") == 0)
+	{
+		return SummerTimeOff;
+	}
+	return strcasecmp (pValue, "on") == 0 ? SummerTimeAlways : SummerTimeEU;
+}
+
 boolean CNetworkManager::HasTime (void) const
 {
 	return CTimer::Get ()->GetUniversalTime () > 1600000000;	// después de 2020
@@ -233,7 +257,7 @@ boolean CNetworkManager::HasTime (void) const
 // octubre, a la 01:00 UTC
 void CNetworkManager::UpdateSummerTime (void)
 {
-	if (!m_bEUSummerTime || !HasTime ())
+	if (m_SummerTime != SummerTimeEU || !HasTime ())
 	{
 		return;
 	}

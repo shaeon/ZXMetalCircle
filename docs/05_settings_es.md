@@ -10,7 +10,7 @@ Todas las opciones van en una sola línea:
 
 | Opción | Valores | Por defecto |
 | --- | --- | --- |
-| `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95` | `128k` |
+| `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95`, `zx81` (el ZX81 con el emulador de Paul Farrow, en el 128K) | `128k` |
 | `tkula=` | ULA del TK90X y el TK95: `50` (Microdigital a 50 Hz: Uruguay), `60` (Microdigital a 60 Hz: Brasil) o `ferranti` (los primeros de exportación; los tiempos del 48K) | `50` |
 | `tkrom=` | ROM del TK90X: `v3` (la de Rodolfo Guerra, la más compatible), `v1` (original, la más difundida) o `v2` (original; el TK95 siempre la lleva). Se aplica al momento: con un TK, se reinicia con la ROM nueva | `v3` |
 | `tklang=` | Idioma de la ROM del TK90X y del TK95: `auto` (el del menú), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. Las originales solo tienen español y portugués (los demás idiomas usan el español): la v1 elige con el diodo de los TK90X brasileños (el bit 7 del puerto 254 a 0 da el portugués) y la v2 y el TK95 con su ROM española o brasileña. La v3 tiene los 17. Se aplica al momento | `auto` |
@@ -34,6 +34,7 @@ Todas las opciones van en una sola línea:
 | `f5=` | `nmi` (F5 = NMI, Alt+F5 = ficheros), `files` (F5 = ficheros, Alt+F5 = NMI) | `nmi` |
 | `aystereo=` | `abc`, `acb`, `bac`, `mono` | `abc` |
 | `tapesound=` | `1` (se oye la carga), `0` (silencio) | `1` |
+| `volume=` | de `0` a `100`, de 10 en 10 (también Alt+ + / Alt+ -; Alt+0 silencia) | `100` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (activadas), `0` | `0` |
 | `pureblack=` | `1` (negro puro también en la paleta del 16K/48K), `0` | `0` |
@@ -45,7 +46,7 @@ Todas las opciones van en una sola línea:
 | `lang=` | `es` (español), `en` (inglés), `pt` (portugués de Portugal), `pt-br` (portugués de Brasil) o cualquier otro idioma de `locales/` | `es` |
 | `net=` | `auto` (WiFi si hay `wpa_supplicant.conf`, si no cable), `wifi`, `eth`, `0` | `auto` |
 | `tz=` | diferencia horaria en minutos (60 = España peninsular, 0 = Canarias) | `60` |
-| `dst=` | `1` (horario de verano europeo automático), `0` | `1` |
+| `dst=` | `1` (automático: el horario de verano europeo, de finales de marzo a finales de octubre), `on` (siempre, una hora más) o `0` (nunca) | `1` |
 | `ip=`, `mask=`, `gw=`, `dns=` | IP fija (si no se pone `ip=`, se usa DHCP) | — |
 | `lec=` | `1` (memoria LEC conectada; en los 128K se usa desde 48 BASIC), `0` | `0` |
 | `if1=` | `auto` (se conecta al insertar un microdrive), `1` (siempre), `0` (nunca) | `auto` |
@@ -59,6 +60,7 @@ Todas las opciones van en una sola línea:
 | `multiface=` | `1` (activo si está su ROM en la SD), `0` (desactivado) | `1` |
 | `gpioaudio=` | `1` (con `sounddev=sndpwm`, el audio sale también por GPIO12, en mono), `0` | `1` |
 | `gpiokbd=` | `48`, `plus3` (tipo de teclado por GPIO), `0` (ninguno) | `48` |
+| `zx81kbd=` | `zx81` (teclado del ZX81 original), `128` (el de la ROM de Paul Farrow, parecido al del 128) | `zx81` |
 | `logdev=` | `ttyS1` (mensajes por el puerto serie) | |
 
 Si falla el dispositivo de sonido elegido, el emulador prueba automáticamente el otro.
@@ -85,9 +87,9 @@ Desde la ayuda (F1), la tecla **C** abre la configuración: diez páginas con la
 | Página | Opciones |
 | --- | --- |
 | 1 Máquina | idioma, modelo, teclado Issue 2/3, velocidad, ULAplus, idioma del +3e*, disco duro al inicio* |
-| 2 Imagen y sonido | borde, scanlines, sonido AY, oír la carga, altavoz, quitar pitido 1 bit, salida de sonido*, sonido por GPIO12*, imagen en el núcleo 1* |
-| 3 Cintas y grabación | modo de carga, SAVE a la SD, formato de SAVE, formato de F8 |
-| 4 Teclado | F5 / Alt+F5, Recreated ZX, teclado por GPIO* |
+| 2 Imagen y sonido | borde, scanlines, sonido AY, volumen, altavoz, quitar pitido 1 bit, salida de sonido*, sonido por GPIO12*, imagen en el núcleo 1* |
+| 3 Cintas y grabación | modo de carga, oír la carga, SAVE a la SD, formato de SAVE, formato de F8 |
+| 4 Teclado | F5 / Alt+F5, Recreated ZX, teclado por GPIO*, teclado del ZX81 |
 | 5 Joysticks y mandos | joystick de los jugadores 1 y 2, mando de cada jugador, mandos de más, cursores del PC, disparo con el teclado, botones del mando (ver [04_usb_gamepads_es.md](04_usb_gamepads_es.md)) |
 | 6 Periféricos | Spectranet, divMMC con esxDOS, memoria LEC, Interface 1, Multiface, RS232*, ZX Net* |
 | 7 Red, hora y casete | red*, zona horaria*, horario de verano*, IP fija*, máscara*, puerta de enlace*, DNS*, comprobar HTTPS*, casete real*, invertir casete*, GPIO del casete* |
@@ -96,10 +98,12 @@ Desde la ayuda (F1), la tecla **C** abre la configuración: diez páginas con la
 | 10 Actualización | buscar e instalar, paquete guardado, buscar al arrancar, paquetes guardados, configuración al actualizar |
 
 - Cursores arriba y abajo para elegir; **izquierda y derecha** (o ENTER) para cambiar el valor; **RePág y AvPág** (o Tab) para cambiar de página.
-- **En las opciones de muchos valores** (modelo, idioma de la ROM del TK, joysticks, zona horaria, GPIO del casete), **ENTER abre la lista entera**, con el valor puesto marcado: se elige con los cursores (o 1-9) y ENTER, y se vuelve a la configuración; ESC vuelve sin cambiarlo. Las flechas siguen pasando de uno en uno.
+- También con los cursores: desde la primera opción, **arriba** sube al título; ahí **izquierda y derecha** cambian de página (la barra se queda en el título), **ENTER** abre la lista de las páginas para ir directamente a una y **abajo** vuelve a las opciones.
+- **En las opciones de más de dos valores** (idioma, modelo, borde, carga de cintas, joysticks, zona horaria...), **ENTER abre la lista entera**, con el valor puesto marcado: se elige con los cursores (o con la tecla que sale delante: 1-9, 0 para la décima y de la A a la Z para las siguientes, en las listas de hasta 36) y ENTER, y se vuelve a la configuración; ESC vuelve sin cambiarlo. Las flechas siguen pasando de uno en uno. En las de dos valores (sí/no), ENTER cambia al otro.
 - **Las direcciones IP se escriben**: ENTER en "IP fija", "Máscara de red", "Puerta de enlace" o "Servidor DNS" y se teclean los números y los puntos (también con el teclado numérico); Retroceso borra, SUPR la deja vacía (automática, con DHCP), ENTER acepta si es una IP válida y ESC la deja como estaba.
 - En las listas de ROMs y de discos duros solo salen los ficheros sin espacios en el nombre (`cmdline.txt` separa las opciones con espacios).
 - Los cambios se aplican **al momento**, salvo los marcados con `*`, que necesitan reiniciar la Pi.
+- **Las ROMs** (16K/48K, 128K, +2, +2A, +3, +3e, Interface 1 y esxDOS) y el idioma del +3e también se aplican al momento: se carga la nueva y, si el Spectrum está usando esa (el modelo en marcha, o el Interface 1 o la divMMC conectados), se reinicia el Spectrum con ella; si no, se usará al cambiar a ese modelo o al conectar el periférico. Igual el disco duro al inicio (se monta ya), la zona horaria, el horario de verano, «Comprobar HTTPS» e «Invertir casete». La flash de la Spectranet sigue necesitando reiniciar la Pi: solo se usa la primera vez, y después la Spectranet usa su copia guardada (`spectranet.flash`).
 - **G** guarda los valores en `cmdline.txt`. Conserva el resto de opciones del fichero (`hdd=`, `ip=`, `logdev=`…) y su orden, cambia las que ya estaban y añade las que no tienen su valor por defecto. Antes deja una copia en `cmdline.bak`.
 - **R** reinicia la Raspberry Pi. Pide confirmación ("No" es la opción marcada) y, si hay cambios sin guardar, ofrece guardarlos antes. Antes de reiniciar se guarda todo lo pendiente: discos del +3, cartuchos de microdrive, la flash de la Spectranet, lo grabado por esxDOS y la salida del RS232.
 - La configuración muestra lo que hay en `cmdline.txt` (se vuelve a leer al abrirla si no hay cambios pendientes, por si se ha cambiado desde la web), más lo que se cambie con las teclas: F4, F6, F7, F9, F10, Alt+B, Alt+S y los periféricos (Alt+T/X/L). Así G también sirve para guardar esos cambios. Lo que cambia solo, como el modelo al cargar un snapshot de 128K, no pasa a la configuración, para no guardarlo sin querer. Si hay algo sin guardar, se avisa en la pantalla.

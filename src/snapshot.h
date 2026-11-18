@@ -1,10 +1,12 @@
 //
-// snapshot.h - Carga de snapshots .SNA, .Z80 y .SZX, y grabación en .Z80 (versión 3)
+// snapshot.h - Carga de snapshots .SNA, .Z80, .SZX y .SP, y grabación en .Z80 (versión 3)
 //
 // Formatos:
 //   .SNA  https://worldofspectrum.org/faq/reference/formats.htm
 //   .Z80  https://worldofspectrum.org/faq/reference/z80format.htm
 //   .SZX  https://www.spectaculator.com/docs/zx-state/intro.shtml
+//   .SP   https://rk.nvg.ntnu.no/sinclair/faq/fileform.html (emulador «Spectrum»
+//         de Pedro Gimeno, y VgaSpec)
 //
 // .SNA: en 48K el PC se guarda en la pila (como manda el formato), en una copia
 // de la memoria; el +2A se graba como 128K (el formato no tiene 0x1FFD).
@@ -40,6 +42,7 @@ private:
 	static const char *LoadSNA (CSpectrum *pSpectrum, const u8 *pData, unsigned nSize);
 	static const char *LoadZ80 (CSpectrum *pSpectrum, const u8 *pData, unsigned nSize);
 	static const char *LoadSZX (CSpectrum *pSpectrum, const u8 *pData, unsigned nSize);
+	static const char *LoadSP (CSpectrum *pSpectrum, const u8 *pData, unsigned nSize);
 
 	static boolean DecompressZ80 (const u8 *pIn, unsigned nInSize, u8 *pOut, unsigned nOutSize,
 				      boolean bEndMarker);

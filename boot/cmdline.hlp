@@ -33,6 +33,8 @@ defecto.
                             Lancaster y disco duro en una tarjeta ZXMMC)
                     tk90x   Microdigital TK90X (clon brasileno del 48K)
                     tk95    Microdigital TK95
+                    zx81    ZX81 con el emulador de Paul Farrow (en el 128K;
+                            hace falta roms/zx81.rom)
 
  p3elang=es       Idioma de las ROMs del +3e incluidas:  es  o  en
 
@@ -117,6 +119,9 @@ defecto.
 
  tapesound=1      Oir la señal de la cinta al cargar: 1 = si, 0 = no
 
+ volume=100       Volumen, de 0 a 100 de 10 en 10 (Alt + + y Alt + - lo
+                  cambian; Alt+0 silencia)
+
  savetrap=1       SAVE de la ROM graba directamente en la SD (carpeta saves):
                     1 = si (por defecto),  0 = no
 
@@ -177,6 +182,13 @@ defecto.
                            extendido ni NMI, y sin gpioaudio. La entrada de
                            cinta (ear=gpio) va entonces por el GPIO15
                     0      sin teclado GPIO (deja libres los pines)
+
+ zx81kbd=zx81     Teclado del ZX81 (emulador de Paul Farrow, F7 o un .P):
+                    zx81   el del ZX81 original (por defecto)
+                    128    el de la ROM de Paul Farrow, con los signos y los
+                           graficos movidos para parecerse al del 128
+                  Con el ZX81 en marcha: PRINT USR 8255 (el del ZX81) y
+                  PRINT USR 8252 (el del 128)
 
 ------------------------------------------------------------------------------
  SONIDO

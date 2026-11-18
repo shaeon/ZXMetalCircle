@@ -26,6 +26,7 @@
 #      ./build.sh "1 3-64 5"      (varios)
 #      QEMU=1 ./build.sh "1 3-64" (kernels para probar en QEMU, en qemu/: sin
 #                                  sonido, que QEMU no emula; ver README)
+#      LIMPIO=1 ./build.sh 3-64   (desde cero; sin LIMPIO, solo se recompila lo que ha cambiado)
 #
 set -e
 
@@ -37,6 +38,7 @@ PREFIX32="${PREFIX32:-${PREFIX:-arm-none-eabi-}}"
 PREFIX64="${PREFIX64:-aarch64-none-elf-}"
 JOBS="${JOBS:-$(nproc)}"
 QEMU="${QEMU:-0}"
+LIMPIO="${LIMPIO:-0}"
 
 TARGETS="${1:-1 2 3-32 4-32 3-64 4-64 5}"
 
@@ -147,11 +149,21 @@ for T in $TARGETS; do
 		make -C "$C/addon/wlan/hostap/wpa_supplicant" -f Makefile.circle -j"$JOBS" > /dev/null
 	fi
 
+	# Carpeta de trabajo de cada objetivo (la de QEMU, aparte: compila con otra
+	# definición). Se conserva entre compilaciones para que make solo recompile
+	# lo que ha cambiado (los .d de Circle dicen qué cabeceras usa cada fichero).
+	# El código se copia con tar, que conserva las fechas de los ficheros sin
+	# cambios y deja fuera los objetos que hubiera en src (de una compilación a
+	# mano). LIMPIO=1 la rehace desde cero.
 	B="$WORK/zxcircle-$T"
-	rm -rf "$B"
+	if [ "$QEMU" = 1 ]; then
+		B="$B-qemu"
+	fi
+	if [ "$LIMPIO" = 1 ]; then
+		rm -rf "$B"
+	fi
 	mkdir -p "$B"
-	cp -a "$ROOT/Makefile" "$ROOT/src" "$ROOT/roms" "$ROOT/third_party" "$B/"
-	find "$B" \( -name '*.o' -o -name '*.d' \) -delete	# nunca reutilizar objetos de otro objetivo
+	tar -C "$ROOT" --exclude='*.o' --exclude='*.d' -cf - Makefile src roms third_party | tar -C "$B" -xf -
 	if [ "$QEMU" = 1 ]; then
 		# QEMU no emula el sonido HDMI ni PWM (al fallar, Circle toca registros
 		# HDMI que no existen y se cuelga) ni responde al DHCP
@@ -273,6 +285,8 @@ for MF in mf1.rom mf128.rom mfplus3.rom; do
 done
 cp "$ROOT/third_party/esxdos/ESXMMC.BIN" "$ROOT/sdcard/roms/esxmmc.bin"
 cp "$ROOT/roms/spectranet.rom" "$ROOT/sdcard/roms/spectranet.rom"
+# Emulador del ZX81 de Paul Farrow (ZX81+ v3.13), con su permiso
+cp "$ROOT/roms/zx81.rom" "$ROOT/sdcard/roms/zx81.rom"
 mkdir -p "$ROOT/sdcard/utils/spectranet"
 cp "$ROOT/third_party/spectranet/installer.tap" "$ROOT/third_party/spectranet/LEEME.txt" "$ROOT/third_party/spectranet/README.txt" "$ROOT/third_party/spectranet/LICENSE.txt" "$ROOT/sdcard/utils/spectranet/"
 

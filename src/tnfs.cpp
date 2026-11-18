@@ -60,7 +60,10 @@ unsigned CTNFSClient::Request (u8 nCommand, const u8 *pData, unsigned nLength)
 	m_Request[1] = m_nSession >> 8;
 	m_Request[2] = m_nSeq;
 	m_Request[3] = nCommand;
-	memcpy (m_Request + 4, pData, nLength);
+	if (nLength > 0)		// (sin datos, pData puede ser 0)
+	{
+		memcpy (m_Request + 4, pData, nLength);
+	}
 
 	for (unsigned nTry = 0; nTry < RETRIES; nTry++)
 	{
@@ -306,7 +309,7 @@ static boolean LooksLikeFile (const char *pName)
 	// extensiones de ficheros de Spectrum: no hace falta preguntar si son carpetas
 	static const char *Ext[] = {".tap", ".tzx", ".z80", ".sna", ".szx", ".csw", ".rom",
 				    ".mdr", ".mdv", ".dsk", ".scr", ".txt", ".zip", ".bin",
-				    ".pzx", ".trd", ".scl", ".hdf", ".img", ".vhd", ".raw"};
+				    ".pzx", ".trd", ".scl", ".hdf", ".img", ".vhd", ".raw", ".p", ".sp"};
 	size_t nLen = strlen (pName);
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{

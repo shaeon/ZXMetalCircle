@@ -41,7 +41,7 @@ It also announces itself on the local network (mDNS) as the "ZXMetalCircle" web 
 - `web=ro` makes it **read-only**: you can browse the SD card, download files, search ZXDB and load a game, but not upload, delete, rename, move, replace, create folders or download from ZXDB to the SD card (those options do not even appear).
 - `webpass=` sets a **password** (in the settings it is typed with lowercase letters and numbers, and shown as `********`). The page asks for it once and then creates a random session key that goes into the links and forms (Circle's web server gives no access to cookies or to the browser's password). The keys are lost when the Pi is switched off; after 5 failed attempts you have to wait 30 s. It is not encrypted (HTTP): it protects you from curious people on your network, not from someone eavesdropping.
 
-**Time**: taken from `pool.ntp.org`. The files you save (SAVE, snapshots, microdrives) carry the real date and time. The zone is set with `tz=` and European summer time is applied automatically (`dst=1`).
+**Time**: taken from `pool.ntp.org`. The files you save (SAVE, snapshots, microdrives) carry the real date and time. The zone is set with `tz=` and European summer time is applied automatically (`dst=1`, "automatic"); with `dst=on` ("yes") one hour is always added and with `dst=0` ("no"), never.
 
 **Zero W**: it has a single core, so the WiFi takes time from the emulation. When connecting (WPA encryption is costly) and while uploading or downloading files there may be short glitches in picture or sound; the Spectrum does not fall behind, because the emulator skips frames if needed. At rest it is not noticeable. Booting with WiFi on a Zero W shows a warning.
 

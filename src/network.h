@@ -50,7 +50,11 @@ public:
 
 	// Arranca la red sin esperar a que conecte (la conexión sigue en segundo plano)
 	// pIP == 0: DHCP; si no, IP fija (máscara, puerta de enlace y DNS)
-	void Start (TNetMode Mode, const char *pHostname, int nTimeZoneMinutes, boolean bEUSummerTime,
+	// Horario de verano (dst=): no, el europeo automático o siempre (+1 hora)
+	enum TSummerTime { SummerTimeOff, SummerTimeEU, SummerTimeAlways };
+	static TSummerTime ParseSummerTime (const char *pValue);
+
+	void Start (TNetMode Mode, const char *pHostname, int nTimeZoneMinutes, TSummerTime SummerTime,
 		    const u8 *pIP = 0, const u8 *pMask = 0, const u8 *pGateway = 0, const u8 *pDNS = 0);
 
 	// Llamar una vez por cuadro: arranca los servicios cuando hay conexión y
@@ -91,6 +95,7 @@ public:
 		{ if (m_pBusyHandler != 0) m_pBusyHandler (pText, m_pBusyParam); }
 
 	void SetTLSVerify (boolean bVerify)	{ m_bTLSVerify = bVerify; }
+	void SetTimeZone (int nMinutes, TSummerTime SummerTime);	// tz= y dst=, en marcha
 	// Servidor web: 0 = apagado, 1 = completo, 2 = solo lectura; contraseña ("" = sin)
 	void SetWebOptions (unsigned nMode, const char *pPassword);
 	void SetWebProtect (bool bProtect)	{ m_bWebProtect = bProtect; }
@@ -107,7 +112,7 @@ private:
 	boolean m_bWiFi;
 	boolean m_bServicesStarted;
 	int m_nTimeZone;
-	boolean m_bEUSummerTime;
+	TSummerTime m_SummerTime;
 	unsigned m_nLastDSTCheck;
 
 	CBcm4343Device *m_pWLAN;

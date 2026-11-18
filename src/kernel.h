@@ -48,6 +48,7 @@
 #include "if1link.h"
 #include "i18n.h"
 #include "videocore.h"
+#include "zx81.h"
 #include <circle/gpiomanager.h>
 #include <circle/sched/scheduler.h>
 
@@ -101,6 +102,12 @@ private:
 	boolean ReadSource (const char *pPath, u8 *pBuffer, unsigned nSize);
 	boolean SaveSnapshot (void);
 	boolean LoadCartridge (const char *pPath);
+	// ZX81 con el emulador de Paul Farrow (kernelzx81.cpp)
+	boolean StartZX81 (const char *pProgram);	// 0: solo arrancarlo; si no, un .P
+	void ZX81Frame (void);				// tras cada cuadro: la carga del .P
+	void StopZX81 (void);				// fuera el cartucho del ZX81
+	boolean IsZX81Active (void) const;
+	boolean IsZX81ROMPresent (void);
 	void ToggleRecording (boolean bEarInput = FALSE);
 	void StartEarInput (void);
 	void LoadAnyFile (const char *pPath);
@@ -127,6 +134,7 @@ private:
 	void ToggleLEC (void);
 	void LoadSettings (void);
 	static boolean FindCmdLineOption (const char *pCmdLine, const char *pKey, char *pValue, unsigned nSize);
+	void SetVolume (int nVolume);
 	void SyncSetting (const char *pKey);
 	void SyncPeripheralSettings (void);
 	void ApplySpeaker (void);
@@ -139,10 +147,19 @@ private:
 	void SetupHardDiskList (void);
 	void SetupROMLists (void);
 	const char *ROMOption (const char *pKey, const char *pDefault);
+	const char *CurrentOption (const char *pKey, const char *pDefault);
+	static int ParseTimeZone (const char *pTZ);
+	// ROMs que se cambian en marcha desde la configuración (sin reiniciar la Pi)
+	const u8 *LoadModelROM (unsigned nROM);		// devuelve la anterior
+	void ReloadModelROM (unsigned nROM);
+	void ReloadPeripheralROM (const char *pKey);
+	void ShowROMChanged (const char *pKey, boolean bReset);
 #define ROM_LISTS 9
 	CString			m_ROMValues[ROM_LISTS];	// ROMs de SD:/roms para la configuración
 	CString			m_ROMNames[ROM_LISTS];
 	CString			m_EsxDirValues;		// carpetas para esxdir=
+	CString			m_TKLangValues;		// idiomas de la ROM del TK, por orden alfabético
+	CString			m_TKLangNames;
 	CString			m_EsxDirNames;
 	CString			m_HDDValues;		// imágenes de SD:/hdd para la configuración
 	CString			m_HDDNames;
@@ -314,6 +331,8 @@ private:
 	// Audio PWM también por GPIO12 (pin 32)
 	CGPIOPin		*m_pAudioGPIO;
 	boolean			m_bMonoAudio;
+	unsigned		m_nVolume;		// volume=: 0-100 %, en pasos de 10
+	boolean			m_bMute;		// Alt+0: silencio (no se guarda)
 	u8			m_PrevGPIOMatrix[8];
 
 	// Búferes grandes en el heap: la imagen del kernel (código + datos) no puede
@@ -388,7 +407,14 @@ private:
 	unsigned		m_nZipChoices;
 	const u8		*m_pTKROM;		// ROMs del TK cargadas (LoadTKROMs)
 	const u8		*m_pTK95ROM;
+	const u8		*m_pModelROMFile[6];	// ROMs de modelo cargadas de roms/ (LoadModelROM)
+	boolean			m_bSettingsLoaded;	// desde entonces, las ROMs según la configuración
 	boolean			m_bModelList;		// pregunta: F7, lista de modelos
+	// ZX81 (kernelzx81.cpp)
+	const u8		*m_pZX81ROM;		// roms/zx81.rom, al usarlo la primera vez
+	boolean			m_bZX81;		// el cartucho puesto es el del ZX81
+	boolean			m_bStartZX81;		// model=zx81: arrancar el ZX81 al empezar
+	CZX81Loader		m_ZX81Loader;		// carga de un .P
 	char			m_UpdateVersion[16];	// versión nueva que hay en GitHub ("" = no se sabe)
 	char			m_UpdateURL[600];	// y la dirección de su paquete
 	char			m_UpdateTarget[16];	// la que se va a instalar

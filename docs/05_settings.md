@@ -10,7 +10,7 @@ All the options go on a single line:
 
 | Option | Values | Default |
 | --- | --- | --- |
-| `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95` | `128k` |
+| `model=` | `16k`, `48k`, `128k`, `plus2`, `plus2a`, `plus3`, `plus3e`, `tk90x`, `tk95`, `zx81` (the ZX81 with Paul Farrow's emulator, on the 128K) | `128k` |
 | `tkula=` | TK90X and TK95 ULA: `50` (Microdigital at 50 Hz: Uruguay), `60` (Microdigital at 60 Hz: Brazil) or `ferranti` (the first export units; 48K timings) | `50` |
 | `tkrom=` | TK90X ROM: `v3` (Rodolfo Guerra's, the most compatible), `v1` (original, the most widespread) or `v2` (original; the TK95 always has it). Applied at once: with a TK, it restarts with the new ROM | `v3` |
 | `tklang=` | Language of the TK90X and TK95 ROM: `auto` (the menu's), `es`, `en`, `pt`, `ca`, `cs`, `de`, `eo`, `eu`, `gl`, `it`, `nl`, `no`, `pl`, `ro`, `ru`, `sv`, `vl`. The originals only have Spanish and Portuguese (other languages use Spanish): v1 chooses with the diode of the Brazilian TK90X (bit 7 of port 254 at 0 gives Portuguese), v2 and the TK95 with their Spanish or Brazilian ROM. v3 has all 17. Applied at once | `auto` |
@@ -34,6 +34,7 @@ All the options go on a single line:
 | `f5=` | `nmi` (F5 = NMI, Alt+F5 = files), `files` (F5 = files, Alt+F5 = NMI) | `nmi` |
 | `aystereo=` | `abc`, `acb`, `bac`, `mono` | `abc` |
 | `tapesound=` | `1` (loading is heard), `0` (silent) | `1` |
+| `volume=` | `0` to `100`, in steps of 10 (also Alt+ + / Alt+ -; Alt+0 mutes) | `100` |
 | `border=` | `none`, `standard`, `full`, `huge` | `full` |
 | `scanlines=` | `1` (on), `0` | `0` |
 | `pureblack=` | `1` (pure black also in the 16K/48K palette), `0` | `0` |
@@ -45,7 +46,7 @@ All the options go on a single line:
 | `lang=` | `es` (Spanish), `en` (English), `pt` (European Portuguese), `pt-br` (Brazilian Portuguese) or any other language in `locales/` | `es` |
 | `net=` | `auto` (WiFi if there is a `wpa_supplicant.conf`, otherwise cable), `wifi`, `eth`, `0` | `auto` |
 | `tz=` | time offset in minutes (60 = mainland Spain, 0 = UK and Canary Islands) | `60` |
-| `dst=` | `1` (automatic European summer time), `0` | `1` |
+| `dst=` | `1` (automatic: European summer time, from late March to late October), `on` (always, one hour ahead) or `0` (never) | `1` |
 | `ip=`, `mask=`, `gw=`, `dns=` | fixed IP (without `ip=`, DHCP is used) | — |
 | `lec=` | `1` (LEC memory connected; on the 128K models it is used from 48 BASIC), `0` | `0` |
 | `if1=` | `auto` (connects when a microdrive is inserted), `1` (always), `0` (never) | `auto` |
@@ -59,6 +60,7 @@ All the options go on a single line:
 | `multiface=` | `1` (active if its ROM is on the SD card), `0` (disabled) | `1` |
 | `gpioaudio=` | `1` (with `sounddev=sndpwm`, audio also comes out of GPIO12, in mono), `0` | `1` |
 | `gpiokbd=` | `48`, `plus3` (GPIO keyboard type), `0` (none) | `48` |
+| `zx81kbd=` | `zx81` (original ZX81 layout), `128` (the 128-style layout of Paul Farrow's ROM) | `zx81` |
 | `logdev=` | `ttyS1` (messages through the serial port) | |
 
 If the chosen sound device fails, the emulator automatically tries the other one.
@@ -85,9 +87,9 @@ From the help screen (F1), the **C** key opens the settings: ten pages with the 
 | Page | Options |
 | --- | --- |
 | 1 Machine | language, model, Issue 2/3 keyboard, speed, ULAplus, +3e language*, boot hard disk* |
-| 2 Video and sound | border, scanlines, AY sound, hear loading, speaker, remove 1-bit whine, sound output*, sound on GPIO12*, video on core 1* |
-| 3 Tapes and saving | loading mode, SAVE to the SD card, SAVE format, F8 format |
-| 4 Keyboard | F5 / Alt+F5, Recreated ZX, GPIO keyboard* |
+| 2 Video and sound | border, scanlines, AY sound, volume, speaker, remove 1-bit whine, sound output*, sound on GPIO12*, video on core 1* |
+| 3 Tapes and saving | loading mode, hear loading, SAVE to the SD card, SAVE format, F8 format |
+| 4 Keyboard | F5 / Alt+F5, Recreated ZX, GPIO keyboard*, ZX81 keyboard |
 | 5 Joysticks and pads | players 1 and 2 joysticks, each player's gamepad, extra gamepads, PC cursor keys, keyboard fire, gamepad buttons (see [04_usb_gamepads.md](04_usb_gamepads.md)) |
 | 6 Peripherals | Spectranet, divMMC with esxDOS, LEC memory, Interface 1, Multiface, RS232*, ZX Net* |
 | 7 Network, time and tape | network*, time zone*, summer time*, fixed IP*, mask*, gateway*, DNS*, check HTTPS*, real cassette*, invert cassette*, cassette GPIO* |
@@ -96,10 +98,12 @@ From the help screen (F1), the **C** key opens the settings: ten pages with the 
 | 10 Update | check and install, saved package, check at boot, saved packages, settings on update |
 
 - Up and down to choose; **left and right** (or ENTER) to change the value; **PgUp and PgDn** (or Tab) to change page.
-- **For options with many values** (model, TK ROM language, joysticks, time zone, cassette GPIO), **ENTER opens the whole list**, with the current value highlighted: choose with the cursor keys (or 1-9) and ENTER to go back to the settings; ESC goes back without changing it. The arrows still go one by one.
+- Also with the cursor keys: from the first option, **up** moves to the title; there **left and right** change page (the bar stays on the title), **ENTER** opens the list of pages to go straight to one, and **down** goes back to the options.
+- **For options with more than two values** (language, model, border, tape loading, joysticks, time zone...), **ENTER opens the whole list**, with the current value highlighted: choose with the cursor keys (or the key shown in front: 1-9, 0 for the tenth and A to Z for the next ones, in lists of up to 36) and ENTER to go back to the settings; ESC goes back without changing it. The arrows still go one by one. In two-value options (yes/no), ENTER switches to the other one.
 - **IP addresses are typed in**: ENTER on "Fixed IP", "Network mask", "Gateway" or "DNS server" and type the digits and dots (also on the numeric keypad); Backspace deletes, DEL empties it (automatic, with DHCP), ENTER accepts it if it is a valid IP and ESC leaves it as it was.
 - The ROM and hard disk lists only show files without spaces in their names (`cmdline.txt` separates options with spaces).
 - Changes apply **at once**, except those marked with `*`, which need the Pi to be restarted.
+- **The ROMs** (16K/48K, 128K, +2, +2A, +3, +3e, Interface 1 and esxDOS) and the +3e language also apply at once: the new one is loaded and, if the Spectrum is using it (the running model, or the Interface 1 or divMMC connected), the Spectrum is reset with it; otherwise it is used when switching to that model or connecting the peripheral. The same goes for the hard disk at startup (it is mounted straight away), the time zone, summer time, "Check HTTPS" and "Invert cassette". The Spectranet flash still needs a Pi restart: it is only used the first time, after which the Spectranet uses its saved copy (`spectranet.flash`).
 - **G** saves the values in `cmdline.txt`. It keeps the file's other options (`hdd=`, `ip=`, `logdev=`…) and their order, changes the ones already there and adds those that are not at their default value. It leaves a copy in `cmdline.bak` first.
 - **R** restarts the Raspberry Pi. It asks for confirmation ("No" is the highlighted option) and, if there are unsaved changes, offers to save them first. Before restarting, everything pending is saved: +3 disks, microdrive cartridges, the Spectranet flash, what esxDOS wrote and the RS232 output.
 - The settings show what is in `cmdline.txt` (read again when opened if there are no pending changes, in case it was changed from the web page), plus whatever is changed with the keys: F4, F6, F7, F9, F10, Alt+B, Alt+S and the peripherals (Alt+T/X/L). So G also saves those changes. What changes by itself, such as the model when loading a 128K snapshot, does not go into the settings, so it is not saved by accident. If something is unsaved, the screen says so.

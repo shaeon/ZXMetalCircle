@@ -4,11 +4,11 @@
 
 ## Keys
 
-The function keys are in a single table (`KeyBindings` in `src/kernel.cpp`). The F1 help is generated from it, so changing an assignment only needs that table.
+The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the group each one appears in on the list of all keys. The F1 help has two parts: the short one, with the everyday keys and the status (`ShortHelp`), and the list of **all keys** (T from the help), in three pages by topic (PgUp/PgDn; ESC goes back to the help), generated from the table. Changing an assignment only needs that table.
 
 | Key | Function |
 | --- | --- |
-| F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives and A the credits |
+| F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives, T the list of all keys and A the credits |
 | Alt+F1 | The settings directly (ESC goes back to the Spectrum) |
 | Alt+U | Drives: see, mount and empty each drive |
 | Alt+K | Keyboard help |
@@ -22,6 +22,7 @@ The function keys are in a single table (`KeyBindings` in `src/kernel.cpp`). The
 | Alt+F7 | Switch to the next model (16K, 48K, 128K, +2, +2A, +3, +3e) |
 | F8 | Save a snapshot to `snaps/` (.Z80, .SNA or .SZX according to `snapformat=`) |
 | F9 | AY stereo: ABC → ACB → BAC → mono |
+| Alt+ + / Alt+ - / Alt+0 | Volume up / down (in steps of 10 %) / mute on-off. The + and - of the keypad also work |
 | F10 | Speed: x1 → x2 → x4 → x10 |
 | F11 | Remove the Interface 2 cartridge (with reset) |
 | Alt+B | Border size: none → standard → full → huge |
@@ -33,7 +34,7 @@ The function keys are in a single table (`KeyBindings` in `src/kernel.cpp`). The
 | Alt+L / Alt+T / Alt+X | LEC memory / Spectranet / divMMC on/off (with reset) |
 | Alt+F / Alt+E | +3 disk: new / eject |
 | Alt+D | Keyboard diagnostics: what arrives over USB, the keys the Spectrum sees, frames per second and frame times |
-| Alt+V | Press several keys at once (cheats like VICTOR in Profanation) |
+| Alt+V | Press keys simultaneously (cheats like VICTOR in Profanation) |
 | F12 or Alt+R | Reset |
 | Pause or Alt+P | Pause |
 
@@ -46,7 +47,7 @@ PC keyboard to Spectrum keyboard mapping:
 
 To load a tape: press F1 and then ENTER, choose the `.TAP`, `.TZX`, `.PZX` or `.CSW` and type `LOAD ""` (on the 128K/+2A, choose "Tape Loader" or "Loader" in the menu). The tape starts by itself when the ROM or a custom loader starts reading it, and stops by itself when the program stops reading it like a loader for 2 seconds. What counts is reading like a loader (the same IN over and over, with a counter that advances, as Fuse does), not reading a lot: menus that poll the keyboard non-stop neither start the tape nor keep it running, so multiloads find the next block where they left it. In fast mode, the emulator runs at full speed while loading.
 
-## Several keys at once (Alt+V)
+## Simultaneous keys (Alt+V)
 
 Some cheats need many keys pressed together, like **VICTOR** in Profanation for infinite lives. A USB keyboard reports at most six keys at a time, and many cannot detect some combinations of four, five or six keys.
 

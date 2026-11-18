@@ -19,7 +19,7 @@ struct TOptionDef
 // Opciones del emulador (cmdline.hlp) y de Circle
 static const TOptionDef Options[] =
 {
-	{"model",	"16k|48k|128k|plus2|+2|plus2a|+2a|plus3|+3|plus3e|+3e|tk90x|tk95"},
+	{"model",	"16k|48k|128k|plus2|+2|plus2a|+2a|plus3|+3|plus3e|+3e|tk90x|tk95|zx81"},
 	{"tape",	"flash|fast|normal"},
 	{"tapeaccel",	"0|1"},
 	{"diskaccel",	"0|1"},
@@ -35,11 +35,13 @@ static const TOptionDef Options[] =
 	{"recreated",	"0|1|auto"},
 	{"multiface",	"0|1"},
 	{"gpiokbd",	"0|off|1|48|128|plus3|plus2a|+3|+2a"},
+	{"zx81kbd",	"zx81|128"},
 	{"gpioaudio",	"0|1"},
 	{"ulaplus",	"0|1"},
 	{"pureblack",	"0|1"},
 	{"aystereo",	"abc|acb|bac|mono"},
 	{"tapesound",	"0|1"},
+	{"volume",	"0|10|20|30|40|50|60|70|80|90|100"},
 	{"beeperfilter", "0|1"},
 	{"speaker",	"auto|beeper|tv|off"},
 	{"issue",	"2|3"},
@@ -55,7 +57,7 @@ static const TOptionDef Options[] =
 	{"snapformat",	"z80|sna|szx"},
 	{"net",		"auto|wifi|eth|0"},
 	{"tz",		0},
-	{"dst",		"0|1"},
+	{"dst",		"0|1|on|off|auto"},
 	{"ip",		0},
 	{"mask",	0},
 	{"gw",		0},

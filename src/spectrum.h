@@ -125,6 +125,7 @@ public:
 	void SetDivMMCROM (const u8 *pROM);		// 8 KB (0 = sin divMMC completa)
 	void SetDivMMCEnabled (boolean bOn);		// divmmc=esxdos
 	boolean IsDivMMCActive (void) const	{ return m_bDivMMC && m_bDivROM && m_Model != ModelPlus3E; }
+	boolean IsDivMMCEnabled (void) const	{ return m_bDivMMC; }	// (en el +3e no se usa)
 	boolean HasDivMMCPorts (void) const	{ return IsDivMMCActive () || m_Model == ModelPlus3E; }
 
 	// Reloj para esxDOS (RTC.SYS de ZXMetalCircle): fecha y hora en formato
@@ -159,6 +160,8 @@ public:
 	CInterface1 *GetInterface1 (void)	{ return &m_IF1; }
 	// Lectura de la memoria tal como la ve ahora la CPU (sin contención; pruebas)
 	u8 ReadMemory (u16 nAddress) const	{ return m_pReadPage[nAddress >> 14][nAddress & 0x3FFF]; }
+	// Escritura en la memoria tal como la ve ahora la CPU (la ROM no se escribe)
+	void WriteMemory (u16 nAddress, u8 nValue)	{ m_pWritePage[nAddress >> 14][nAddress & 0x3FFF] = nValue; }
 
 	// Ampliación de memoria LEC: 16 páginas de 32 KB que sustituyen a los 32 KB
 	// bajos (0x0000-0x7FFF). Necesaria para el CP/M de LEC. En los 128K (128,

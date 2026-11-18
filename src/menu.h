@@ -24,6 +24,7 @@
 #define MENU_OPTION_LINES	6
 #define MENU_CHOICE_ITEMS	512		// las de un ZIP grande
 #define MENU_CHOICE_ROWS	14		// las que caben en pantalla
+#define MENU_CHOICE_KEYS	36		// con tecla propia: 1-9, 0 y A-Z
 
 // Unidades de la pantalla de unidades
 #define UNIT_TAPE		0
@@ -64,7 +65,7 @@ public:
 
 	boolean OpenBrowser (void);
 	void OpenHelp (void);			// ayuda general (F1); ENTER abre el selector
-	void OpenKeyHelp (void);		// ayuda del teclado (Alt+K)
+	void OpenKeyHelp (boolean bZX81 = FALSE);	// ayuda del teclado (Alt+K); del ZX81 si está puesto
 	void SetSettings (CSettings *pSettings)	{ m_pSettings = pSettings; }
 	void OpenSettings (void);		// configuración (C desde la ayuda)
 	unsigned GetChangedSetting (void) const	{ return m_nChangedSetting; }
@@ -86,6 +87,7 @@ public:
 
 	// Lista para elegir una opción (por ejemplo, el bloque 0x28 de una cinta)
 	void OpenChoice (const char *pTitle);
+	char ChoiceKey (unsigned nItem) const;
 	void SetChoiceItem (unsigned nItem, const char *pText);
 	unsigned GetChoice (void) const		{ return m_nChoiceSelected; }
 	void SetChoiceSelected (unsigned nItem);
@@ -133,6 +135,13 @@ public:
 	// Líneas de la ayuda general (teclas de función), generadas por el kernel
 	void SetHelpLine (unsigned nLine, const char *pText);
 
+	// Lista de todas las teclas (T en la ayuda), por páginas, generada por el
+	// kernel: AddKeyListLine (0, título) es el título de un grupo y ("", "")
+	// una línea en blanco
+	void ClearKeyList (void);
+	void AddKeyListPage (const char *pTitle);
+	void AddKeyListLine (const char *pKey, const char *pText);
+
 private:
 	boolean ReadDirectory (void);
 	boolean ReadRemoteDirectory (void);
@@ -148,10 +157,11 @@ private:
 	CVideo *m_pVideo;
 
 	enum TMode { ModeClosed, ModeBrowser, ModeHelp, ModeKeyHelp, ModeSettings, ModeChoice, ModeUnits,
-		     ModeAbout, ModeTape, ModeInput, ModeList };
+		     ModeAbout, ModeTape, ModeInput, ModeList, ModeKeyList };
 	unsigned SettingsOnPage (unsigned *pIndex, unsigned nMax) const;
 	void FixSettingsRow (void);
 	TMode m_Mode;
+	boolean m_bKeyHelpZX81;		// Alt+K con el ZX81 puesto
 
 	struct TEntry
 	{
@@ -172,8 +182,10 @@ private:
 	unsigned m_nScrollChoice;	// opción elegida en la lista (para su desplazamiento)
 	unsigned m_nScrollSetting;	// fila elegida en la configuración (ídem)
 	// ENTER en una opción de muchos valores: su lista (ver HandleKey)
-	#define SETTING_LIST_MIN	4	// con más valores que estos
+	#define SETTING_LIST_MIN	2	// con más valores que estos (las de sí/no, ENTER las cambia)
 	boolean m_bSettingChoice;
+	boolean m_bSettingsTitle;	// la barra en el título: las flechas cambian de página
+	boolean m_bSettingsPageChoice;	// ENTER en el título: la lista de páginas
 	unsigned m_nSettingChoiceIndex;
 	unsigned m_nSettingChoiceItems;
 	u16 m_SettingChoiceItem[MENU_CHOICE_ITEMS];	// opción de la lista -> valor
@@ -184,6 +196,14 @@ private:
 
 	char m_Status[MENU_STATUS_LINES][64];		// con los valores entre |
 	char m_Help[MENU_HELP_LINES][48];
+	#define MENU_KEYLIST_PAGES	4
+	#define MENU_KEYLIST_LINES	28
+	char m_KeyListTitle[MENU_KEYLIST_PAGES][48];
+	char m_KeyListKey[MENU_KEYLIST_PAGES][MENU_KEYLIST_LINES][16];	// \x01: título de grupo
+	char m_KeyListText[MENU_KEYLIST_PAGES][MENU_KEYLIST_LINES][48];
+	unsigned m_nKeyListLines[MENU_KEYLIST_PAGES];
+	unsigned m_nKeyListPages;
+	unsigned m_nKeyListPage;
 	CSettings *m_pSettings;
 	unsigned m_nSettingsPage;
 	unsigned m_nSettingsRow;
