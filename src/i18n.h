@@ -77,6 +77,8 @@ private:
 
 	char m_Current[8];
 	unsigned m_nLanguages;
+	static int CompareNames (const char *pA, const char *pB);
+
 	char m_Code[I18N_MAX_LANGUAGES][8];
 	char m_Name[I18N_MAX_LANGUAGES][32];
 

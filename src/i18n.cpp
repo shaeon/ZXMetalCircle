@@ -147,6 +147,46 @@ void CI18n::ScanLanguages (void)
 		m_nLanguages++;
 	}
 	f_closedir (&Dir);
+
+	// por orden alfabético del nombre (el de la tarjeta sale en cualquier orden)
+	for (unsigned i = 1; i < m_nLanguages; i++)
+	{
+		for (unsigned j = i; j > 0 && CompareNames (m_Name[j - 1], m_Name[j]) > 0; j--)
+		{
+			char Code[8], Name[32];
+			strcpy (Code, m_Code[j]);		strcpy (Name, m_Name[j]);
+			strcpy (m_Code[j], m_Code[j - 1]);	strcpy (m_Name[j], m_Name[j - 1]);
+			strcpy (m_Code[j - 1], Code);		strcpy (m_Name[j - 1], Name);
+		}
+	}
+}
+
+// Letra sin acento y en minúscula, para ordenar: las latinas con tilde (UTF-8
+// C3 xx) cuentan como la letra sin ella ("Español" va tras "English"). Avanza
+// el puntero.
+static char BaseLetter (const char *&p)
+{
+	unsigned char c = *p++;
+	if (c == 0xC3 && *p != '\0')
+	{
+		unsigned char d = (unsigned char) *p++ | 0x20;	// À-Þ (80-9E) como à-þ (A0-BE)
+		static const char Base[] = "aaaaaaaceeeeiiiidnooooo/ouuuuyty";	// à-ÿ
+		return d >= 0xA0 && d <= 0xBF ? Base[d - 0xA0] : '?';
+	}
+	return (c >= 'A' && c <= 'Z') ? c - 'A' + 'a' : c;
+}
+
+int CI18n::CompareNames (const char *pA, const char *pB)
+{
+	while (*pA != '\0' && *pB != '\0')
+	{
+		char a = BaseLetter (pA), b = BaseLetter (pB);
+		if (a != b)
+		{
+			return (unsigned char) a - (unsigned char) b;
+		}
+	}
+	return (unsigned char) *pA - (unsigned char) *pB;
 }
 
 // Copia una cadena JSON (sin las comillas) quitando los escapes
