@@ -58,6 +58,9 @@ public:
 	unsigned GetTranslatedCount (void) const	{ return m_nEntries; }
 	unsigned GetEmptyCount (void) const		{ return m_nEmpty; }
 
+	// para ordenar nombres: sin tildes (latinas) ni mayúsculas
+	static int CompareNames (const char *pA, const char *pB);
+
 private:
 	void Clear (void);
 	boolean Load (const char *pPath);
@@ -77,8 +80,6 @@ private:
 
 	char m_Current[8];
 	unsigned m_nLanguages;
-	static int CompareNames (const char *pA, const char *pB);
-
 	char m_Code[I18N_MAX_LANGUAGES][8];
 	char m_Name[I18N_MAX_LANGUAGES][32];
 

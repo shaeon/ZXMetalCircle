@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Cambiado**: también salen por orden alfabético «Idioma ROM del TK» (con «automático» primero, y se vuelve a ordenar al cambiar el idioma del menú: en inglés, Basque, Catalan, Czech...), «Disco duro al inicio» («ninguno» primero) e «Importar a esxDOS desde» (`esxdos_i` primero y «no» al final). Probado en QEMU (Pi 3).
 - **Cambiado**: en la página 8 de la configuración (ROMs y carpetas), las listas de ROMs salen por orden alfabético, con «la incluida» (o la de por defecto) siempre la primera. Antes salían en el orden en que estaban en la carpeta `roms` de la SD. Probado en QEMU (Pi 3).
 - **Nuevo**: «Horario de verano» tiene tres valores: **automático** (el europeo, de finales de marzo a finales de octubre, como el antiguo «sí»), **sí** (siempre una hora más, para zonas con otro calendario) y **no**. En `cmdline.txt`: `dst=1` sigue siendo el automático, así que no cambia nada para quien ya lo tenía; `dst=on`, siempre; `dst=0`, nunca (también valen `auto` y `off`). Se aplica al momento. Guías 05 y 10 actualizadas.
 - **Cambiado**: la lista de idiomas (configuración, página 1) sale siempre por orden alfabético del nombre, sin tener en cuenta las tildes: English, Español, Português (BR), Português (PT). Antes salía el español primero y los demás en el orden en que estaban en la carpeta `locales` de la SD. Probado en QEMU (Pi 3).

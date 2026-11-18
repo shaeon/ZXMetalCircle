@@ -3212,6 +3212,63 @@ const char *CKernel::ROMOption (const char *pKey, const char *pDefault)
 
 // Página "ROMs y carpetas" de la configuración: para cada ROM, las de la
 // carpeta roms con su tamaño; para esxDOS, las carpetas de la raíz de la SD
+// Ordena una lista de valores de la configuración ("a|b|c" y sus nombres) por
+// el nombre, sin tildes ni mayúsculas. Las nFirst primeras y las nLast
+// últimas (como "ninguno" o "no") se quedan donde están.
+static void SortValueList (CString &rValues, CString &rNames, unsigned nFirst, unsigned nLast)
+{
+	static char Value[64][72], Name[64][128];
+	unsigned n = 0;
+	const char *pV = rValues, *pN = rNames;
+	while (n < 64 && *pV != '\0')
+	{
+		unsigned k = 0;
+		while (*pV != '\0' && *pV != '|')
+		{
+			if (k < sizeof Value[n] - 1) Value[n][k++] = *pV;
+			pV++;
+		}
+		Value[n][k] = '\0';
+		k = 0;
+		while (*pN != '\0' && *pN != '|')
+		{
+			if (k < sizeof Name[n] - 1) Name[n][k++] = *pN;
+			pN++;
+		}
+		Name[n][k] = '\0';
+		n++;
+		if (*pV == '|') pV++;
+		if (*pN == '|') pN++;
+	}
+	if (n <= nFirst + nLast)
+	{
+		return;
+	}
+
+	for (unsigned i = nFirst + 1; i < n - nLast; i++)
+	{
+		for (unsigned j = i; j > nFirst && CI18n::CompareNames (Name[j - 1], Name[j]) > 0; j--)
+		{
+			char T1[72], T2[128];
+			strcpy (T1, Value[j]);	strcpy (Value[j], Value[j - 1]);	strcpy (Value[j - 1], T1);
+			strcpy (T2, Name[j]);	strcpy (Name[j], Name[j - 1]);		strcpy (Name[j - 1], T2);
+		}
+	}
+
+	rValues = "";
+	rNames = "";
+	for (unsigned i = 0; i < n; i++)
+	{
+		if (i > 0)
+		{
+			rValues.Append ("|");
+			rNames.Append ("|");
+		}
+		rValues.Append (Value[i]);
+		rNames.Append (Name[i]);
+	}
+}
+
 void CKernel::SetupROMLists (void)
 {
 	static const struct { const char *pKey; unsigned nSize; const char *pDefaultName; } ROMs[] =
@@ -3307,7 +3364,25 @@ void CKernel::SetupROMLists (void)
 	m_EsxDirValues.Append ("|0");
 	m_EsxDirNames.Append ("|");
 	m_EsxDirNames.Append (T ("no"));
+	SortValueList (m_EsxDirValues, m_EsxDirNames, 1, 1);	// esxdos_i primero y "no" al final
 	CSettings::SetValueList ("esxdir", m_EsxDirValues, m_EsxDirNames);
+
+	// idioma de la ROM del TK: "automático" primero y los demás por el nombre
+	// en el idioma del menú (se vuelve a ordenar al cambiarlo)
+	static const char *pTKLangValues = 0, *pTKLangNames = 0;
+	int nTKLang = m_Settings.Find ("tklang");
+	if (nTKLang >= 0)
+	{
+		if (pTKLangValues == 0)
+		{
+			pTKLangValues = m_Settings.GetDef (nTKLang).pValues;	// los de settings.cpp
+			pTKLangNames = m_Settings.GetDef (nTKLang).pNames;
+		}
+		m_TKLangValues = pTKLangValues;
+		m_TKLangNames = T (pTKLangNames);
+		SortValueList (m_TKLangValues, m_TKLangNames, 1, 0);
+		CSettings::SetValueList ("tklang", m_TKLangValues, m_TKLangNames);
+	}
 }
 
 // "Disco duro al arrancar" (hdd=) en la configuración: las imágenes de la
@@ -3348,6 +3423,7 @@ void CKernel::SetupHardDiskList (void)
 		nCount++;
 	}
 	f_closedir (&Dir);
+	SortValueList (m_HDDValues, m_HDDNames, 1, 0);		// "ninguno" primero
 	CSettings::SetValueList ("hdd", m_HDDValues, m_HDDNames);
 }
 

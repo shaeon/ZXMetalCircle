@@ -158,6 +158,8 @@ private:
 	CString			m_ROMValues[ROM_LISTS];	// ROMs de SD:/roms para la configuración
 	CString			m_ROMNames[ROM_LISTS];
 	CString			m_EsxDirValues;		// carpetas para esxdir=
+	CString			m_TKLangValues;		// idiomas de la ROM del TK, por orden alfabético
+	CString			m_TKLangNames;
 	CString			m_EsxDirNames;
 	CString			m_HDDValues;		// imágenes de SD:/hdd para la configuración
 	CString			m_HDDNames;
