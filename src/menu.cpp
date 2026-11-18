@@ -1280,6 +1280,12 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 			m_Mode = ModeClosed;
 			Result = MenuResultChoice;
 		}
+		else if (nKey == 0x27 && m_nChoices >= 10 && m_nChoices <= MENU_CHOICE_ROWS)
+		{
+			m_nChoiceSelected = 9;				// 0: la décima
+			m_Mode = ModeClosed;
+			Result = MenuResultChoice;
+		}
 		else if (nKey == HID_KEY_ENTER || nKey == 0x58)
 		{
 			m_Mode = ModeClosed;
@@ -2043,10 +2049,10 @@ void CMenu::Draw (TPixel *pScreen)
 				m_pVideo->FillRect (pScreen, tx - 2, y - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
 			}
 
-			char Number[4] = {(char) ('1' + i), ' ', '\0', '\0'};
-			if (i >= 9 || bLong)
+			char Number[4] = {(char) (i == 9 ? '0' : '1' + i), ' ', '\0', '\0'};	// la décima, con el 0
+			if (i >= 10 || bLong)
 			{
-				Number[0] = ' ';			// del 10 en adelante y en las
+				Number[0] = ' ';			// de la 11 en adelante y en las
 			}					// listas largas: con los cursores
 			m_pVideo->DrawText (pScreen, tx, y, Number, nInk, nPaper, 2);
 
@@ -2079,7 +2085,9 @@ void CMenu::Draw (TPixel *pScreen)
 		}
 		if (!m_bChoiceInfo)
 		{
-			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), m_nChoices > MENU_CHOICE_ROWS ? T ("ENTER: elegir  RePág/AvPág  ESC: seguir") : T ("ENTER o 1-9: elegir   ESC: seguir"),
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), m_nChoices > MENU_CHOICE_ROWS ? T ("ENTER: elegir  RePág/AvPág  ESC: seguir")
+					    : m_nChoices >= 10 ? T ("ENTER o 0-9: elegir   ESC: seguir")
+							       : T ("ENTER o 1-9: elegir   ESC: seguir"),
 					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		}
 		return;

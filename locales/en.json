@@ -469,6 +469,7 @@
 	"Cursores y RePág/AvPág   ESC volver": "Cursors and PgUp/PgDn   ESC back",
 	"ENTER pulsar  BORRAR corregir  ESC salir": "ENTER press  BKSP correct  ESC exit",
 	"ENTER: elegir  RePág/AvPág  ESC: seguir": "ENTER: choose  PgUp/PgDn  ESC: continue",
+	"ENTER o 0-9: elegir   ESC: seguir": "ENTER or 0-9: choose   ESC: continue",
 	"ENTER o 1-9: elegir   ESC: seguir": "ENTER or 1-9: choose   ESC: continue",
 	"Configuración %u/%u: %s": "Settings %u/%u: %s",
 	"* se aplica al reiniciar la Pi": "* applied after restarting the Pi",
