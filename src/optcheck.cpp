@@ -57,7 +57,7 @@ static const TOptionDef Options[] =
 	{"snapformat",	"z80|sna|szx"},
 	{"net",		"auto|wifi|eth|0"},
 	{"tz",		0},
-	{"dst",		"0|1"},
+	{"dst",		"0|1|on|off|auto"},
 	{"ip",		0},
 	{"mask",	0},
 	{"gw",		0},

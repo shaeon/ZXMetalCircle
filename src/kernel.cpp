@@ -1949,7 +1949,7 @@ void CKernel::StartNetwork (void)
 	else if (strcasecmp (pMode, "eth") == 0)				Mode = NetModeEthernet;
 
 	int nTimeZone = ParseTimeZone (m_Options.GetAppOptionString ("tz", "60"));
-	boolean bDST = m_Options.GetAppOptionDecimal ("dst", 1) != 0;
+	CNetworkManager::TSummerTime DST = CNetworkManager::ParseSummerTime (m_Options.GetAppOptionString ("dst", "1"));
 
 	// IP fija opcional: ip=192.168.1.50 mask=255.255.255.0 gw=192.168.1.1 dns=192.168.1.1
 	u8 IP[4], Mask[4] = {255, 255, 255, 0}, Gateway[4], DNS[4];
@@ -1978,7 +1978,7 @@ void CKernel::StartNetwork (void)
 	m_Network.SetWebOptions (strcmp (pWeb, "0") == 0 ? 0 : (strcasecmp (pWeb, "ro") == 0 ? 2 : 1),
 				 m_Options.GetAppOptionString ("webpass", ""));
 	m_Network.SetWebProtect (strcmp (m_Options.GetAppOptionString ("webprotect", "1"), "0") != 0);
-	m_Network.Start (Mode, "zxmetalcircle", nTimeZone, bDST,
+	m_Network.Start (Mode, "zxmetalcircle", nTimeZone, DST,
 			 bStatic ? IP : 0, Mask, Gateway, DNS);
 
 	if (   m_Network.IsWiFi ()
@@ -2932,7 +2932,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "tz") == 0 || strcmp (pKey, "dst") == 0)
 	{
 		m_Network.SetTimeZone (ParseTimeZone (m_Settings.GetValue (m_Settings.Find ("tz"))),
-				       strcmp (m_Settings.GetValue (m_Settings.Find ("dst")), "0") != 0);
+				       CNetworkManager::ParseSummerTime (m_Settings.GetValue (m_Settings.Find ("dst"))));
 	}
 	else if (strcmp (pKey, "tlsverify") == 0)	m_Network.SetTLSVerify (strcmp (pValue, "0") != 0);
 	else if (strcmp (pKey, "earinvert") == 0)

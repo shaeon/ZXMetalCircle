@@ -94,7 +94,7 @@ static TSettingDef Settings[] =
 	{"net",		N_("Red"),		6, "auto|wifi|eth|0", N_("automática|WiFi|cable|no"),	"auto",	FALSE},
 	{"tz",		N_("Zona horaria"),	6, "-480|-300|-240|-180|0|60|120|180|240|330|480|540|600",
 				   "UTC-8|UTC-5|UTC-4|UTC-3|UTC|UTC+1|UTC+2|UTC+3|UTC+4|UTC+5:30|UTC+8|UTC+9|UTC+10", "60", TRUE},
-	{"dst",		N_("Horario de verano"), 6, "1|0", N_("sí|no"),				"1",	TRUE},
+	{"dst",		N_("Horario de verano"), 6, "1|on|0", N_("automático|sí|no"),		"1",	TRUE},
 	{"ip",		N_("IP fija"),		6, "*ip", N_("no (DHCP)"),				"",	FALSE},
 	{"mask",	N_("Máscara de red"),	6, "*ip", "255.255.255.0",				"",	FALSE},
 	{"gw",		N_("Puerta de enlace"),	6, "*ip", N_("automática"),			"",	FALSE},
@@ -346,6 +346,12 @@ void CSettings::SetValue (unsigned nIndex, const char *pValue)
 		else if (strcmp (Settings[nIndex].pKey, "net") == 0 && strcasecmp (pValue, "off") == 0)
 		{
 			pValue = "0";
+		}
+		else if (strcmp (Settings[nIndex].pKey, "dst") == 0)
+		{
+			if (strcasecmp (pValue, "auto") == 0)		pValue = "1";	// (1 = automático)
+			else if (strcasecmp (pValue, "off") == 0)	pValue = "0";
+			else if (strcasecmp (pValue, "on") == 0)	pValue = "on";	// (ON, On...)
 		}
 		else if (strcmp (Settings[nIndex].pKey, "hdd") == 0 && (*pValue == '\0' || strcmp (pValue, "0") == 0))
 		{

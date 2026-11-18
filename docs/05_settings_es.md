@@ -46,7 +46,7 @@ Todas las opciones van en una sola línea:
 | `lang=` | `es` (español), `en` (inglés), `pt` (portugués de Portugal), `pt-br` (portugués de Brasil) o cualquier otro idioma de `locales/` | `es` |
 | `net=` | `auto` (WiFi si hay `wpa_supplicant.conf`, si no cable), `wifi`, `eth`, `0` | `auto` |
 | `tz=` | diferencia horaria en minutos (60 = España peninsular, 0 = Canarias) | `60` |
-| `dst=` | `1` (horario de verano europeo automático), `0` | `1` |
+| `dst=` | `1` (automático: el horario de verano europeo, de finales de marzo a finales de octubre), `on` (siempre, una hora más) o `0` (nunca) | `1` |
 | `ip=`, `mask=`, `gw=`, `dns=` | IP fija (si no se pone `ip=`, se usa DHCP) | — |
 | `lec=` | `1` (memoria LEC conectada; en los 128K se usa desde 48 BASIC), `0` | `0` |
 | `if1=` | `auto` (se conecta al insertar un microdrive), `1` (siempre), `0` (nunca) | `auto` |

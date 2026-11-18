@@ -41,7 +41,7 @@ Además, se anuncia en la red local (mDNS) como servicio web "ZXMetalCircle".
 - `web=ro` la deja en **solo lectura**: se puede ver la SD, bajar ficheros, buscar en ZXDB y mandar cargar un juego, pero no subir, borrar, renombrar, mover, sustituir, crear carpetas ni descargar de ZXDB a la SD (esas opciones ni aparecen).
 - `webpass=` pone una **contraseña** (en la configuración se escribe con letras minúsculas y números, y se ve como `********`). La página la pide una vez y entonces crea una clave de sesión al azar que va en los enlaces y formularios (el servidor web de Circle no da acceso a cookies ni a la contraseña del navegador). Las claves se pierden al apagar la Pi; tras 5 intentos fallidos hay que esperar 30 s. Va sin cifrar (HTTP): protege de curiosos de tu red, no de alguien que la espíe.
 
-**Hora**: se toma de `pool.ntp.org`. Los ficheros que grabes (SAVE, snapshots, microdrives) llevan fecha y hora reales. La zona se ajusta con `tz=` y el horario de verano europeo se aplica solo (`dst=1`).
+**Hora**: se toma de `pool.ntp.org`. Los ficheros que grabes (SAVE, snapshots, microdrives) llevan fecha y hora reales. La zona se ajusta con `tz=` y el horario de verano europeo se aplica solo (`dst=1`, «automático»); con `dst=on` («sí») siempre se suma una hora y con `dst=0` («no»), nunca.
 
 **Zero W**: tiene un solo núcleo, así que la WiFi le quita tiempo a la emulación. Al conectar (el cifrado WPA es costoso) y mientras subes o bajas ficheros puede haber cortes breves de imagen o sonido; el Spectrum no se retrasa, porque el emulador salta cuadros si hace falta. En reposo no se nota. Al arrancar con WiFi en una Zero W aparece un aviso.
 

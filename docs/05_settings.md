@@ -46,7 +46,7 @@ All the options go on a single line:
 | `lang=` | `es` (Spanish), `en` (English), `pt` (European Portuguese), `pt-br` (Brazilian Portuguese) or any other language in `locales/` | `es` |
 | `net=` | `auto` (WiFi if there is a `wpa_supplicant.conf`, otherwise cable), `wifi`, `eth`, `0` | `auto` |
 | `tz=` | time offset in minutes (60 = mainland Spain, 0 = UK and Canary Islands) | `60` |
-| `dst=` | `1` (automatic European summer time), `0` | `1` |
+| `dst=` | `1` (automatic: European summer time, from late March to late October), `on` (always, one hour ahead) or `0` (never) | `1` |
 | `ip=`, `mask=`, `gw=`, `dns=` | fixed IP (without `ip=`, DHCP is used) | — |
 | `lec=` | `1` (LEC memory connected; on the 128K models it is used from 48 BASIC), `0` | `0` |
 | `if1=` | `auto` (connects when a microdrive is inserted), `1` (always), `0` (never) | `auto` |

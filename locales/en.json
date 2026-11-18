@@ -624,6 +624,7 @@
 	"automática|WiFi|cable|no": "automatic|WiFi|cable|no",
 	"Zona horaria": "Time zone",
 	"Horario de verano": "Daylight saving",
+	"automático|sí|no": "automatic|yes|no",
 	"IP fija": "Fixed IP",
 	"no (DHCP)": "no (DHCP)",
 	"Máscara de red": "Network mask",
