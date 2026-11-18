@@ -90,6 +90,8 @@ CZXKeyboard::CZXKeyboard (void)
 {
 	ReleaseAll ();
 	memset (m_PrevKeys, 0, sizeof m_PrevKeys);
+	memset (m_KbdModifiers, 0, sizeof m_KbdModifiers);
+	memset (m_KbdKeys, 0, sizeof m_KbdKeys);
 	m_nHeldFrames = 0;
 	for (unsigned i = 0; i < 8; i++)
 	{
@@ -266,6 +268,72 @@ boolean CZXKeyboard::GetKeyEvent (TKeyEvent *pEvent)
 	m_nEventOut = (m_nEventOut + 1) % (sizeof m_Events / sizeof m_Events[0]);
 
 	return TRUE;
+}
+
+void CZXKeyboard::UpdateFromKeyboard (unsigned nKeyboard, u8 nModifiers, const u8 RawKeys[6])
+{
+	if (nKeyboard >= ZXKBD_KEYBOARDS)
+	{
+		UpdateFromReport (nModifiers, RawKeys);
+		return;
+	}
+
+	// informe de error (demasiadas teclas): se mantiene lo que tenía ese teclado
+	for (unsigned i = 0; i < 6; i++)
+	{
+		if (RawKeys[i] >= 0x01 && RawKeys[i] <= 0x03)
+		{
+			return;
+		}
+	}
+
+	m_KbdModifiers[nKeyboard] = nModifiers;
+	memcpy (m_KbdKeys[nKeyboard], RawKeys, 6);
+	UpdateMerged ();
+}
+
+void CZXKeyboard::ForgetKeyboard (unsigned nKeyboard)
+{
+	if (nKeyboard < ZXKBD_KEYBOARDS)
+	{
+		m_KbdModifiers[nKeyboard] = 0;
+		memset (m_KbdKeys[nKeyboard], 0, 6);
+	}
+	UpdateMerged ();
+}
+
+// Las teclas de todos los teclados juntas: los modificadores de cualquiera y
+// hasta 6 teclas (las primeras que haya, sin repetir)
+void CZXKeyboard::UpdateMerged (void)
+{
+	u8 nModifiers = 0;
+	u8 Keys[6] = {0, 0, 0, 0, 0, 0};
+	unsigned nKeys = 0;
+	for (unsigned k = 0; k < ZXKBD_KEYBOARDS; k++)
+	{
+		nModifiers |= m_KbdModifiers[k];
+		for (unsigned i = 0; i < 6 && nKeys < 6; i++)
+		{
+			u8 nKey = m_KbdKeys[k][i];
+			if (nKey < 4)
+			{
+				continue;
+			}
+			boolean bDup = FALSE;
+			for (unsigned j = 0; j < nKeys; j++)
+			{
+				if (Keys[j] == nKey)
+				{
+					bDup = TRUE;
+				}
+			}
+			if (!bDup)
+			{
+				Keys[nKeys++] = nKey;
+			}
+		}
+	}
+	UpdateFromReport (nModifiers, Keys);
 }
 
 void CZXKeyboard::UpdateFromReport (u8 nModifiers, const u8 RawKeys[6])

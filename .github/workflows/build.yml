@@ -66,6 +66,8 @@ jobs:
           ./mdr_format_test
           g++ -O2 -std=c++17 -I. -I$S -o joystick_test joystick_test.cpp $S/zxkeyboard.cpp
           ./joystick_test
+          g++ -O2 -std=c++17 -I. -I$S -o multikbd_test multikbd_test.cpp $S/zxkeyboard.cpp
+          ./multikbd_test
           g++ -O2 -std=c++17 -I. -I$S -o players_test players_test.cpp $S/zxkeyboard.cpp
           ./players_test
           g++ -O2 -std=c++17 -I. -I$S -o padassign_test padassign_test.cpp $S/padassign.cpp

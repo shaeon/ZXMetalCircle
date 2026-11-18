@@ -921,12 +921,13 @@ void CKernel::KeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned cha
 		return;
 	}
 
-	// El detector del Recreated ZX decide qué informes llegan como teclado normal
+	// El detector del Recreated ZX decide qué informes llegan como teclado
+	// normal; con varios teclados, las teclas de cada uno se juntan
 	CRecreatedKeyboard::TOutput Out;
 	s_pThis->m_Recreated[nIndex].ProcessReport (ucModifiers, RawKeys, CTimer::GetClockTicks (), &Out);
 	for (unsigned i = 0; i < Out.nCount; i++)
 	{
-		s_pThis->m_Keyboard.UpdateFromReport (Out.Modifiers[i], Out.Keys[i]);
+		s_pThis->m_Keyboard.UpdateFromKeyboard (nIndex, Out.Modifiers[i], Out.Keys[i]);
 	}
 }
 
@@ -944,7 +945,7 @@ void CKernel::KeyboardRemovedHandler (CDevice *pDevice, void *pContext)
 		s_pThis->m_Recreated[nIndex].Reset (s_pThis->m_RecreatedMode);
 	}
 
-	s_pThis->m_Keyboard.ReleaseAll ();
+	s_pThis->m_Keyboard.ForgetKeyboard (nIndex);	// sus teclas se sueltan; las de los demás, no
 }
 
 void CKernel::UpdateUSB (void)
@@ -5846,7 +5847,7 @@ void CKernel::HandleGPIOKeyboard (void)
 		m_Recreated[k].CheckTimeout (CTimer::GetClockTicks (), &Out);
 		for (unsigned i = 0; i < Out.nCount; i++)
 		{
-			m_Keyboard.UpdateFromReport (Out.Modifiers[i], Out.Keys[i]);
+			m_Keyboard.UpdateFromKeyboard (k, Out.Modifiers[i], Out.Keys[i]);
 		}
 		LeaveCritical ();
 
