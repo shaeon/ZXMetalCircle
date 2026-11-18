@@ -3234,8 +3234,11 @@ void CKernel::SetupROMLists (void)
 		FILINFO Info;
 		if (m_bSDMounted && f_opendir (&Dir, "SD:/roms") == FR_OK)
 		{
-			unsigned nCount = 0;
-			while (nCount < 24 && f_readdir (&Dir, &Info) == FR_OK && Info.fname[0] != '\0')
+			// las de ese tamaño, por orden alfabético (en la tarjeta están en
+			// cualquier orden); en la lista caben 24
+			static char Names[64][61];
+			unsigned nFound = 0;
+			while (nFound < 64 && f_readdir (&Dir, &Info) == FR_OK && Info.fname[0] != '\0')
 			{
 				if (   (Info.fattrib & AM_DIR) || Info.fsize != ROMs[i].nSize
 				    || strchr (Info.fname, ' ') != 0 || strlen (Info.fname) > 60
@@ -3244,15 +3247,24 @@ void CKernel::SetupROMLists (void)
 				{
 					continue;
 				}
-				char UTF8[128];
-				CP850ToUTF8 (Info.fname, UTF8, sizeof UTF8);
-				m_ROMValues[i].Append ("|");
-				m_ROMValues[i].Append (Info.fname);
-				m_ROMNames[i].Append ("|");
-				m_ROMNames[i].Append (UTF8);
-				nCount++;
+				unsigned j = nFound++;
+				for (; j > 0 && strcasecmp (Names[j - 1], Info.fname) > 0; j--)
+				{
+					strcpy (Names[j], Names[j - 1]);
+				}
+				strcpy (Names[j], Info.fname);
 			}
 			f_closedir (&Dir);
+
+			for (unsigned j = 0; j < nFound && j < 24; j++)
+			{
+				char UTF8[128];
+				CP850ToUTF8 (Names[j], UTF8, sizeof UTF8);
+				m_ROMValues[i].Append ("|");
+				m_ROMValues[i].Append (Names[j]);
+				m_ROMNames[i].Append ("|");
+				m_ROMNames[i].Append (UTF8);
+			}
 		}
 		CSettings::SetValueList (ROMs[i].pKey, m_ROMValues[i], m_ROMNames[i]);
 	}
