@@ -147,6 +147,13 @@ private:
 	void SetupHardDiskList (void);
 	void SetupROMLists (void);
 	const char *ROMOption (const char *pKey, const char *pDefault);
+	const char *CurrentOption (const char *pKey, const char *pDefault);
+	static int ParseTimeZone (const char *pTZ);
+	// ROMs que se cambian en marcha desde la configuración (sin reiniciar la Pi)
+	const u8 *LoadModelROM (unsigned nROM);		// devuelve la anterior
+	void ReloadModelROM (unsigned nROM);
+	void ReloadPeripheralROM (const char *pKey);
+	void ShowROMChanged (const char *pKey, boolean bReset);
 #define ROM_LISTS 9
 	CString			m_ROMValues[ROM_LISTS];	// ROMs de SD:/roms para la configuración
 	CString			m_ROMNames[ROM_LISTS];
@@ -398,6 +405,8 @@ private:
 	unsigned		m_nZipChoices;
 	const u8		*m_pTKROM;		// ROMs del TK cargadas (LoadTKROMs)
 	const u8		*m_pTK95ROM;
+	const u8		*m_pModelROMFile[6];	// ROMs de modelo cargadas de roms/ (LoadModelROM)
+	boolean			m_bSettingsLoaded;	// desde entonces, las ROMs según la configuración
 	boolean			m_bModelList;		// pregunta: F7, lista de modelos
 	// ZX81 (kernelzx81.cpp)
 	const u8		*m_pZX81ROM;		// roms/zx81.rom, al usarlo la primera vez

@@ -191,6 +191,8 @@
 	"esxDOS: preparando una tarjeta mayor...": "esxDOS: preparando um cartão maior...",
 	"esxDOS: importando %u de %u (%u de %u MB)...": "esxDOS: importando %u de %u (%u de %u MB)...",
 	"Falta la ROM de ese modelo (mira el README)": "Falta a ROM desse modelo (veja o README)",
+	"Falta esa ROM en roms/ (o no tiene 8 KB)": "Falta essa ROM em roms/ (ou não tem 8 KB)",
+	"%s: %s (Spectrum reiniciado)": "%s: %s (Spectrum reiniciado)",
 	"Falta roms/plus3e-es.rom (ver LEEME)": "Falta roms/plus3e-es.rom (ver LEEME)",
 	"Error: %s": "Erro: %s",
 	"No se pudo guardar la descarga en la SD": "Não se guardou a transferência no SD",

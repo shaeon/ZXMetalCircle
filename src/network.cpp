@@ -224,6 +224,20 @@ boolean CNetworkManager::Process (void)
 	return TRUE;
 }
 
+// Zona horaria y horario de verano cambiados en la configuración: se aplican
+// ya (el horario de verano, en la próxima comprobación, si ya hay hora)
+void CNetworkManager::SetTimeZone (int nMinutes, boolean bEUSummerTime)
+{
+	m_nTimeZone = nMinutes;
+	m_bEUSummerTime = bEUSummerTime;
+	m_nLastDSTCheck = 0;
+	CTimer::Get ()->SetTimeZone (m_nTimeZone);
+	if (m_State == NetStateRunning)
+	{
+		UpdateSummerTime ();
+	}
+}
+
 boolean CNetworkManager::HasTime (void) const
 {
 	return CTimer::Get ()->GetUniversalTime () > 1600000000;	// después de 2020

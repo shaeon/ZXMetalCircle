@@ -125,6 +125,7 @@ public:
 	void SetDivMMCROM (const u8 *pROM);		// 8 KB (0 = sin divMMC completa)
 	void SetDivMMCEnabled (boolean bOn);		// divmmc=esxdos
 	boolean IsDivMMCActive (void) const	{ return m_bDivMMC && m_bDivROM && m_Model != ModelPlus3E; }
+	boolean IsDivMMCEnabled (void) const	{ return m_bDivMMC; }	// (en el +3e no se usa)
 	boolean HasDivMMCPorts (void) const	{ return IsDivMMCActive () || m_Model == ModelPlus3E; }
 
 	// Reloj para esxDOS (RTC.SYS de ZXMetalCircle): fecha y hora en formato

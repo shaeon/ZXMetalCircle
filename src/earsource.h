@@ -41,6 +41,9 @@ public:
 	// La emulación se ha parado (menú, pausa, velocidad xN): al volver se
 	// resincroniza con el tiempo real
 	virtual void Resync (void) = 0;
+
+	// earinvert=, cambiado en la configuración (solo la entrada por GPIO)
+	virtual void SetInvert (boolean bInvert) {}
 };
 
 class CGPIOEarSource : public CEarSource
@@ -49,6 +52,7 @@ public:
 	CGPIOEarSource (unsigned nPin, boolean bInvert, CGPIOManager *pManager);
 	~CGPIOEarSource (void);
 
+	void SetInvert (boolean bInvert)	{ m_bInvert = bInvert; }
 	boolean Initialize (void);
 	void FillFrame (CEarInput *pInput, u64 nFrameNs, unsigned nTstatesFrame, unsigned nClock);
 	void Resync (void)		{ m_bSynced = FALSE; }

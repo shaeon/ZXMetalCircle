@@ -91,6 +91,7 @@ public:
 		{ if (m_pBusyHandler != 0) m_pBusyHandler (pText, m_pBusyParam); }
 
 	void SetTLSVerify (boolean bVerify)	{ m_bTLSVerify = bVerify; }
+	void SetTimeZone (int nMinutes, boolean bEUSummerTime);	// tz= y dst=, en marcha
 	// Servidor web: 0 = apagado, 1 = completo, 2 = solo lectura; contraseña ("" = sin)
 	void SetWebOptions (unsigned nMode, const char *pPassword);
 	void SetWebProtect (bool bProtect)	{ m_bWebProtect = bProtect; }

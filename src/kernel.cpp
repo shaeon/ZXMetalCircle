@@ -236,6 +236,27 @@ static const struct { const char *pKey; const char *pDescription; } ShortHelp[] 
 	{N_("Pausa"), N_("Pausa")},
 };
 
+// ROMs de los modelos: opción de la configuración, fichero por defecto, tamaño
+// y modelo. Las del 48K y el 128K, si no están en roms/, van en el kernel.
+static const struct
+{
+	const char *pOption;
+	const char *pDefault;
+	unsigned nSize;
+	TModel Model;
+	const char *pShort;	// nombre para el aviso (0 = ROM opcional)
+}
+s_ModelROMs[] =
+{
+	{"rom48",     "48.rom",     0x4000,  Model48K,    0},
+	{"rom128",    "128.rom",    0x8000,  Model128K,   0},
+	{"romplus2",  "plus2.rom",  0x8000,  ModelPlus2,  "+2"},
+	{"romplus2a", "plus2a.rom", 0x10000, ModelPlus2A, "+2A"},
+	{"romplus3",  "plus3.rom",  0x10000, ModelPlus3,  "+3"},
+	{"romplus3e", 0,            0x10000, ModelPlus3E, "+3e"},
+};
+#define MODEL_ROMS	(sizeof s_ModelROMs / sizeof s_ModelROMs[0])
+
 CKernel *CKernel::s_pThis = 0;
 
 CKernel::CKernel (void)
@@ -288,6 +309,11 @@ CKernel::CKernel (void)
 	m_bUpdateBootChecked = FALSE;
 	m_bUpdateBootRunning = FALSE;
 	m_pTKROM = 0;
+	for (unsigned i = 0; i < sizeof m_pModelROMFile / sizeof m_pModelROMFile[0]; i++)
+	{
+		m_pModelROMFile[i] = 0;
+	}
+	m_bSettingsLoaded = FALSE;
 	m_pTK95ROM = 0;
 	m_pZX81ROM = 0;
 	m_bZX81 = FALSE;
@@ -1891,6 +1917,23 @@ void CKernel::StartEarInput (void)
 }
 
 // Red: net=auto (WiFi si hay wpa_supplicant.conf, si no cable), wifi, eth o 0;
+// tz= en minutos, con signo (por ejemplo tz=-300 para Nueva York)
+int CKernel::ParseTimeZone (const char *pTZ)
+{
+	int nSign = 1;
+	if (*pTZ == '-' || *pTZ == '+')
+	{
+		nSign = *pTZ == '-' ? -1 : 1;
+		pTZ++;
+	}
+	int nTimeZone = 0;
+	while (*pTZ >= '0' && *pTZ <= '9')
+	{
+		nTimeZone = nTimeZone * 10 + (*pTZ++ - '0');
+	}
+	return nTimeZone * nSign;
+}
+
 // tz= diferencia horaria en minutos (60 = España peninsular); dst=1 horario de verano europeo
 void CKernel::StartNetwork (void)
 {
@@ -1905,20 +1948,7 @@ void CKernel::StartNetwork (void)
 	else if (strcasecmp (pMode, "wifi") == 0)				Mode = NetModeWiFi;
 	else if (strcasecmp (pMode, "eth") == 0)				Mode = NetModeEthernet;
 
-	// tz admite signo (por ejemplo tz=-300 para Nueva York)
-	const char *pTZ = m_Options.GetAppOptionString ("tz", "60");
-	int nSign = 1;
-	if (*pTZ == '-' || *pTZ == '+')
-	{
-		nSign = *pTZ == '-' ? -1 : 1;
-		pTZ++;
-	}
-	int nTimeZone = 0;
-	while (*pTZ >= '0' && *pTZ <= '9')
-	{
-		nTimeZone = nTimeZone * 10 + (*pTZ++ - '0');
-	}
-	nTimeZone *= nSign;
+	int nTimeZone = ParseTimeZone (m_Options.GetAppOptionString ("tz", "60"));
 	boolean bDST = m_Options.GetAppOptionDecimal ("dst", 1) != 0;
 
 	// IP fija opcional: ip=192.168.1.50 mask=255.255.255.0 gw=192.168.1.1 dns=192.168.1.1
@@ -2644,6 +2674,7 @@ void CKernel::LoadSettings (void)
 		}
 	}
 	m_Settings.ClearDirty ();
+	m_bSettingsLoaded = TRUE;
 	m_Menu.SetSettings (&m_Settings);
 	UpdateRows ();				// lo que dicen las filas de la página 10
 }
@@ -2864,6 +2895,53 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "tapesound") == 0)	m_pSpectrum->GetAudio ()->SetTapeSound (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "tapeaccel") == 0)	m_pSpectrum->SetLoaderAcceleration (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "diskaccel") == 0)	m_pSpectrum->SetDiskAcceleration (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "p3elang") == 0 || strncmp (pKey, "rom", 3) == 0)
+	{
+		// ROMs: se cargan ya; la del modelo en uso reinicia el Spectrum
+		if (strcmp (pKey, "romif1") == 0 || strcmp (pKey, "romesx") == 0)
+		{
+			ReloadPeripheralROM (pKey);
+		}
+		for (unsigned i = 0; i < MODEL_ROMS; i++)
+		{
+			if (   strcmp (pKey, s_ModelROMs[i].pOption) == 0
+			    || (strcmp (pKey, "p3elang") == 0 && s_ModelROMs[i].Model == ModelPlus3E))
+			{
+				ReloadModelROM (i);
+			}
+		}
+	}
+	else if (strcmp (pKey, "hdd") == 0)
+	{
+		// disco duro: se monta ya (como al arrancar); "ninguno" no desmonta el
+		// que haya (eso, con Alt+U)
+		if (m_bSDMounted && *pValue != '\0' && strcmp (pValue, "none") != 0 && strcmp (pValue, "0") != 0)
+		{
+			if (m_HDDPath[0] != '\0')
+			{
+				m_pSpectrum->GetSDCard ()->Insert (0);
+				m_HardDisk.Flush ();
+				m_HardDisk.Close ();
+				m_HDDPath[0] = '\0';
+			}
+			CString Path;
+			Path.Format (strncmp (pValue, "SD:", 3) == 0 ? "%s" : "SD:/%s", pValue);
+			MountHardDisk (Path);
+		}
+	}
+	else if (strcmp (pKey, "tz") == 0 || strcmp (pKey, "dst") == 0)
+	{
+		m_Network.SetTimeZone (ParseTimeZone (m_Settings.GetValue (m_Settings.Find ("tz"))),
+				       strcmp (m_Settings.GetValue (m_Settings.Find ("dst")), "0") != 0);
+	}
+	else if (strcmp (pKey, "tlsverify") == 0)	m_Network.SetTLSVerify (strcmp (pValue, "0") != 0);
+	else if (strcmp (pKey, "earinvert") == 0)
+	{
+		if (m_pEarSource != 0)
+		{
+			m_pEarSource->SetInvert (strcmp (pValue, "1") == 0);	// (solo la del GPIO)
+		}
+	}
 	else if (strcmp (pKey, "tkrom") == 0 || strcmp (pKey, "tklang") == 0)
 	{
 		// la ROM o su idioma: se cargan ya y, con un TK, se reinicia con ella
@@ -3118,9 +3196,17 @@ void CKernel::OpenTapeSelect (void)
 }
 
 // Nombre de la ROM de una opción (rom...=): "default" (o nada) es la de siempre
+// Una opción: la de cmdline.txt hasta leer la configuración y, desde entonces,
+// la de la configuración (que se puede cambiar en marcha)
+const char *CKernel::CurrentOption (const char *pKey, const char *pDefault)
+{
+	int nIndex = m_bSettingsLoaded ? m_Settings.Find (pKey) : -1;
+	return nIndex >= 0 ? m_Settings.GetValue (nIndex) : m_Options.GetAppOptionString (pKey, pDefault);
+}
+
 const char *CKernel::ROMOption (const char *pKey, const char *pDefault)
 {
-	const char *pName = m_Options.GetAppOptionString (pKey, pDefault);
+	const char *pName = CurrentOption (pKey, pDefault);
 	return (pName == 0 || *pName == '\0' || strcasecmp (pName, "default") == 0) ? pDefault : pName;
 }
 
@@ -3725,6 +3811,41 @@ const u8 *CKernel::LoadROMFile (const char *pName, unsigned nSize)
 	return pROM;
 }
 
+// Carga la ROM de un modelo según la configuración y se la da al Spectrum (0 si
+// no está: el 48K y el 128K usan entonces la incluida). Devuelve la anterior,
+// para liberarla cuando el Spectrum ya no la use.
+const u8 *CKernel::LoadModelROM (unsigned nROM)
+{
+	const char *pName = CurrentOption (s_ModelROMs[nROM].pOption, s_ModelROMs[nROM].pDefault);
+	if (   pName != 0
+	    && (   strcasecmp (pName, "default") == 0
+		|| strcasecmp (pName, ZX81_ROM_NAME) == 0))	// (el ZX81 no es una ROM de Spectrum)
+	{
+		pName = s_ModelROMs[nROM].pDefault;	// "la incluida" en la configuración
+	}
+	const u8 *pROM = 0;
+
+	if (pName != 0)
+	{
+		pROM = LoadROMFile (pName, s_ModelROMs[nROM].nSize);
+	}
+	else
+	{
+		// +3e: plus3e.rom si existe; si no, la del idioma elegido
+		pROM = LoadROMFile ("plus3e.rom", s_ModelROMs[nROM].nSize);
+		if (pROM == 0)
+		{
+			boolean bEnglish = strcasecmp (CurrentOption ("p3elang", "es"), "en") == 0;
+			pROM = LoadROMFile (bEnglish ? "plus3e-en.rom" : "plus3e-es.rom", s_ModelROMs[nROM].nSize);
+		}
+	}
+
+	const u8 *pOld = m_pModelROMFile[nROM];
+	m_pModelROMFile[nROM] = pROM;
+	m_pSpectrum->SetModelROM (s_ModelROMs[nROM].Model, pROM);
+	return pOld;
+}
+
 void CKernel::LoadROMs (void)
 {
 	m_MissingROMs = "";
@@ -3734,58 +3855,13 @@ void CKernel::LoadROMs (void)
 		return;
 	}
 
-	static const struct
+	for (unsigned i = 0; i < MODEL_ROMS; i++)
 	{
-		const char *pOption;
-		const char *pDefault;
-		unsigned nSize;
-		TModel Model;
-		const char *pShort;	// nombre para el aviso (0 = ROM opcional)
-	}
-	ROMs[] =
-	{
-		{"rom48",     "48.rom",     0x4000,  Model48K,    0},
-		{"rom128",    "128.rom",    0x8000,  Model128K,   0},
-		{"romplus2",  "plus2.rom",  0x8000,  ModelPlus2,  "+2"},
-		{"romplus2a", "plus2a.rom", 0x10000, ModelPlus2A, "+2A"},
-		{"romplus3",  "plus3.rom",  0x10000, ModelPlus3,  "+3"},
-		{"romplus3e", 0,            0x10000, ModelPlus3E, "+3e"},
-	};
-
-	for (unsigned i = 0; i < sizeof ROMs / sizeof ROMs[0]; i++)
-	{
-		const char *pName = m_Options.GetAppOptionString (ROMs[i].pOption, ROMs[i].pDefault);
-		if (   pName != 0
-		    && (   strcasecmp (pName, "default") == 0
-			|| strcasecmp (pName, ZX81_ROM_NAME) == 0))	// (el ZX81 no es una ROM de Spectrum)
-		{
-			pName = ROMs[i].pDefault;	// "la incluida" en la configuración
-		}
-		const u8 *pROM = 0;
-
-		if (pName != 0)
-		{
-			pROM = LoadROMFile (pName, ROMs[i].nSize);
-		}
-		else
-		{
-			// +3e: plus3e.rom si existe; si no, la del idioma elegido
-			pROM = LoadROMFile ("plus3e.rom", ROMs[i].nSize);
-			if (pROM == 0)
-			{
-				boolean bEnglish = strcasecmp (m_Options.GetAppOptionString ("p3elang", "es"), "en") == 0;
-				pROM = LoadROMFile (bEnglish ? "plus3e-en.rom" : "plus3e-es.rom", ROMs[i].nSize);
-			}
-		}
-
-		if (pROM != 0)
-		{
-			m_pSpectrum->SetModelROM (ROMs[i].Model, pROM);
-		}
-		else if (ROMs[i].pShort != 0)
+		LoadModelROM (i);
+		if (m_pModelROMFile[i] == 0 && s_ModelROMs[i].pShort != 0)
 		{
 			m_MissingROMs.Append (m_MissingROMs.GetLength () > 0 ? " " : "");
-			m_MissingROMs.Append (ROMs[i].pShort);
+			m_MissingROMs.Append (s_ModelROMs[i].pShort);
 		}
 	}
 
@@ -3808,6 +3884,94 @@ void CKernel::LoadROMs (void)
 		m_Logger.Write (FromKernel, LogWarning, "Faltan ROMs en SD:/roms: %s",
 				(const char *) m_MissingROMs);
 	}
+}
+
+// Cambio de una ROM de modelo en la configuración: se carga ya y, si el
+// Spectrum está en ese modelo, se reinicia con ella (como las del TK)
+void CKernel::ReloadModelROM (unsigned nROM)
+{
+	const u8 *pOld = LoadModelROM (nROM);
+
+	TModel Model = s_ModelROMs[nROM].Model;
+	TModel Current = m_pSpectrum->GetModel ();
+	boolean bInUse = Current == Model || (Model == Model48K && Current == Model16K);
+	if (bInUse)
+	{
+		if (m_pSpectrum->IsModelAvailable (Current))
+		{
+			SetModel (Current);		// con la ROM nueva
+			ShowROMChanged (s_ModelROMs[nROM].pOption, TRUE);
+		}
+		else
+		{
+			SetModel (Model48K);		// esa ROM no está en roms/
+			ShowMessage (T ("Falta la ROM de ese modelo (mira el README)"));
+		}
+	}
+	else if (!m_pSpectrum->IsModelAvailable (Model))
+	{
+		ShowMessage (T ("Falta la ROM de ese modelo (mira el README)"));
+	}
+	else
+	{
+		ShowROMChanged (s_ModelROMs[nROM].pOption, FALSE);
+	}
+
+	delete [] pOld;				// el Spectrum ya no la usa
+}
+
+// ROM del Interface 1 o de esxDOS: se carga ya y, si el periférico está
+// conectado, se reinicia el Spectrum con ella. Si no lo está, se usará al
+// conectarlo.
+void CKernel::ReloadPeripheralROM (const char *pKey)
+{
+	boolean bIF1 = strcmp (pKey, "romif1") == 0;
+	const u8 *pROM = LoadROMFile (bIF1 ? ROMOption ("romif1", "if1.rom") : ROMOption ("romesx", "esxmmc.bin"),
+				      0x2000);
+	if (pROM == 0)
+	{
+		ShowMessage (T ("Falta esa ROM en roms/ (o no tiene 8 KB)"));
+		return;
+	}
+
+	boolean bReset;
+	if (bIF1)
+	{
+		m_pSpectrum->SetIF1ROM (pROM);		// (la copia)
+		bReset = m_pSpectrum->IsIF1Connected () || m_pSpectrum->IsLECConnected ();
+	}
+	else
+	{
+		if (!m_pSpectrum->IsDivMMCEnabled ())
+		{
+			delete [] pROM;			// se carga al conectar la divMMC
+			ShowROMChanged (pKey, FALSE);
+			return;
+		}
+		m_pSpectrum->SetDivMMCROM (pROM);	// (la copia)
+		bReset = m_pSpectrum->IsDivMMCActive ();
+	}
+	delete [] pROM;
+
+	if (bReset)
+	{
+		SetModel (m_pSpectrum->GetModel ());
+	}
+	ShowROMChanged (pKey, bReset);
+}
+
+// Aviso: "ROM 128K: 128-es.rom" y, si se ha reiniciado, que se ha reiniciado
+void CKernel::ShowROMChanged (const char *pKey, boolean bReset)
+{
+	int nIndex = m_Settings.Find (pKey);
+	if (nIndex < 0)
+	{
+		return;
+	}
+	CString Message;
+	Message.Format (bReset ? T ("%s: %s (Spectrum reiniciado)") : "%s: %s",
+			T (m_Settings.GetDef (nIndex).pLabel), m_Settings.GetValueName (nIndex));
+	ShowMessage (Message);
 }
 
 // Disco duro del +3e (tarjeta de la ZXMMC): abre la imagen y arranca el +3e
