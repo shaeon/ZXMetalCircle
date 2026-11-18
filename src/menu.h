@@ -182,7 +182,7 @@ private:
 	unsigned m_nScrollChoice;	// opción elegida en la lista (para su desplazamiento)
 	unsigned m_nScrollSetting;	// fila elegida en la configuración (ídem)
 	// ENTER en una opción de muchos valores: su lista (ver HandleKey)
-	#define SETTING_LIST_MIN	4	// con más valores que estos
+	#define SETTING_LIST_MIN	2	// con más valores que estos (las de sí/no, ENTER las cambia)
 	boolean m_bSettingChoice;
 	boolean m_bSettingsTitle;	// la barra en el título: las flechas cambian de página
 	boolean m_bSettingsPageChoice;	// ENTER en el título: la lista de páginas
