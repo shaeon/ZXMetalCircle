@@ -253,7 +253,7 @@ defecto.
 
  divmmc=0         divMMC con esxDOS:
                     0       sin divMMC (por defecto)
-                    esxdos  divMMC con esxDOS 0.8.9; su tarjeta es la
+                    esxdos  divMMC con esxDOS 0.9.0; su tarjeta es la
                             imagen hdd/esxdos.img (ver esxdir=). No convive con el
                             Interface 1, la memoria LEC ni el Multiface
                   F5 abre el navegador de esxDOS. Tambien se conecta o

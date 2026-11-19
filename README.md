@@ -34,7 +34,7 @@ The licence and the credits can also be seen in the emulator itself: F1 and then
 - **Instant loading and tapes**: the LD-BYTES trap and the registers it leaves follow Fuse (`tape_traps.c`); the polarity of TZX blocks follows libspectrum, and the TZX format its specification (<https://worldofspectrum.net/TZXformat.html>); the PZX format follows the pzxtools specification (Patrik Rak).
 - **Protected disks**: the weak area of the +3 Speedlock follows SAMdisk (Simon Owen, MIT, `IsSpectrumSpeedlockTrack`); CRC errors in the header and the weak stretch of sectors with several copies follow Fuse (`disk.c`).
 - **Spectranet** © Dylan Smith (https://spectrum.alioth.net), firmware under the MIT licence; the card emulation is based on Fuse's (Philip Kendall and others, GPL v2 or later).
-- **esxDOS 0.8.9** © 2005-2021 Papaya Dezign (https://esxdos.org): ROM and system files, unmodified, for non-commercial use.
+- **esxDOS 0.9.0** © 2005-2026 Papaya Dezign (https://esxdos.org): ROM and system files, unmodified, for non-commercial use.
 - **Mbed TLS** 3.6 (Apache-2.0), **jsmn** (MIT, Serge Zaitsev), **ZXInfo API** (api.zxinfo.dk) and **Spectrum Computing** (ZXDB). **Mozilla** root certificate list (MPL-2.0).
 - **Multiface ROMs** © Romantic Robot UK Ltd (`roms/mf1.rom`, `mf128.rom`, `mfplus3.rom`).
 - **ZX81+** © Paul Farrow (http://www.fruitcake.plus.com): ZX81 emulator for the Spectrum 128 as an Interface 2 cartridge, version 3.13 (`roms/zx81.rom`), unmodified, included with his permission; the way of loading .P files follows ESPectrum.
@@ -108,7 +108,7 @@ Done:
 - Recording of the tape signal (MIC output) with Alt+W, for programs with their own saving routines.
 - Spectrum +3 with disk drive: .DSK disks (standard and extended, with protections: weak sectors, Speedlock, long tracks, CRC errors) and 720K disks (the drive becomes a 3.5" one by itself), with MAME's uPD765 controller.
 - Spectrum +3e (Garry Lancaster's ROMs) with a hard disk on a ZXMMC card: .VHD, .IMG, .RAW and .HDF images.
-- divMMC with esxDOS 0.8.9: its card is an image (`hdd/esxdos.img`) and whatever is left in the `esxdos_i` folder is copied into it; divMMC ports on the +3e.
+- divMMC with esxDOS 0.9.0: its card is an image (`hdd/esxdos.img`) and whatever is left in the `esxdos_i` folder is copied into it; divMMC ports on the +3e.
 - Spectranet network card, with the official firmware.
 - Your own ROMs for any machine (`roms` folder of the SD card).
 - Network over WiFi or cable: web server to manage the SD card from a browser (it can be turned off, made read-only or protected with a password), time by NTP, and search and download of programs from ZXDB over HTTPS, from the web page or from the emulator's own file browser (F3).

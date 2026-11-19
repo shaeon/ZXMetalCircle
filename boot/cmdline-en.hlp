@@ -262,7 +262,7 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
 
  divmmc=0         divMMC with esxDOS:
                     0       no divMMC (default)
-                    esxdos  divMMC with esxDOS 0.8.9; its card is the
+                    esxdos  divMMC with esxDOS 0.9.0; its card is the
                             hdd/esxdos.img image (see esxdir=).
                             It cannot be used with the Interface 1, the
                             LEC memory or the Multiface

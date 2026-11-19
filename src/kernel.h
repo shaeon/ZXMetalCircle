@@ -211,6 +211,7 @@ private:
 	static void UpdateDownloadProgress (void *pParam, size_t nReceived, size_t nTotal);
 	static void UpdateInstallProgress (void *pParam, unsigned nDone, unsigned nTotal);
 	boolean IsEsxImageMounted (void) const;
+	void EsxCheckSystem (void);
 	void EsxFolderToImage (boolean bRemount);
 	static void EsxProgressHandler (unsigned nDone, unsigned nTotal, unsigned nMBDone, unsigned nMBTotal,
 					void *pParam);

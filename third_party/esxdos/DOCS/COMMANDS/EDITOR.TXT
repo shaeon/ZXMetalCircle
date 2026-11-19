@@ -1,0 +1,510 @@
+===============================================================================
+
+                        E S X D O S   E D I T O R   1 . 2
+
+                  A HEX/ASCII file viewer and editor for esxDOS
+                            (c) 2021-2026 namco/nexgen
+
+                            USER MANUAL - Version 1.2
+
+===============================================================================
+
+CONTENTS
+
+  1.  Introduction
+  2.  Requirements and installation
+  3.  Starting the editor
+  4.  The screen
+  5.  Moving around
+  6.  Display modes and zones
+  7.  Editing
+  8.  Undo and unsaved changes
+  9.  Writing to the file
+  10. Go to, home, last and back
+  11. Find
+  12. Saving the block elsewhere
+  13. Info
+  14. Themes
+  15. Command summary
+  16. Messages
+  17. Technical notes
+  18. Credits
+
+
+-------------------------------------------------------------------------------
+1. INTRODUCTION
+-------------------------------------------------------------------------------
+
+The editor is an esxDOS dot command that shows any file on your SD card as
+hexadecimal and ASCII, and lets you change its bytes in place.
+
+The file is read in 512 byte blocks. You edit the block on screen, and
+nothing goes to the card until you write it back. The size of the file
+never changes: the editor overwrites bytes, it never inserts or deletes.
+
+What it does:
+
+  - view any file of any size (up to 4GB), in HEX/ASCII or in ASCII only
+  - edit bytes as hexadecimal digits or as typed characters
+  - undo the last 64 edits of the block
+  - warn before throwing away edits you did not write
+  - jump to any offset, to the start or end, and back again
+  - find a piece of text or a sequence of bytes anywhere in the file
+  - save the block on screen to a new file or to tape
+
+
+-------------------------------------------------------------------------------
+2. REQUIREMENTS AND INSTALLATION
+-------------------------------------------------------------------------------
+
+You need a ZX Spectrum with an esxDOS interface (DivIDE, DivMMC and
+similar), running 48 BASIC.
+
+Copy the file "editor" into the BIN directory of your SD card. It is then
+available from BASIC as .editor
+
+
+-------------------------------------------------------------------------------
+3. STARTING THE EDITOR
+-------------------------------------------------------------------------------
+
+  .editor filename
+
+opens the file and shows its first block. Quotes around the name are
+allowed and ignored, so these are the same:
+
+  .editor game.tap
+  .editor "game.tap"
+
+Spaces before and after the name are ignored. A ':' ends the name, so
+another statement can follow it; put the name in quotes if it really has
+a ':' in it.
+
+.editor on its own prints a short help text and returns to BASIC.
+
+The editor needs 3200 bytes of free memory above your BASIC program for
+its block buffer, the save area of its windows and the stack. If there is
+not enough, it stops with "Not enough free MEMORY". Use CLEAR, or NEW, and
+try again.
+
+The file is always opened READ-ONLY. See section 9 for writing.
+
+
+-------------------------------------------------------------------------------
+4. THE SCREEN
+-------------------------------------------------------------------------------
+
+  row  0      header: file name, modified mark, offset, page
+  row  1      ------------------------------------------------
+  rows 2-17   the data
+  row 18      ------------------------------------------------
+  row 19      byte at the cursor, file size, file mode
+  row 20      ------------------------------------------------
+  rows 21-23  the command menu
+
+The header, in inverse, looks like this:
+
+  GAME.TAP    * >000003A7<  page 3
+
+  GAME.TAP    the file name (the first 12 characters)
+  *           shown when the block holds edits that are not in the file
+  >000003A7<  the offset of the byte under the cursor, in hexadecimal,
+              counted from 0 at the start of the file
+  page 3      which quarter of the block is on screen (HEX/ASCII mode)
+
+Row 19:
+
+  byte 167  size 00001B00  mode rd
+
+  byte        the value of the byte under the cursor, in decimal
+  size        the size of the file, in hexadecimal
+  mode        rd (read-only) or wr (read and write)
+
+The menu shows every command as a word. The letter in inverse is the key
+that runs it, and it is always the first letter:
+
+  zone ascii edit save read write
+  info theme mode page quit goto
+  undo find next home last back
+
+
+-------------------------------------------------------------------------------
+5. MOVING AROUND
+-------------------------------------------------------------------------------
+
+  CAPS SHIFT + 5/6/7/8   (the cursor keys) move the cursor
+
+The cursor moves one byte left or right, or one row up or down. It moves
+freely through the whole file: past the edge of the screen it turns the
+page, and past the edge of the block it reads the next or previous block
+from the card. It stops at the first and the last byte of the file.
+
+  TRUE VIDEO  (CAPS SHIFT + 3)   one block (512 bytes) back
+  INV. VIDEO  (CAPS SHIFT + 4)   one block (512 bytes) forward
+
+These keep the cursor in the same place of the block. Going forward into a
+last block that is shorter than 512 bytes stops on the last byte of the
+file. On the first block, TRUE VIDEO does nothing; on the last block,
+INV. VIDEO does nothing.
+
+  P   page
+
+In HEX/ASCII mode a block is shown in four pages of 128 bytes, numbered 0
+to 3. P asks for a page number and jumps to the same place on that page.
+ENTER on its own cancels. There are no pages in ASCII mode.
+
+See also section 10 for jumping to an offset.
+
+
+-------------------------------------------------------------------------------
+6. DISPLAY MODES AND ZONES
+-------------------------------------------------------------------------------
+
+  A   ascii
+
+switches between the two display modes:
+
+  HEX/ASCII   16 rows of 8 bytes. Each row shows the bytes in hexadecimal
+              on the left and as characters on the right. 128 bytes, one
+              page of the block, fit on the screen.
+
+  ASCII       16 rows of 32 characters. The whole block, 512 bytes, fits
+              on the screen.
+
+Bytes that are not printable characters (below 32, or 128 and above) are
+shown as a dot.
+
+The cursor stays on the same byte when you change modes.
+
+  Z   zone
+
+In HEX/ASCII mode the cursor is either on the hexadecimal side (a two
+character cursor) or on the character side (a one character cursor). Z
+moves it to the other side, on the same byte. The zone decides how you edit
+(section 7). Z does nothing in ASCII mode.
+
+
+-------------------------------------------------------------------------------
+7. EDITING
+-------------------------------------------------------------------------------
+
+  E   edit
+
+The cursor turns red and you are in edit mode. ENTER leaves it. An empty
+file has no bytes to edit, so E does nothing there.
+
+On the hexadecimal side you type hexadecimal digits, 0-9 and A-F. The first
+digit changes the high half of the byte, the second the low half, and the
+cursor moves on to the next byte. Any other key is ignored. ENTER after a
+single digit leaves edit mode with only the high half changed.
+
+On the character side, and in ASCII mode, you type characters (codes 32 to
+126), and each one replaces the byte under the cursor. CAPS LOCK (CAPS
+SHIFT + 2) switches between upper and lower case.
+
+Both sides of the row are redrawn as you type, so the hexadecimal and the
+character view always agree.
+
+Edit mode stays inside the block: on the last byte of the block, or of the
+file, the cursor stops and further typing changes that same byte. Leave
+edit mode to move to the next block.
+
+Edits change the block in memory only. The header shows * while there are
+edits that are not in the file. Use W to write them (section 9).
+
+
+-------------------------------------------------------------------------------
+8. UNDO AND UNSAVED CHANGES
+-------------------------------------------------------------------------------
+
+  U   undo
+
+puts back the byte changed by the last edit and moves the cursor to it.
+Press U again to go further back. Each byte typed in edit mode is one edit;
+a hexadecimal byte counts as one edit even though you type two digits.
+
+The editor remembers the last 64 edits of the block. When a new block is
+read, the undo list starts again, empty.
+
+Undo also works after a W: undoing then changes the block back and the *
+comes back to remind you that the file now differs.
+
+The * disappears when the block and the file agree again: after W, after
+R, or after undoing every edit since the last read or write.
+
+Discarding edits
+
+Some commands have to replace the block in memory with another one: moving
+into another block, TRUE VIDEO / INV. VIDEO, goto, home, last, back, find,
+next, and quit. If the block has edits that are not in the file, they ask
+first:
+
+  block modified!
+
+  discard edits? y/n
+
+  Y   throws the edits away and carries on
+  N   (or any other key) cancels the command. Your edits stay, and you
+      can write them with W.
+
+  R   read
+
+reads the block again from the file, throwing away every edit without
+asking. It is the quick way to start the block over.
+
+
+-------------------------------------------------------------------------------
+9. WRITING TO THE FILE
+-------------------------------------------------------------------------------
+
+For safety the file is opened read-only, and W refuses to write:
+
+  file is in read-only
+  mode for security!
+
+  flip mode & retry
+
+  M   mode
+
+switches the file between read-only and read-write. Row 19 shows "mode rd"
+or "mode wr".
+
+  W   write
+
+writes the block back to the file, at the place it was read from, and
+switches back to read-only. So writing always takes two keys, M then W.
+
+Only the bytes that were read are written, so writing never makes a file
+longer, not even when the last block is shorter than 512 bytes.
+
+
+-------------------------------------------------------------------------------
+10. GO TO, HOME, LAST AND BACK
+-------------------------------------------------------------------------------
+
+  G   goto
+
+asks for an offset in hexadecimal, up to 8 digits, the same way the header
+shows it. The cursor goes to that byte, reading its block if needed. If the
+offset is past the end of the file, the editor asks again. ENTER on its own
+cancels.
+
+A block number is an offset too: block n starts at offset n * 200h. For
+example block 5 starts at A00 and block 16 at 2000.
+
+  H   home      goes to the first byte of the file
+  L   last      goes to the last byte of the file
+
+  B   back
+
+goes back to where you were before the last goto, home, last, find, next
+or back. As back also counts, pressing B again returns you to where you
+started. B is a quick way to look at another part of the file and come
+back, or to switch between two places.
+
+
+-------------------------------------------------------------------------------
+11. FIND
+-------------------------------------------------------------------------------
+
+  F   find
+
+asks:
+
+  Find text or hex
+
+  T   search for text. Type up to 14 characters.
+  H   search for bytes. Type up to 14 hexadecimal digits, which is 7 bytes,
+      for example 3E 00 C9 is typed as 3E00C9. An odd last digit is ignored.
+
+  Any other key cancels.
+
+The search starts at the byte under the cursor and goes towards the end of
+the file, reading block after block. If it finds a match, the cursor goes
+to its first byte. If not, it says:
+
+  not found
+
+and you stay where you were.
+
+The search looks for the exact bytes, so text is case sensitive: "Hello"
+does not find "HELLO". A match may cross from one block into the next.
+
+  N   next
+
+searches again for the same thing, starting after the byte under the
+cursor. Press N repeatedly to go through every match.
+
+Both find and next count as jumps for B (back), so after a search B
+returns to where the search started.
+
+Hold BREAK (CAPS SHIFT + SPACE) to stop a long search. It then says "not
+found" and you stay where you were.
+
+If the block on screen has unsaved edits, a search that has to read
+further blocks asks to discard them first (section 8). The search does
+see your unsaved edits in the block on screen.
+
+The search is fast when the first character of the string is rare in the
+file: then the time is mostly the SD card reading blocks. It is slower when
+that character is very common (for example a string starting with 00 in a
+file full of zeros), down to about 12 KB per second, so a 64K file takes
+around 5 seconds even then.
+
+
+-------------------------------------------------------------------------------
+12. SAVING THE BLOCK ELSEWHERE
+-------------------------------------------------------------------------------
+
+  S   save
+
+asks where to save the block on screen, edits included:
+
+  select device
+
+  sdcard or tape
+
+  S   sdcard. Type a file name of up to 12 characters. The editor creates
+      the file, replacing any file with that name, and writes the block
+      into it. It refuses the name of the file being edited, in upper
+      or lower case and with or without a path (it compares the part
+      after the last /), with "that is the file being edited!".
+      ENTER on its own cancels.
+
+  T   tape. Start the tape recorder and the block is saved as a CODE
+      file called "esxEditor", 512 bytes long, with start address 32768.
+      BREAK stops the save.
+
+  Any other key cancels.
+
+Only the bytes that were read are saved to the SD card, so the last block
+of a file gives a file shorter than 512 bytes. A tape save is always 512
+bytes.
+
+
+-------------------------------------------------------------------------------
+13. INFO
+-------------------------------------------------------------------------------
+
+  I   info
+
+shows the byte under the cursor and the one after it, as a 16-bit word
+(on the last byte of the file the one after it counts as 0):
+
+  address at cursor
+
+  decimal      the word, first byte high
+  hexadecimal  the word, first byte high
+  binary       the word, first byte high
+
+All three show the same number, read with the bytes in the order they are
+in the file. For example, the bytes 48 65 show 18533 as decimal, 4865 as
+hexadecimal and 0100100001100101 as binary.
+
+Any key closes the window.
+
+
+-------------------------------------------------------------------------------
+14. THEMES
+-------------------------------------------------------------------------------
+
+  T   theme
+
+changes the colours, going through five schemes:
+
+  white, green, cyan, yellow, dark (white on black), and white again.
+
+
+-------------------------------------------------------------------------------
+15. COMMAND SUMMARY
+-------------------------------------------------------------------------------
+
+  cursor keys   move one byte / one row
+  TRUE VIDEO    previous block
+  INV. VIDEO    next block
+
+  Z   zone      switch between the HEX and character side
+  A   ascii     switch between HEX/ASCII and ASCII mode
+  E   edit      edit mode, ENTER leaves it
+  S   save      save the block to the SD card or tape
+  R   read      read the block again, dropping its edits
+  W   write     write the block to the file (needs mode wr)
+
+  I   info      decimal, hexadecimal and binary of the word at the cursor
+  T   theme     next colour scheme
+  M   mode      switch the file between read-only and read-write
+  P   page      go to page 0-3 of the block (HEX/ASCII mode)
+  Q   quit      back to BASIC
+  G   goto      go to a hexadecimal offset
+
+  U   undo      undo the last edit
+  F   find      find text or bytes
+  N   next      find the next match
+  H   home      first byte of the file
+  L   last      last byte of the file
+  B   back      back to the place before the last jump
+
+
+-------------------------------------------------------------------------------
+16. MESSAGES
+-------------------------------------------------------------------------------
+
+  Not enough free MEMORY
+      There are fewer than 3200 bytes free above the BASIC program.
+
+  file read/write error!
+      The SD card refused a read or a write. Press any key. If it was M
+      that failed (a read-only file or card), the file stays read-only.
+
+  that is the file being edited!
+      S sdcard was given the name of the file being edited. Press any
+      key and save under another name.
+
+  file is in read-only / mode for security!
+      W was pressed in read-only mode. Press M first.
+
+  block modified! / discard edits? y/n
+      The command would throw away edits that are not in the file.
+      See section 8.
+
+  not found
+      Find or next reached the end of the file, or BREAK was pressed.
+
+  save aborted!
+      The tape save was stopped with BREAK.
+
+
+-------------------------------------------------------------------------------
+17. TECHNICAL NOTES
+-------------------------------------------------------------------------------
+
+  - The dot command is 5632 bytes: 5626 bytes of code padded with zeros to
+    11 whole sectors. Its work areas (file name, undo list, search string)
+    sit after the code, inside the dot command's own memory, and end well
+    below 3D00h.
+
+  - The 512 byte block buffer and the window save area (up to 1520 bytes,
+    for the info window) are placed 1024 bytes above STKEND, in the free
+    memory of BASIC. 144 bytes are kept free below the stack pointer.
+
+  - Offsets are 32-bit, so files up to 4GB can be viewed.
+
+  - The text uses the editor's own 6-pixel-high font, drawn directly to
+    the screen. Letters with descenders (g j p q y and _) sit one pixel
+    lower.
+
+  - Only the typing of file names, numbers and search strings uses the
+    ROM's print routine.
+
+
+-------------------------------------------------------------------------------
+18. CREDITS
+-------------------------------------------------------------------------------
+
+  Programmed by NaMcO, (c) 2021-2026 NeXGeN Software.
+
+  Programmed with sjasmplus and tested with the ZXSpin emulator by Paul
+  Dunn, with additional development and testing on the eLeMeNt board by
+  Jan Kucera. Thanks to lordcoxis for the esxDOS clarifications.
+
+===============================================================================

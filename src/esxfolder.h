@@ -73,6 +73,15 @@ public:
 	unsigned GetFailed (void) const		{ return m_nFailed; }	// se quedan en la carpeta
 	const char *GetError (void) const	{ return m_pError; }
 
+	// Sistema de esxDOS (SYS y BIN) de la copia de referencia pRefDir
+	// ("SD:/roms/esxdos"): ¿la tarjeta tiene su mismo ESXDOS.SYS? Si no (otra
+	// versión, o no hay tarjeta), StageSystem lo copia a la carpeta de
+	// importación, y Import lo pasa a la tarjeta. La configuración
+	// (SYS/CONFIG) solo si no hay tarjeta. La ROM 0.9.0 no arranca con el
+	// ESXDOS.SYS de otra versión.
+	boolean SystemUpToDate (const char *pRefDir);
+	boolean StageSystem (const char *pRefDir, boolean bWithConfig);
+
 	// Monta la imagen como "NVME:" (para la web y el selector)
 	static boolean MountImage (CHardDiskImage *pImage, FATFS *pFS);
 	static void UnmountImage (FATFS *pFS);
@@ -89,6 +98,8 @@ private:
 	void ImportTree (const char *pSrc, const char *pDst, unsigned nDepth);
 	void SkipTree (const char *pPath, unsigned nDepth);
 	boolean ExportTree (const char *pSrc, const char *pDst, unsigned nDepth);
+	static boolean CopyTree (const char *pSrc, const char *pDst, unsigned nDepth, boolean bWithConfig);
+	static boolean SameFile (const char *pA, const char *pB);
 	void Progress (void);
 
 	char m_Folder[64];

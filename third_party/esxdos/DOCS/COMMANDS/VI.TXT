@@ -1,0 +1,310 @@
+===============================================================================
+
+                               E S X D O S   V I   1 . 1
+
+                         A text editor for esxDOS
+                            (C) 2026 namco/nexgen
+
+                            USER MANUAL - Version 1.1
+
+===============================================================================
+
+CONTENTS
+
+  1.  Introduction
+  2.  Requirements and installation
+  3.  Starting vi
+  4.  The screen
+  5.  Keys
+  6.  The : line
+  7.  Find
+  8.  Matching brackets and quotes
+  9.  Undo
+  10. Saving and quitting
+  11. Messages
+  12. Technical notes
+
+
+-------------------------------------------------------------------------------
+1. INTRODUCTION
+-------------------------------------------------------------------------------
+
+vi is an esxDOS dot command that edits text files on the card, borrowing
+its command line from the Unix vi. It has no modes: typing always
+inserts, and everything else (save, quit, go to a line, find, options)
+is typed on the ":" line at the bottom of the screen.
+
+  - 32, 42 or 64 columns, switched at any time while editing
+  - the cursor follows the text, as in a word processor
+  - lines ending in LF (Linux, these manuals), CR (the Spectrum's own)
+    or CR LF (Windows), even mixed in one file, are kept as they are
+  - undo, find, go to a line, matching brackets and quotes
+  - safe saving: the old file is only replaced once the new one is
+    written in full
+
+The widths:
+
+  32 columns   the Spectrum's own ROM font
+  42 columns   the proportional ROM font of ZX ArtWorks (narrower capitals)
+  64 columns   the 4 pixel font used in esxDOS File Manager (the default)
+
+
+-------------------------------------------------------------------------------
+2. REQUIREMENTS AND INSTALLATION
+-------------------------------------------------------------------------------
+
+You need a ZX Spectrum (48K or 128K) with an esxDOS interface (DivIDE,
+DivMMC and compatibles) running esxDOS 0.9.0.
+
+Copy the file "vi" into the /BIN folder of your SD card.
+
+The text is held in free BASIC memory, above the end of your program and
+variables, up to just under the machine stack. With an empty BASIC
+program a 48K Spectrum has room for a text of about 34K; the status bar
+always shows how much is left. A larger file is refused with "File too
+BIG". On a 128K only the normal 48K of memory is used.
+
+
+-------------------------------------------------------------------------------
+3. STARTING VI
+-------------------------------------------------------------------------------
+
+  .vi [file] [32|42|64]
+
+The words can come in any order. Examples:
+
+  .vi readme.txt           edit README.TXT in 64 columns
+  .vi /src/game.asm 32     a file in another directory, 32 columns
+  .vi "my notes.txt" 42    a name with a space in it
+  .vi notes.txt            a file that does not exist yet: vi starts
+                           with an empty text, the file is made by the
+                           first save
+  .vi                      an empty text with no name (give it one when
+                           saving: :w name)
+
+Any file can be loaded, text or not. Every byte is kept as it is, and only
+the bytes you change are different when the file is saved.
+
+.vi -help shows a short help text with the syntax. Any word vi does not
+understand shows it too.
+
+
+-------------------------------------------------------------------------------
+4. THE SCREEN
+-------------------------------------------------------------------------------
+
+The top 23 rows show the text, one line of the file per row. Lines are
+never wrapped: when the cursor goes past the right edge, the whole window
+jumps sideways by half a screen (and back again on the left). A line that
+goes on past the right edge has its last cell inverted.
+
+  TAB        runs to the next multiple of 8 columns. The cursor steps
+             over it in one go.
+  £ and ©    byte 96 shows as £ and byte 127 as ©, as on the Spectrum
+  others     any other byte outside 32-127 (except TAB, CR and LF) shows
+             as an inverted "." and is kept
+
+In 42 columns the characters are not all the same width, so moving up or
+down keeps the column number while the cursor itself can shift a little
+sideways, as in a word processor.
+
+The bottom row is the status bar:
+
+  NOTES.TXT*                 12:5        64 lf   sm     34567 free
+
+  NOTES.TXT  the file name (cut short with "..." when too long)
+  *          the text was changed since it was loaded or saved
+  12:5       the cursor's line and column
+  64         the width: 32, 42 or 64
+  lf         what ENTER puts at the end of a line: lf, cr or crlf
+  sm         matching brackets and quotes are shown (see section 8)
+  #1B        on a TAB or a control byte: its code in hex
+  34567 free the bytes the text can still grow by
+
+Messages ("Saved 1234 bytes", "Not found"...) take the place of the
+status bar until the next key.
+
+
+-------------------------------------------------------------------------------
+5. KEYS
+-------------------------------------------------------------------------------
+
+Typing a character inserts it at the cursor. The cursor stays on the
+text: at the end of a line, right goes on to the start of the next line,
+and at the start of a line, left goes back to the end of the line above.
+Down stops on the last line and right at the end of the text. Moving up
+or down keeps the column you were on: on a shorter line the cursor sits
+at its end, and comes back to that column on a longer one.
+
+  CAPS+5/6/7/8        cursor left / down / up / right
+  TRUE VIDEO (CAPS+3) page up
+  INV VIDEO  (CAPS+4) page down (on the last page, the cursor goes down
+                      to the last line)
+  SYM+Q / SYM+E       start / end of the line
+  ENTER               new line (splits the line at the cursor)
+  DELETE (CAPS+0)     delete left; at the start of a line, joins it to
+                      the line above
+  SYM+W               delete the character under the cursor
+  SYM+I               TAB
+  CAPS+ENTER          undo (section 9)
+  SYM+SPACE           find the next one (section 7)
+  SYM+ENTER           go to the matching bracket or quote (section 8)
+  EDIT (CAPS+1)       the : line (section 6)
+  CAPS LOCK (CAPS+2)  capitals on / off
+  BREAK (CAPS+SPACE)  quit (section 10)
+
+Held keys repeat. With SYMBOL SHIFT, the keys give the characters printed
+on them in red, plus these that the Spectrum keyboard does not show:
+
+  SYM+Y  [     SYM+U  ]     SYM+F  {     SYM+G  }
+  SYM+A  ~     SYM+S  |     SYM+D  \     SYM+X  £
+
+
+-------------------------------------------------------------------------------
+6. THE : LINE
+-------------------------------------------------------------------------------
+
+EDIT opens a ":" line on the bottom row. Type a command (up to 62
+characters) and press ENTER. DELETE rubs out the last character, EDIT
+again cancels.
+
+  :w             save
+  :w name        save under a new name (vi then keeps that name)
+  :wq  or  :x    save and quit (a name may follow, as for :w)
+  :q             quit; refused when the text was changed since the last
+                 save ("Not saved (:q! quits)")
+  :q!            quit without saving
+  :123           go to line 123 (:0 is line 1; past the end, the last
+                 line)
+  :$             go to the last line
+  :d             delete the cursor's line
+  :j             join the next line to the cursor's line
+  :u             undo (as CAPS+ENTER)
+  /text          find "text" (section 7)
+  /              find the next one (as SYM+SPACE)
+  :set 32        width 32 columns (also 42 or 64)
+  :set lf        ENTER ends a line with LF (also cr or crlf)
+  :set sm        show matching brackets and quotes (nosm: don't)
+
+Anything else shows "Not a command".
+
+When a file is loaded, ENTER uses the file's own line end (the first one
+in the file), or LF in a new file. Where the chosen end would pair up with
+its neighbour (an LF typed just after a lone CR, a CR just before an LF),
+ENTER puts CR LF instead, so it always makes a new line.
+
+
+-------------------------------------------------------------------------------
+7. FIND
+-------------------------------------------------------------------------------
+
+  /text  then ENTER     find the next "text" after the cursor
+  SYM+SPACE  or  /      find the same text again
+
+The search starts just after the cursor and goes round to the start of
+the text when it reaches the end. Capitals count ("Text" is not "text"),
+and a match never runs over a line end. The cursor goes to the first
+character of the match; when that is off the window, its line is shown in
+the middle of the screen. Nothing found: "Not found", and the cursor
+stays.
+
+
+-------------------------------------------------------------------------------
+8. MATCHING BRACKETS AND QUOTES
+-------------------------------------------------------------------------------
+
+With the cursor on one of  ( ) [ ] { } < >  its partner is shown inverted
+when it is on the window (up to 23 lines away). SYM+ENTER jumps to it
+wherever it is in the text. Nesting is counted, over any number of lines.
+Every bracket counts, also inside quotes or comments, and < > too (so
+in "a < b" the "<" has no partner).
+
+For the quotes " and ' the partner is on the same line: after an even
+number of that quote on the line it is the next one, otherwise the one
+before. In  x "a" "b"  each quoted word gets its own pair.
+
+No partner (an unclosed bracket or quote): nothing is shown, and SYM+ENTER
+says "Not found".
+
+:set nosm turns the inverted partner off (SYM+ENTER still works); :set sm
+turns it back on.
+
+
+-------------------------------------------------------------------------------
+9. UNDO
+-------------------------------------------------------------------------------
+
+CAPS+ENTER (or :u) takes back one step. A step is a run of typing, a run
+of DELETE, a run of SYM+W, a run of ENTER, or one : command (:d, :j).
+Any other key, such as a cursor key, ends a run. The cursor goes back to
+where it was before the step. Undoing back to the text as it was last
+saved removes the "*" from the status bar.
+
+The steps are kept in 1K of memory. When it is full the oldest steps are
+forgotten. A single step too big for it (a :d of a line of over about
+1000 characters, for example) cannot be undone, and the steps before it
+are forgotten too. With nothing left: "Nothing to undo". There is no
+redo.
+
+
+-------------------------------------------------------------------------------
+10. SAVING AND QUITTING
+-------------------------------------------------------------------------------
+
+Saving writes the text to a temporary file VI$$$.TMP in the file's own
+directory. Only when that is written and closed is the old file deleted
+and the temporary file renamed to its name. If anything fails before that
+(a full card, a read-only file...), the message is shown, the old file is
+left as it was and the text is still in memory, so nothing is lost: try
+again, or :w another name. In the unlikely case that the final rename
+fails, the old file is gone but the text is in VI$$$.TMP (and still in
+memory).
+
+After a save the status row shows "Saved n bytes" and the "*" goes.
+
+BREAK quits at once when the text has not been changed. Otherwise vi
+asks:
+
+  Save changes? (Y/N)
+
+Y saves and quits (if the save fails, or the text has no name yet, the
+message is shown and vi stays), N quits without saving, and any other key
+goes back to the text. The screen is cleared on the way out.
+
+
+-------------------------------------------------------------------------------
+11. MESSAGES
+-------------------------------------------------------------------------------
+
+  Not enough free MEMORY   less than 1K of room for the text
+  File too BIG             the file does not fit in free memory
+  Saved n bytes            the text was saved
+  No file name             :w with no name in an unnamed text
+  Not saved (:q! quits)    :q on a changed text
+  Not a command            the : line was not understood
+  Not found                find, or no matching partner
+  Nothing to undo          undo with no step left
+
+Card errors, while saving:
+
+  Not found, I/O error, Bad name, Disk full, Is a directory, Bad path,
+  In use, Read only        as esxDOS reports them
+  Error n                  any other esxDOS error code
+
+
+-------------------------------------------------------------------------------
+12. TECHNICAL NOTES
+-------------------------------------------------------------------------------
+
+  - The program is exactly 7168 bytes (14 sectors), the most esxDOS
+    loads for a dot command. The 32/42/64 column fonts and their tables
+    (2.7K) are built in BASIC memory, in front of the text.
+  - The text is held in a gap buffer: typing and deleting at the cursor
+    cost nothing; the first edit somewhere else moves the gap there.
+  - Columns are counted in bytes (a TAB up to the next multiple of 8),
+    and lines can be up to 65535 columns long, so binary files load
+    too.
+  - vi keeps the dot command's work areas in #3C00-#3C7F and
+    #3E00-#3FFF; esxDOS's own #3DE8-#3DFF is not touched.
+
+===============================================================================

@@ -1,0 +1,892 @@
+===============================================================================
+
+                     E S X D O S   F I L E   M A N A G E R   1 . 3
+
+       A twin-panel file manager for esxDOS, the Spectrum's "Directory Opus"
+                             (c) 2026 namco/nexgen
+
+                           USER MANUAL - Version 1.3
+
+===============================================================================
+
+CONTENTS
+
+  1.  Introduction
+  2.  Requirements and installation
+  3.  Starting fm
+  4.  The screen
+  5.  Moving around
+  6.  Marking files
+  7.  The pointer (mouse and keys)
+  8.  Commands
+  9.  Copy, Move and Erase
+  10. ENTER on a file: view, run, handlers
+  11. GLANCE: the hex viewer
+  12. Z80DIS: the Z80 disassembler
+  13. The -USER- buttons
+  14. TAP2ESX: tapes to files
+  15. Settings and the config file
+  16. Command summary
+  17. Messages
+  18. Technical notes
+  19. Credits
+
+
+-------------------------------------------------------------------------------
+1. INTRODUCTION
+-------------------------------------------------------------------------------
+
+fm is an esxDOS dot command: two lists side by side, each showing a folder
+of your SD card, with the buttons of the commands below them. You move
+around with the keyboard or a Kempston mouse, mark what you want and copy,
+move or erase it from one panel into the other.
+
+What it does:
+
+  - copy, move and erase files and whole directories (with their contents),
+    between folders and between drives, with a progress bar and a
+    Replace? question that can be answered once for all files
+  - rename, make directories, change file attributes (R H S A)
+  - show sizes, dates, the free space of each drive, and the size of whole
+    directories
+  - mark by wildcard, invert the marks, compare two folders
+  - look at a picture (.scr) or a font (.fnt), read a text (.txt), or
+    glance at any file as hex and ASCII, with find
+  - run a .tap, .sna, .z80 or BASIC program with ENTER, or hand any other
+    file type to the esxDOS command of your choice
+  - DISASSEMBLE any file of Z80 code into an sjasmplus source (Z80DIS)
+  - turn a .tap into esxDOS files that load from the SD card (TAP2ESX)
+  - three buttons (-USER-) that you define: a shortcut to a folder, or an
+    esxDOS command that is run on the marked files
+  - sound effects on the AY chip, colour themes, a pointer you can move
+    with the keys
+
+Everything below is about fm as it is on the card. Sections 11 to 14 cover
+the four tools that need more explaining than a button: GLANCE, Z80DIS, the
+USER buttons and TAP2ESX.
+
+
+-------------------------------------------------------------------------------
+2. REQUIREMENTS AND INSTALLATION
+-------------------------------------------------------------------------------
+
+You need a ZX Spectrum (48K or 128K) with an esxDOS interface (DivIDE,
+DivMMC and compatibles), running esxDOS 0.9.0. Sound needs a 128K (or an
+AY interface); on a 48K fm is silent.
+
+The zip holds:
+
+  fm           the dot command (7168 bytes)
+  fm.sys       its overlay file: the commands that do not fit in the dot
+               command's 7K (copy, move, erase, info, attributes, compare,
+               config, the viewers, run, GLANCE, USER, TAP2ESX, Z80DIS)
+  FM.TXT       this manual
+  INSTALL.TXT  the installation steps below, on their own
+
+To install, on the SD card of your system drive (the one esxDOS boots from):
+
+  1. Copy fm into /BIN.
+  2. Copy fm.sys into /SYS (esxDOS's own folder: it is already there).
+  3. Type .fm
+
+To update, copy BOTH files again: fm and fm.sys are made together and
+belong together. fm does not start without its overlay:
+
+  Overlay not found in /SYS   there is no /SYS/fm.sys
+  Wrong fm.sys                /SYS/fm.sys belongs to another build of fm
+
+Both are shown by esxDOS, back in BASIC. The same happens if fm.sys goes
+while fm runs: the next command that needs it leaves fm.
+
+fm takes the free memory of BASIC for its lists and buffers: about 18K of
+lists, 2.5K for the overlays and whatever is left (at least 1K, 20K on a
+bare 48K) as the copy buffer. If there is not enough room it stops with
+"Not enough free memory". Use CLEAR or NEW and try again. A bigger copy
+buffer makes copying faster and lets Z80DIS take bigger files; anything
+above RAMTOP (code, UDGs) and your BASIC program stay untouched.
+
+CLEAR 46999 is the lowest RAMTOP can be.
+
+
+-------------------------------------------------------------------------------
+3. STARTING FM
+-------------------------------------------------------------------------------
+
+  .fm
+
+Both panels open on the folder and drive BASIC is on (or, when a config
+file exists, where you left them last time). Anything typed after .fm is
+ignored. There is no help text: this is it.
+
+Leaving (SYMBOL SHIFT + Q, or the QUIT button) restores the border, your
+BASIC colours and returns to BASIC with "0 OK". The config file is written
+on the way out (section 15).
+
+
+-------------------------------------------------------------------------------
+4. THE SCREEN
+-------------------------------------------------------------------------------
+
+fm prints 64 columns, so each panel is 31 characters wide.
+
+  row  0       the two paths (the active panel's in red; "hd0:/GAMES/")
+  rows 1-18    the lists
+  row  19      the status row of each panel
+  rows 20-23   the buttons: 8 columns by 4 rows
+
+The lists. Each line has the name (21 characters), then the size:
+
+  - bytes, up to 9983; K / M / G from there; <DIR> for directories
+  - after SYMBOL SHIFT + S, the date instead (dd-mm-yy)
+
+Names longer than 21 characters show 20 and a small mark; fm always uses the
+whole name behind the scenes (INFO shows it in full). The list is sorted:
+".." first, then directories, then files, each by name (case ignored).
+A panel holds up to 255 entries; with more, a + follows the file count and
+only the first 255 are listed. Little arrows at the edge (up and down)
+show that the list goes on.
+
+Colours. The bar is the entry you are on. Marked entries are yellow,
+hidden / system ones magenta, directories blue (cyan in the dark theme).
+SYMBOL SHIFT + T swaps between the light and the dark theme.
+
+The status row shows "D m/n F m/n" (marked / total directories and files,
+".." not counted), the bytes of the marked files, and the free space of the
+drive on the right. A drive's first free-space reading can take a moment on
+big cards: the label says " Scanning media... " meanwhile.
+
+The buttons. Column 0 has one button per drive ("hd0:", "hd1:"...): click
+one to put the active panel on that drive. The active panel's drive is
+bright. Columns 1 to 7 hold the commands:
+
+  ALL      COPY     MAKEDIR  INFO     ATTRIB   Z80DIS   KEYS
+  NONE     MOVE     PARENT   DATES    DIFF     -USER-   THEME
+  WILDCRD  RENAME   ROOT     DRIVE    M-LOCK   -USER-   MUTE
+  INVERT   ERASE    PATH     GLANCE   TAP2ESX  -USER-   QUIT
+
+The key of each command is shown in inverse in its button while you hold
+SYMBOL SHIFT (section 16 lists them). Clicking a button runs it.
+
+
+-------------------------------------------------------------------------------
+5. MOVING AROUND
+-------------------------------------------------------------------------------
+
+  7 (or CAPS SHIFT + 7)         bar up
+  6 (or CAPS SHIFT + 6)         bar down
+  5 (or CAPS SHIFT + 5)         page up
+  8 (or CAPS SHIFT + 8)         page down
+  TRUE VIDEO  (CAPS SHIFT + 3)  first entry
+  INV. VIDEO  (CAPS SHIFT + 4)  last entry
+  ENTER                         into the directory (".." = up); on a file:
+                                see section 10
+  0, DELETE (CAPS SHIFT + 0)    the parent directory (the bar lands on the
+                                directory you came from)
+  EXTENDED MODE (CAPS + SS),
+  or 1                          the other panel
+  BREAK (CAPS SHIFT + SPACE)    the root of the panel's drive
+
+7, 6, 5 and 8 repeat when held. A joystick on the cursor keys works.
+
+PATH (SYMBOL SHIFT + H) puts the panel's path on row 0 for you to edit.
+Type a full path or one relative to the panel's; "." and ".." are
+understood and ".." stops at the root. ENTER goes there, SPACE or BREAK
+cancels, DELETE rubs out, EDIT clears the line. If the path cannot be
+opened the panel stays where it was and the status row says why. Drives are
+changed with DRIVE (SYMBOL SHIFT + D, steps through the drives that
+exist) or the drive buttons, not in the path.
+
+Quick find. Hold GRAPH (CAPS SHIFT + 9 on a 48K) and press a letter or
+digit: the bar goes to the next entry whose name starts with it, wrapping.
+Hold the key and it keeps going. Letting GRAPH go ends it. Plain letters are
+the pointer keys, which is why the shift is needed. (A keyboard quirk: with
+GRAPH, 0 reads as Z, and 9 cannot be found.)
+
+
+-------------------------------------------------------------------------------
+6. MARKING FILES
+-------------------------------------------------------------------------------
+
+Most commands work on the marked entries of the active panel, or on the
+bar's entry when nothing is marked. ".." is never marked or acted on.
+
+  SPACE                  mark / unmark the bar's entry
+  SYMBOL SHIFT + A       mark all (ALL)
+  SYMBOL SHIFT + N       mark none (NONE)
+  SYMBOL SHIFT + V       invert the marks (INVERT)
+  SYMBOL SHIFT + W       wildcard (WILDCRD)
+  SYMBOL SHIFT + F       compare the panels (DIFF)
+
+WILDCRD asks "Mark:" and a pattern: * is any number of characters, ? is
+one. The whole name must match, case is ignored. Entries that match are
+marked in addition to the ones already marked, so you can build a
+selection in several steps (*.tap, then *.sna). SPACE cancels.
+
+DIFF compares the two panels: it marks every entry in either panel that
+has no namesake in the other panel with the same size. Two directories of
+the same name count as equal (their contents are not looked at), and a
+directory against a file of the same name counts as different. Names are
+compared ignoring case, dates are not compared. Marked entries are then
+what you copy, move or erase to bring the two folders together.
+
+Marks go when a command that changes the disk finishes.
+
+
+-------------------------------------------------------------------------------
+7. THE POINTER (MOUSE AND KEYS)
+-------------------------------------------------------------------------------
+
+fm has a Kempston mouse pointer (an arrow). It appears when you first move
+the mouse, so without a mouse nothing shows.
+
+  left click on an entry    the bar goes there (and that panel is active)
+  double click              ENTER
+  right click               mark / unmark
+  click on a path           the same as PATH
+  up / down arrows          page up / down; hold to repeat
+  click on a button         runs the command (no SYMBOL SHIFT needed)
+
+The pointer also moves with the keys Q (up), A (down), O (left), P (right)
+and M (the left button; twice = double click). The keys work only while fm
+waits for a command, not inside questions and viewers, nor during quick find.
+
+KEYS (SYMBOL SHIFT + Y) asks for the five keys one after another on the
+status row: up, down, left, right and fire. Shifts, digits, ENTER, SPACE
+and keys already given are refused. They are saved in the config file.
+
+M-LOCK (SYMBOL SHIFT + L) switches the pointer off altogether, mouse and
+keys, and the button stays inverse while it is off. Press it again to
+switch it on. Use it if your interface reads as a mouse that is not there.
+
+
+-------------------------------------------------------------------------------
+8. COMMANDS
+-------------------------------------------------------------------------------
+
+All on SYMBOL SHIFT + the letter, or by clicking the button.
+
+COPY (C), MOVE (M), ERASE (E)         see section 9.
+
+RENAME (R, or EDIT)    the bar's name is typed over on its row (up to 65
+                       characters). ENTER renames, SPACE cancels. The bar
+                       follows the new name.
+
+MAKEDIR (K)            "New dir:" on the status row. The bar goes to the
+                       new directory.
+
+INFO (I)               name (in full), size, date and time, attributes
+                       (RHSVDA, - = off), and, when entries are marked,
+                       how many and how many bytes. The size of a
+                       directory is everything in it, all the way down;
+                       SPACE stops the counting. Any key or click closes.
+
+ATTRIB (B)             the status row shows R H S A (read-only, hidden,
+                       system, archive). Press the letter to change it.
+                       For one entry the letter is on or off; for several
+                       marked entries it cycles keep (.), on, off (-) so
+                       you can set one attribute on all of them without
+                       touching the others. ENTER applies, SPACE cancels.
+
+DATES (S)              the size column shows dates in both panels; again
+                       for sizes.
+
+PARENT (P), ROOT (O)   as 0 and BREAK.
+
+DRIVE (D), PATH (H)    section 5.
+
+THEME (T)              light / dark.
+
+MUTE (U)               sound on / off. The button is inverse while muted.
+                       The effects are a low buzz for an error, two rising
+                       notes when a command finished, and a blip for a
+                       question.
+
+QUIT (Q)               leave fm.
+
+
+-------------------------------------------------------------------------------
+9. COPY, MOVE AND ERASE
+-------------------------------------------------------------------------------
+
+COPY. The marked entries (or the bar's) of the active panel go into the
+folder shown in the other panel, on whatever drive that is. Directories are
+copied with everything inside them. The active panel shows "Copy n/m", the
+file and a progress bar. SPACE cancels.
+
+  - If both panels show the same folder: "Same directory", nothing happens.
+  - A directory cannot be copied into itself ("Into itself").
+  - If a file already exists a requester asks "Replace NAME?" with YES,
+    NO and ALL. ALL answers the same for the rest of this command: click
+    it (or press SYMBOL SHIFT + A) first and then YES or NO.
+    Y and N need SYMBOL SHIFT; SPACE is NO. The pointer works in it.
+    A directory that already exists on the target is merged into.
+  - A write error or a full card stops the copy with its message and
+    erases the half-written target file. Files copied before it stay.
+  - Copies are exact: a +3DOS header inside a file is copied unchanged.
+
+MOVE. The same selection, screen and questions, "Move n/m".
+  - On the same drive nothing is copied: the file is renamed into the other
+    folder, which is instant. A name in the way asks Replace as above.
+  - On another drive the file is copied and the source erased only when
+    its copy is complete. A file you answer NO to, a cancel or an error
+    leaves the source where it was.
+
+ERASE. "Erase NAME?" (or "Erase n items?") with YES / NO. If directories are
+among them, a second question asks "Erase dirs + contents?". Directories are
+emptied before they are removed. SPACE during the erase stops it, and the
+first error stops it too and is shown.
+
+After every command both panels are read again (the bar stays where it
+was); the other panel too when it shows the same folder.
+
+
+-------------------------------------------------------------------------------
+10. ENTER ON A FILE: VIEW, RUN, HANDLERS
+-------------------------------------------------------------------------------
+
+ENTER (or a double click) on a file does what suits its type:
+
+  .scr         shows the picture. 7 / 5 and 6 / 8 show the previous / next
+               .scr in the list (the bar follows); any other key or a click
+               goes back.
+  .fnt         shows the font: the file name, its 96 characters (32-127)
+               and a sample text, in the theme's colours. A +3DOS header
+               is skipped; characters a short file lacks are blank. 7 / 5
+               and 6 / 8 show the previous / next .fnt; any other key or a
+               click goes back.
+  .txt         a pager over both panels in 64 columns: 7 / 6 line, 5 / 8
+               page, 3 / 4 start / end. CR, LF and CR LF end lines, TAB
+               goes to the next multiple of 8. Any other key goes back.
+               Files of any size.
+  .tap         fm quits and the tape is run: the file is attached as the
+               tape and LOAD "" is typed for you.
+  .sna, .z80   fm quits and the snapshot is loaded (.snapload).
+  BASIC        a file with a +3DOS header of type BASIC program is loaded
+               and run (LOAD *"path"). TAP2ESX makes these.
+  anything     a file with an extension that is none of the above: its
+  else         HANDLER (below).
+  no extension nothing happens.
+
+Programs are run exactly as if you typed the line yourself: fm leaves the
+panel's folder as the current directory, so a program that loads its own
+files by relative name finds them.
+
+HANDLERS. The first time you press ENTER on, say, a .pt3, fm asks "Enter
+command handler:" - the name of an esxDOS command (in /BIN) that understands
+that file: for example "play", with or without the leading dot. fm quits and
+runs ".play path/name". The extension and its command are written to the
+config file, and next time ENTER on a .pt3 goes straight to it. SPACE,
+BREAK or an empty line cancel the question.
+
+SYMBOL SHIFT + ENTER on any file with an extension asks the handler
+question again, pre-filled with the current handler (or with nothing, for
+files the viewers take): change the text to change the handler, or empty
+the line to forget it. Use it to give .txt files to an editor instead of the
+pager, or a .scr to a viewer of your own.
+
+Up to about 45 handlers are kept (the config file stops at 511 bytes); the
+oldest drop out when it is full.
+
+
+-------------------------------------------------------------------------------
+11. GLANCE: THE HEX VIEWER
+-------------------------------------------------------------------------------
+
+GLANCE (SYMBOL SHIFT + G) shows the bar's file as it is, over both panels,
+without loading it all. Any file, any size (offsets are 32 bits, up to 4GB).
+
+HEX mode (the one it starts in) shows 16 bytes a row: the 8-digit offset,
+the bytes in four groups of four, then the 16 characters. ASCII mode shows
+64 characters a row. Row 0 has the name, the mode, and the offset of the
+first row on screen and the size of the file in hexadecimal. Row 19 holds
+the commands, whose first letters are always inverse:
+
+  T  TOGGLE MODE   HEX <-> ASCII
+  F  FIND          row 0 asks "Find Text or Hex?": T for text (up to 24
+                   characters, upper and lower case count) or H for
+                   hexadecimal (digit pairs; spaces and other characters
+                   are skipped, an odd last digit is ignored)
+  N  NEXT          the next match, after the last one found
+  E  EXIT          (SPACE does it too)
+
+The cursor keys work as in the .txt pager: 7 / 6 row, 5 / 8 page, 3 / 4
+start / end. A click on a word of row 19 runs it. The match is shown
+inverse (even when it crosses a row), and the page moves only if the match
+is not on it already. BREAK stops a long search ("Cancelled"). "Not found"
+stays on row 19 until the next key.
+
+GLANCE only reads: it never changes a file. For editing use the .editor
+dot command, which you can also hang on a USER button (section 13).
+
+
+-------------------------------------------------------------------------------
+12. Z80DIS: THE Z80 DISASSEMBLER
+-------------------------------------------------------------------------------
+
+Z80DIS (SYMBOL SHIFT + Z, or the Z80DIS button) turns the file on the bar
+into an assembler source: `NAME.asm`, written next to the file, in
+sjasmplus syntax. It works on any file: a game's CODE block, a dot command
+in /BIN, a ROM image, a tape block saved from an emulator. A directory or
+".." does nothing.
+
+You read the result in a pager first and save it only when you want to.
+This is not a toy listing: the output is meant to be assembled again.
+
+12.1 What it asks first: the origin
+
+Machine code only means something at the address it was written for, so
+fm asks for the ORIGIN on row 0:
+
+  - if the file has a +3DOS CODE header, its address is offered
+    (the 128 byte header is skipped and its length is used);
+  - in /BIN/ the origin offered is #2000, because that is where esxDOS
+    puts a dot command;
+  - otherwise #8000.
+
+Type a number in decimal, #hex or $hex and ENTER (an empty line goes back;
+a bad number asks again). Get this right: every jump, call and address in
+the listing is worked out from it. A wrong origin gives a listing of
+nonsense labels, but costs nothing: leave it with E and try again.
+
+12.2 How it works: it follows the code, it does not guess
+
+Z80 code and data are in the same bytes, and nothing tells them apart.
+Z80DIS does what you would do on paper: it starts at the entry points and
+follows the program.
+
+  1. TRACE ("Tracing... (BREAK stops)"). From each entry point it decodes
+     instructions one after another. At a jump or call it also visits the
+     target. It stops a path at JP, JR (unconditional), RET, RETN and
+     JP (HL); for a conditional jump, JR cc, DJNZ, CALL and RST it goes
+     on and also visits the target. The ORIGIN is always an entry point;
+     you add more with C in the pager (below).
+  2. LABELS. Every address that was jumped or called to gets a label
+     (L8009 = address #8009). A second pass labels every other address
+     operand that falls inside the file, so `ld hl,L8009`, `ld (L8010),a`
+     and data tables are named too.
+  3. EVERYTHING ELSE is data.
+
+Special cases handled: after RST #08 one byte is data (a ROM error code or
+an esxDOS call number); after RST #28 the calculator's bytes up to #38 are
+data; after RST #18 in a dot command (origin #2000) a 2-byte address
+follows.
+
+12.3 The pager
+
+Over both panels: the address, up to 4 bytes of each instruction, and the
+text. Labels have their own line, in the directories' colour. Row 0 shows
+the name, ORG, LEN (the bytes that were used) and AT (the address of the bar).
+Row 19 holds the commands; a click on a word works too, and a click on
+a line moves the bar there.
+
+  G  go to an address
+  C  make the bar's line an entry point and trace again. C on it again
+     removes it. Up to 16 entry points. This is how you tell Z80DIS about
+     code it cannot find by itself (see limits).
+  S  save NAME.asm next to the file (the file's extension is replaced).
+     If it exists you are asked "Replace NAME.asm? (y/n)". A file that is
+     already a .asm gives "Bad name". BREAK cancels the save and deletes
+     the half-written file.
+  E  (or SPACE) back to the panels
+  7 / 6 line, 5 / 8 page, 3 / 4 start / end, as everywhere else.
+
+12.4 Data
+
+Runs of 4 or more printable characters become DEFM text; a last character
+with bit 7 set, as in the ROM's tables, shows as `"STOP",'X'+#80`.
+Everything else is DEFB, 8 bytes to a line. No line runs past a label. A
+label that points into the middle of an instruction (self-modifying code
+tends to do that) becomes `Lnnnn equ $+k` before the instruction.
+Instructions an assembler would encode differently (undocumented duplicates
+in the ED and DDCB groups, a lone DD or FD prefix) are written as DEFB, so
+the same bytes always come out again.
+
+12.5 The .asm file
+
+Lowercase, tabs, LF line ends, starting with `; NAME (fm disassembly)` and
+`org #nnnn`. It was tested the hard way: every opcode, and the whole 48K
+ROM from #0000, reassemble with `sjasmplus --raw` to EXACTLY the same bytes
+as the file.
+
+12.6 Benefits
+
+  - The listing reassembles byte for byte. You can change a number,
+    reassemble on the PC and be sure you changed only that.
+  - It is a real trace: tables and text are not decoded as instructions
+    (a listing that disassembles everything linearly turns text into
+    garbage opcodes, and then "mis-aligns" the real code behind it).
+  - Labels are consistent in the whole file, including data references.
+  - It runs on the Spectrum, from the file manager, on the card. No
+    transfer to a PC just to see what a file does.
+  - Any file works: no +3DOS header or tape format is needed.
+
+12.7 Limits - read these
+
+  - It cannot follow what is computed. JP (HL), a RET used as a jump
+    (push an address, RET), and jump tables are not followed. The code
+    behind them is shown as DEFB data, and a table of addresses is shown
+    as bytes, not DW. Find the targets yourself and press C on them.
+    The trace, and the labels, are only as good as the entry points.
+  - Code that cannot be reached from an entry point is data. Interrupt
+    routines (installed with LD I,A and a vector table), routines called
+    only through such a table, and other-bank code will all look like
+    DEFB until you add them with C.
+  - Data inside the code's path is shown as code. If the trace walks into
+    a table because a path "falls through" to it, you get instructions
+    that are really data. The pager shows the bytes beside each line, so
+    you can see it; remove the entry point or the call that leads there.
+  - The second pass labels any 16-bit operand that lands in the file.
+    Operands that are really numbers (a loop count of #8010 in a file at
+    #8000) get a label too. Check the ones that look odd.
+  - The listing has no names: no ROM routine names, no variable names, no
+    comments, only the L labels. A call into the ROM shows as a plain
+    address (`call #0556`). Naming things is the fun part, and is up
+    to you.
+  - Memory: the code and label maps cost 2 bits per byte of the file, on
+    top of the module (6K) and a 1.7K work area. On a bare 48K the copy
+    buffer (about 19.5K) holds about 45.7K of the file. A longer file is
+    cut (LEN on row 0 shows what was used, and addresses stop at #FFFF).
+    With less than 8786 bytes of copy buffer you get "Not enough memory".
+  - Speed (measured in an emulator, real hardware can differ): a 16K file
+    traces in about 7 s and saves a 4700 line source in about 17 s. BREAK
+    stops the trace. A page redraws in about 0.3 s.
+  - Z80 code only: Z80N (ZX Next) opcodes are not decoded. It sees one
+    file at one origin, so bank-switched 128K code is not followed across
+    banks: take each bank as its own file, with its own origin.
+  - The .asm is not a project. Macros, includes, sections and the assembler
+    directives you started from are all lost, as with any disassembler.
+
+
+-------------------------------------------------------------------------------
+13. THE -USER- BUTTONS
+-------------------------------------------------------------------------------
+
+Three buttons in column 6 (rows 21, 22 and 23) are yours. Each one is a
+slot you fill with either:
+
+  SHORTCUT   a place: a drive and a folder
+  COMMAND    an esxDOS command to run
+
+SYMBOL SHIFT + 1, 2 and 3 press them from the keyboard (so does a click).
+
+13.1 Defining a slot
+
+An empty button asks at once. A defined one runs when you press it, so to
+change it HOLD the key (or the left button) for about 2 seconds: the
+question appears on row 0: "Shortcut, Command or Wipe?" Answer S, C or W
+(with or without a shift); any other key goes back.
+
+SHORTCUT stores the ACTIVE panel's drive and path, as it is now. You are
+offered a label (6 characters, shown on the button): the last name of the
+path ("HD0" at a root), which you can type over. From then on the button
+puts the active panel there. If the folder is gone, the panel stays where
+it was and the status row says why.
+
+COMMAND asks for the command line (32 characters; a leading dot is
+dropped; the old one is offered when you redefine). Then the label (6
+characters), offered as the first word of the command.
+
+WIPE empties the slot.
+
+13.2 What a command button does
+
+When you press a command button, fm builds one line for every marked entry
+of the active panel (in list order), or one for the bar's entry if none is
+marked:
+
+  command /full/path/NAME
+
+with the complete path (and drive) of the entry, so the command finds it
+wherever you are. If the bar is on ".." (or the list is empty) the command
+runs once on its own, with no name. The command text can contain options:
+`rm -f` becomes `rm -f /full/path/NAME`. The panel's folder is made the
+current directory, and its drive the default one, first.
+
+Then fm leaves, the lines are run one after another, and fm starts again,
+with your two panels as you left them (the marks are not kept). Quitting
+that fm is an ordinary return to BASIC.
+
+If a line fails, its error is printed ("line: error n"), the rest are
+skipped, and fm waits for a key before restarting. If a command prints
+something, fm waits for a key before the screen is replaced, so you can
+read it.
+
+13.3 What is it good for
+
+  - A button for each tool you use all the time on files:
+    `editor` to edit the bar's file in .editor, `cat` to read it, `rm -f`
+    to erase without the question, `tapein` to attach a tape, `play`
+    for music, your own assemblers.
+  - Mark 20 files and press the button: the command runs 20 times.
+  - Shortcuts to the 3 folders you always jump to (/GAMES, /BIN, /TMP).
+  - All in the config file, so they are there at the next start.
+
+13.4 Limits
+
+  - It runs ONE name per command run. A command that needs two names
+    (a copy command with a source and a target) cannot be used: the name
+    is always appended last. Put fixed words before it, as options.
+  - The commands must be dot commands that esxDOS can find (in /BIN, or
+    given with a path). It is run as if typed after a "." with the name
+    appended, so the usual rules of the command apply: a command that
+    takes the rest of the line as the name will include everything.
+  - A command that never returns to esxDOS (a snapshot loader, say) ends
+    the chain there: nothing after it runs, and fm is not started again.
+  - Commands that use the ROM's screen and keyboard routines run with the
+    IY register set to a value esxDOS leaves, not 23610. A command that
+    does not set IY itself can crash.
+  - Many marked files: fm keeps the lines in the copy buffer, and needs
+    room to start again after them. Too many gives "Too many files",
+    nothing runs. Mark fewer at a time.
+  - The commands stay in the config file: 3 slots, each of at most 32
+    characters of command and 6 of label.
+
+
+-------------------------------------------------------------------------------
+14. TAP2ESX: TAPES TO FILES
+-------------------------------------------------------------------------------
+
+Almost every program on a .tap does the same two things: a BASIC loader
+runs LOAD "" for each part, and the ROM looks for the next block on the
+tape. On an esxDOS machine you would rather have the parts as files on the
+card, loading with LOAD *"name" at once, and a program you can ENTER on
+and run.
+
+TAP2ESX (SYMBOL SHIFT + X, or the TAP2ESX button) does that. Put the bar on
+a .tap file (the name must end in .tap, case ignored; else "Not a .tap
+file") and press it. The files are written NEXT TO the .tap, in the same
+folder (no sub-folder; files of the same name are written over). When it is
+done the bar is on the first file (the program), and the status row says
+what happened:
+
+  7 files 3 LOADs 2 raw 3 calls
+
+(the files made, the BASIC `LOAD` commands rewritten, the headerless blocks,
+and the tape-loading calls redirected). Press ENTER on the program to run
+it.
+
+14.1 What it does, step by step
+
+It reads the whole tape once and finds the blocks:
+
+  - A header block followed by its data block is a FILE. Its name is the
+    tape name: trailing spaces off; characters that are not a letter, a
+    digit or '-' become '_'. The extension follows the type: .bas
+    (program), .dat (an array), .scr (CODE of 6912 bytes at 16384) or .bin
+    (any other CODE). A name already used on this tape gets a 2-9 or A-Z
+    before the extension.
+  - A data block without a header ("headerless") is a FILE too, named
+    `NAME_1.bin`, `NAME_2.bin`... where NAME is the first 8 characters of
+    the .tap's name.
+
+Every file gets a proper 128 byte +3DOS header (esxDOS builds it from the
+tape header: type, length, address, autostart line), so BASIC's LOAD *,
+CODE and SCREEN$ understand it. ENTER on a .bas runs it.
+
+Each BASIC program is then edited, line by line:
+
+  - `LOAD "name"` (and the CODE, SCREEN$ and DATA forms) becomes
+    `LOAD *"name"`, with the name of the file that was made for that
+    tape block. The program's own numbers, strings and REMs are left
+    alone (fm tokenises as it goes, and skips the 5-byte numbers inside).
+  - If the name is built in an expression, `LOAD "p"+STR$ a CODE 32768`
+    for example, fm links the literal to the files whose name starts with
+    it (p1, p2...) and rewrites it as `LOAD *"p"+STR$ a+".bin"CODE`.
+
+It is possible that some BASIC loaders might require further editing. This
+tool will convert everything but it is not flawless in editing the
+loaders.
+
+14.2 Games that load their own blocks (headerless)
+
+A game's machine code often loads its blocks by itself, calling the ROM's
+LD-BYTES routine with IX = the address and DE = the length. There is no
+BASIC LOAD to rewrite and no file name in the call. For these fm:
+
+  - makes the headerless blocks files with a CODE header;
+  - adds a small loader to the first program: a REM line (after its last
+    line, number + 1) holding a 79-byte stand-in for LD-BYTES and the list
+    of the headerless files' names, in the order they were on the tape;
+  - searches the program's lines and every .bin for a CALL or JP to
+    LD-BYTES (#0556) or LD-BLOCK (#0802) and points them at the stand-in.
+
+The stand-in does what LD-BYTES does, but from the card: the next name in
+the list, opened and read to IX, DE bytes long. It returns like LD-BYTES,
+carry set when all was read, no carry when the list is over or the file
+is short. This is why 128K games that load their banks themselves still
+load. The result line's "calls" is how many were redirected.
+
+14.3 Benefits
+
+  - Tapes become files that load in a second, and can be edited,
+    reordered, backed up and run with ENTER.
+  - Not just "dump the blocks": the BASIC loaders are really rewritten, so
+    the result runs by itself. Rewritten programs are original otherwise.
+  - Games that loaded their blocks with ROM calls work too, 128K ones
+    among them. The author's own 128K games (Who Dares Wins III,
+    ZX Tetris, Mine Alert 2) each have exactly one such call, and convert.
+  - The tape is not touched. If it goes wrong, delete the files and look
+    at the .tap with GLANCE.
+
+14.4 Limits - read these
+
+  - STANDARD SPEED BLOCKS ONLY. Turbo and custom loaders (a game with its
+    own tape loader, speedlock, a copy of LD-BYTES inside the data) are
+    read as headerless blocks if at all, but fm cannot find their calls:
+    the status row ends with "0 calls". The files are made, but the game
+    will not load from them. Games like that need a different tool.
+  - PROTECTION. A program that checks its own loader (reads the ROM
+    bytes, jumps inside LD-BYTES, tests its timing) will see the stand-in,
+    not the ROM, and may refuse to start.
+  - A name that is NOT a literal is not followed. `LOAD n$`, with the file
+    name in a variable, stays as it is, and so does any `LOAD ""` whose
+    block cannot be matched. Such a program loads its first file and fails
+    at the next. Edit the line (GLANCE helps you see what is in there) or
+    use the original tape.
+  - AT MOST 48 FILES per tape. A program is edited in the copy buffer: a
+    program that grows beyond it gives "Program too big" (the 40000-byte
+    kind). Each LOAD grows by one byte (the `*`), a name expression by more.
+  - Only the FIRST program gets the loader line (the stand-in). A second
+    program on the tape is rewritten for its LOADs, but the machine-code
+    calls to LD-BYTES are redirected only in the first program's lines and
+    in the .bin files.
+  - Only LOAD (and the LD-BYTES / LD-BLOCK calls) are rewritten. SAVE,
+    VERIFY and MERGE are left as they are.
+  - While the stand-in reads a file it runs on a stack of its own with
+    interrupts disabled, until it returns.
+  - Existing files with the same names are overwritten, without asking.
+    Convert tapes folder by folder.
+
+
+-------------------------------------------------------------------------------
+15. SETTINGS AND THE CONFIG FILE
+-------------------------------------------------------------------------------
+
+fm writes /SYS/CONFIG/FM.CFG on the system drive when you quit, but only if
+something changed. It keeps:
+
+  - the theme, the mute and the dates / sizes choice
+  - the active panel, and the drive and path of each panel
+  - the pointer keys, and M-LOCK
+  - the three -USER- buttons
+  - the extension handlers
+
+A path that no longer exists, or a drive that is gone, is replaced by the
+current folder of BASIC. To go back to the defaults, delete the file. The
+file is a list of records (tag, length, data) and unknown tags are skipped,
+so other programs can add theirs. /SYS and /SYS/CONFIG are made when needed.
+
+
+-------------------------------------------------------------------------------
+16. COMMAND SUMMARY
+-------------------------------------------------------------------------------
+
+Keys on their own:
+
+  7 6 5 8              bar up / down, page up / down (CAPS SHIFT + digit too)
+  TRUE / INV. VIDEO    first / last entry
+  ENTER                into the directory; on a file: view / run
+  0, DELETE            parent directory
+  BREAK                root of the drive
+  EXTENDED MODE, 1     other panel
+  SPACE                mark / unmark
+  EDIT                 rename
+  GRAPH + letter       quick find
+  Q A O P  M           pointer up, down, left, right, click (redefinable)
+
+With SYMBOL SHIFT:
+
+  A  all          N  none         V  invert       W  wildcard
+  F  diff         C  copy         M  move         E  erase
+  R  rename       K  makedir      I  info         B  attributes
+  S  dates        P  parent       O  root         H  path
+  D  drive        T  theme        U  mute         Y  keys
+  L  M-lock       G  glance       Z  Z80DIS       X  TAP2ESX
+  1 2 3  -USER-   ENTER  the file's handler       Q  quit
+
+In requesters: YES / NO / ALL are clicked or SYMBOL SHIFT + Y / N / A.
+SPACE is NO. In every text line: ENTER accepts, SPACE or BREAK cancels,
+DELETE rubs out, EDIT clears.
+
+
+-------------------------------------------------------------------------------
+17. MESSAGES
+-------------------------------------------------------------------------------
+
+On the status row (with a buzz):
+
+  Not found             the file or folder is not there
+  I/O error             the card could not be read or written
+  Bad name              the name is not valid (also: Z80DIS on a .asm)
+  Access denied         the card or the file does not allow it
+  Disk full             the target ran out of room; the half file is erased
+  No such drive         the drive of a path is gone
+  Not a directory       a path went through a file
+  Already exists        MAKEDIR, RENAME: the name is taken
+  Bad path              the path text is not valid
+  Path too long         paths are 126 characters at most
+  In use                the file is open elsewhere
+  Read only             the file is read-only (ATTRIB can change it)
+  Dir not empty         ERASE could not empty a directory
+  Cancelled             SPACE or BREAK stopped it
+  Same directory        COPY / MOVE into the folder it comes from
+  Into itself           a directory into its own contents
+  Not a .tap file       TAP2ESX on something that is not a .tap
+  Program too big       TAP2ESX: a BASIC program would not fit in the buffer
+  Not enough memory     Z80DIS: not enough copy buffer (section 12.7)
+  Too many files        USER: the lines of a command do not fit (13.4)
+
+Other esxDOS errors are shown as "Error n".
+
+Shown by esxDOS, fm left (back in BASIC):
+
+  Not enough free memory      at start: no room in BASIC (section 2)
+  Overlay not found in /SYS   /SYS/fm.sys is not there (section 2)
+  Wrong fm.sys                /SYS/fm.sys belongs to another build of fm
+
+An esxDOS error while fm.sys is read is shown the same way, with esxDOS's
+own message.
+
+
+-------------------------------------------------------------------------------
+18. TECHNICAL NOTES
+-------------------------------------------------------------------------------
+
+  - fm is 7168 bytes, exactly 14 sectors of 512 (7166 of code, padded:
+    whole sectors load faster). esxDOS loads at most 7168 of a dot command,
+    and the build stops past that. fm.sys (about 22K, in /SYS) holds the
+    rest as modules, read from the card one at a time into a 2560 byte
+    overlay area in BASIC memory and relocated there. The copy buffer is
+    what remains.
+
+  - Z80DIS is two modules: a small one (DIS) that checks the situation, and
+    DISB (6005 bytes), which is too big for the overlay area. DIS reads DISB
+    into the start of the copy buffer and runs it from there, so a long
+    disassembly never costs the other commands any buffer.
+
+  - Directory entries are 32 bytes (name, attributes, size, date, position
+    in the directory), 255 to a panel, with a sort index of one byte per
+    entry. Directories are walked without keeping any handle open while
+    files are copied or erased, which keeps esxDOS's few handles free.
+
+  - Saves are bare data. A copy is byte for byte; headers inside files are
+    copied unchanged. Only TAP2ESX asks esxDOS for a +3DOS header.
+
+  - Sound: channel A of the AY, played from the 50 Hz interrupt. fm calls
+    esxDOS in IM 1 and turns the channel off around every call; it is
+    silent on a 48K.
+
+  - To run programs, fm quits first, then types the line into BASIC
+    (LOAD "", .snapload, LOAD *"path") the way the keyboard would.
+
+  - Text is fm's own 4 pixel wide font, drawn directly to the screen.
+
+
+-------------------------------------------------------------------------------
+19. CREDITS
+-------------------------------------------------------------------------------
+
+  Programmed by NaMcO, (c) 2026 namco/nexgen.
+  Programmed with sjasmplus. The 64 column font is partly me, partly Tasword.
+
+===============================================================================

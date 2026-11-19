@@ -57,7 +57,7 @@ The file can be up to 4 GB, the FAT32 limit.
 
 ## divMMC with esxDOS
 
-The **divMMC** is the most widely used SD card interface for the Spectrum today, and **esxDOS** its system: loading tapes, snapshots and TR-DOS disks from the card, commands `.ls`, `.cd`, `.tapein`…, and a file browser on the NMI. ZXMetalCircle includes **esxDOS 0.8.9** (© Papaya Dezign, https://esxdos.org, non-commercial use).
+The **divMMC** is the most widely used SD card interface for the Spectrum today, and **esxDOS** its system: loading tapes, snapshots and TR-DOS disks from the card, commands `.ls`, `.cd`, `.tapein`…, and a file browser on the NMI. ZXMetalCircle includes **esxDOS 0.9.0** (© Papaya Dezign, https://esxdos.org, non-commercial use).
 
 **Turning it on**: add `divmmc=esxdos` to `cmdline.txt`, or connect it at any time with **Alt+X** or in the settings (F1, C, page 6).
 
@@ -70,6 +70,8 @@ The **divMMC** is the most widely used SD card interface for the Spectrum today,
 - While importing, the progress is shown ("esxDOS: importing 12 of 40 (9 of 20 MB)..."); the emulation is stopped.
 - With the folder empty nothing is done, and without the divMMC connected, nothing either.
 - The folder comes with the esxDOS system (SYS, BIN, TMP) and an empty JUEGOS folder: they go into the card the first time.
+- **When the emulator is updated**, the card is brought up to date by itself: if its `SYS/ESXDOS.SYS` is not this version's (the reference copy is in `roms/esxdos` on the SD card), the system (SYS and BIN, but not your settings in `SYS/CONFIG`) is copied to `esxdos_i` and goes into the card before esxDOS starts. This is needed because the esxDOS 0.9.0 ROM does not boot with the 0.8.9 system (the screen stays black). It is not done if you have chosen another esxDOS ROM in the settings. The old commands in `BIN` that now live in `SYS/BIN` stay, but esxDOS no longer uses them: they can be deleted.
+- **Names**: esxDOS 0.9.0 shows long names (up to 65 characters; 0.8.9 only the short 8.3 ones). Accented letters, ñ and ç are stored without the accent inside the image, because esxDOS draws bytes from 0x80 upwards as graphics or BASIC keywords.
 - What the Spectrum saves (`.cp`, snapshots, `.tapeout`…) stays on the card. The image is not included in the SD cards of new versions, so updating by copying the new SD card over the old one does not lose it.
 - **In 0.94 and earlier** the folder was `esxdos` and it was synchronised with the image both ways. On startup, if `esxdos` exists and `esxdos_i` does not, it is renamed, and its contents are imported like anything else (what was already on the card is replaced by the same and is no longer duplicated on the SD card).
 - `esxdir=other` uses another folder to import from; `esxdir=0` turns importing off (the `hdd=` image, or `hdd/esxdos.img`, is used as it is).
@@ -93,7 +95,7 @@ Connecting one disconnects the others.
 
 **Tested** on the PC and in QEMU:
 - the folder: creating the image from `esxdos/`, `.ls` and `.cd`, and a file made with `.cp` that goes back to the folder by itself;
-- esxDOS 0.8.9 boot on the 48K and 128K;
+- esxDOS 0.9.0 boot on the 48K and 128K, and moving a 0.8.9 card to 0.9.0;
 - `.tapein` followed by `LOAD ""`, which loads a program from the card;
 - the NMI browser with F5;
 - `.128`.

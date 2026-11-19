@@ -35,7 +35,7 @@ La licencia y los créditos también se ven en el propio emulador: F1 y luego **
 
 - **Spectranet** © Dylan Smith (https://spectrum.alioth.net), firmware con licencia MIT; la emulación de la tarjeta se basa en la de Fuse (Philip Kendall y otros, GPL v2 o posterior).
 
-- **esxDOS 0.8.9** © 2005-2021 Papaya Dezign (https://esxdos.org): ROM y ficheros del sistema, sin modificar, para uso no comercial.
+- **esxDOS 0.9.0** © 2005-2026 Papaya Dezign (https://esxdos.org): ROM y ficheros del sistema, sin modificar, para uso no comercial.
 
 - **Mbed TLS** 3.6 (Apache-2.0), **jsmn** (MIT, Serge Zaitsev), **ZXInfo API** (api.zxinfo.dk) y **Spectrum Computing** (ZXDB). Lista de certificados raíz de **Mozilla** (MPL-2.0).
 
@@ -114,7 +114,7 @@ Hecho:
 - Grabación de la señal de cinta (salida MIC) con Alt+W, para programas con rutinas de grabación propias.
 - Spectrum +3 con disquetera: discos .DSK (normales y extendidos, con protecciones: sectores débiles, Speedlock, pistas largas, errores de CRC) y discos de 720K (la unidad pasa sola a ser de 3,5"), con el controlador uPD765 de MAME.
 - Spectrum +3e (ROMs de Garry Lancaster) con disco duro en una tarjeta ZXMMC: imágenes .VHD, .IMG, .RAW y .HDF.
-- divMMC con esxDOS 0.8.9: su tarjeta es una imagen (`hdd/esxdos.img`) y lo que se deja en la carpeta `esxdos_i` se copia a ella; puertos divMMC en el +3e.
+- divMMC con esxDOS 0.9.0: su tarjeta es una imagen (`hdd/esxdos.img`) y lo que se deja en la carpeta `esxdos_i` se copia a ella; puertos divMMC en el +3e.
 - Tarjeta de red Spectranet, con el firmware oficial.
 - ROMs propias para cualquier máquina (carpeta `roms` de la SD).
 - Red por WiFi o cable: servidor web para gestionar la SD desde el navegador (se puede apagar, dejar en solo lectura o proteger con contraseña), hora por NTP y búsqueda y descarga de programas de ZXDB por HTTPS, desde la web o desde el navegador de ficheros del propio emulador (F3).

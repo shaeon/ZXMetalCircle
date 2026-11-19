@@ -323,6 +323,11 @@ cp -r "$ROOT/locales" "$ROOT/sdcard/locales"
 rm -rf "$ROOT/sdcard/esxdos" "$ROOT/sdcard/esxdos_i"
 mkdir -p "$ROOT/sdcard/esxdos_i/TMP" "$ROOT/sdcard/esxdos_i/JUEGOS"
 cp -r "$ROOT/third_party/esxdos/SYS" "$ROOT/third_party/esxdos/BIN" "$ROOT/sdcard/esxdos_i/"
+# Copia de referencia del sistema de esxDOS: con ella el emulador pone al día una
+# tarjeta que tenga otra versión (ver EsxCheckSystem)
+rm -rf "$ROOT/sdcard/roms/esxdos"
+mkdir -p "$ROOT/sdcard/roms/esxdos"
+cp -r "$ROOT/third_party/esxdos/SYS" "$ROOT/third_party/esxdos/BIN" "$ROOT/sdcard/roms/esxdos/"
 rm -f "$ROOT/sdcard/hdd/esxdos.img"
 
 # Menú y controlador del CP/M para la imagen Mar Océana

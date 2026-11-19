@@ -631,6 +631,7 @@ void CKernel::ParseOptions (void)
 	{
 		if (m_EsxFolder.IsEnabled ())
 		{
+			EsxCheckSystem ();		// el sistema de esxDOS de esta versión
 			EsxFolderToImage (FALSE);	// crea o pone al día la imagen
 		}
 		FILINFO Info;
@@ -2574,6 +2575,7 @@ void CKernel::ToggleDivMMC (void)
 	{
 		if (m_EsxFolder.IsEnabled ())
 		{
+			EsxCheckSystem ();
 			EsxFolderToImage (FALSE);
 		}
 		FILINFO Info;
@@ -3671,6 +3673,32 @@ boolean CKernel::IsEsxImageMounted (void) const
 
 // Carpeta -> imagen. Si la imagen está montada en la tarjeta del Spectrum, se
 // saca mientras tanto (y se vuelve a poner si bRemount).
+// Antes de arrancar esxDOS: si la tarjeta no tiene el sistema (SYS y BIN) de la
+// copia de referencia de la SD (roms/esxdos, la de esta versión), se pone en la
+// carpeta de importación y entra en la tarjeta con lo demás. Así, al actualizar
+// el emulador, la tarjeta pasa a la versión nueva de esxDOS (con la ROM nueva no
+// arranca el ESXDOS.SYS de otra). Solo con la ROM de esxDOS de serie y la
+// carpeta esxdos_i; con la tarjeta montada no se mira.
+void CKernel::EsxCheckSystem (void)
+{
+	const char *pROM = CurrentOption ("romesx", "default");
+	if (   !m_EsxFolder.IsEnabled ()
+	    || strcasecmp (m_EsxFolder.GetFolder (), "SD:/" ESX_IMPORT_DIR) != 0
+	    || (strcasecmp (pROM, "default") != 0 && strcasecmp (pROM, "esxmmc.bin") != 0)
+	    || IsEsxImageMounted ()
+	    || m_EsxFolder.SystemUpToDate ("SD:/roms/esxdos"))
+	{
+		return;
+	}
+
+	FILINFO Info;
+	boolean bNoCard = f_stat ("SD:/hdd/esxdos.img", &Info) != FR_OK;
+	if (m_EsxFolder.StageSystem ("SD:/roms/esxdos", bNoCard))
+	{
+		m_Logger.Write (FromKernel, LogNotice, "esxDOS: se pone al día el sistema de la tarjeta");
+	}
+}
+
 void CKernel::EsxFolderToImage (boolean bRemount)
 {
 	if (!m_EsxFolder.IsEnabled ())
