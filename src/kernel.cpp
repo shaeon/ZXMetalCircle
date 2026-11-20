@@ -3787,7 +3787,8 @@ void CKernel::EsxProgressHandler (unsigned nDone, unsigned nTotal, unsigned nMBD
 	}
 	else
 	{
-		Text.Format (T ("esxDOS: importando %u de %u (%u de %u MB)..."), nDone, nTotal, nMBDone, nMBTotal);
+		Text.Format (T ("esxDOS: importando %u de %u..."), nDone, nTotal);	// (los MB, con ficheros
+										// pequeños, salían "0 de 0 MB")
 	}
 	NetBusyHandler (Text, pThis);
 }

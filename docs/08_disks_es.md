@@ -67,7 +67,7 @@ La **divMMC** es la interfaz de tarjeta SD más usada hoy en el Spectrum, y **es
 - Cada copia se lee otra vez y se compara con el original antes de borrarlo. Lo que no se puede importar (no cabe, el nombre no vale…) se queda en la carpeta y un aviso dice cuántos y por qué, por ejemplo "esxDOS: 40 importados, 2 no (raíz de la tarjeta llena: usa subcarpetas)".
 - Si en la tarjeta ya hay un fichero con el mismo nombre, el nuevo lo sustituye ("esxDOS: 3 importados (1 sustituidos)").
 - Si no cabe todo, se crea una tarjeta mayor y se pasa a ella lo que ya había.
-- Mientras se importa se ve el progreso ("esxDOS: importando 12 de 40 (9 de 20 MB)..."); la emulación está parada.
+- Mientras se importa se ve el progreso ("esxDOS: importando 12 de 40..."); la emulación está parada.
 - Con la carpeta vacía no se hace nada, y sin la divMMC conectada, tampoco.
 - La carpeta viene con el sistema de esxDOS (SYS, BIN, TMP) y una carpeta JUEGOS vacía: entran en la tarjeta la primera vez.
 - **Al actualizar el emulador**, la tarjeta se pone al día sola: si su `SYS/ESXDOS.SYS` no es el de esta versión (la copia de referencia está en `roms/esxdos` de la SD), el sistema (SYS y BIN, pero no tu configuración de `SYS/CONFIG`) se copia a `esxdos_i` y entra en la tarjeta antes de arrancar esxDOS. Hace falta, porque la ROM de esxDOS 0.9.0 no arranca con el sistema de la 0.8.9 (se queda la pantalla en negro). No se hace si en la configuración has elegido otra ROM de esxDOS. Los comandos viejos de `BIN` que ahora están en `SYS/BIN` se quedan, pero esxDOS ya no los usa: se pueden borrar.

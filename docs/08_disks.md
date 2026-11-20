@@ -67,7 +67,7 @@ The **divMMC** is the most widely used SD card interface for the Spectrum today,
 - Each copy is read again and compared with the original before deleting it. Whatever cannot be imported (it does not fit, the name is not valid…) stays in the folder and a message says how many and why, for example "esxDOS: 40 imported, 2 not (card root is full: use subfolders)".
 - If the card already has a file with the same name, the new one replaces it ("esxDOS: 3 imported (1 replaced)").
 - If everything does not fit, a bigger card is created and what was already there is moved to it.
-- While importing, the progress is shown ("esxDOS: importing 12 of 40 (9 of 20 MB)..."); the emulation is stopped.
+- While importing, the progress is shown ("esxDOS: importing 12 of 40..."); the emulation is stopped.
 - With the folder empty nothing is done, and without the divMMC connected, nothing either.
 - The folder comes with the esxDOS system (SYS, BIN, TMP) and an empty JUEGOS folder: they go into the card the first time.
 - **When the emulator is updated**, the card is brought up to date by itself: if its `SYS/ESXDOS.SYS` is not this version's (the reference copy is in `roms/esxdos` on the SD card), the system (SYS and BIN, but not your settings in `SYS/CONFIG`) is copied to `esxdos_i` and goes into the card before esxDOS starts. This is needed because the esxDOS 0.9.0 ROM does not boot with the 0.8.9 system (the screen stays black). It is not done if you have chosen another esxDOS ROM in the settings. The old commands in `BIN` that now live in `SYS/BIN` stay, but esxDOS no longer uses them: they can be deleted.

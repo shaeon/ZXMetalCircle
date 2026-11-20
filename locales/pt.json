@@ -189,7 +189,7 @@
 	"esxDOS: %u importados (%u sustituidos)": "esxDOS: %u importados (%u substituídos)",
 	"esxDOS: %u importados": "esxDOS: %u importados",
 	"esxDOS: preparando una tarjeta mayor...": "esxDOS: preparando um cartão maior...",
-	"esxDOS: importando %u de %u (%u de %u MB)...": "esxDOS: importando %u de %u (%u de %u MB)...",
+	"esxDOS: importando %u de %u...": "esxDOS: importando %u de %u...",
 	"Falta la ROM de ese modelo (mira el README)": "Falta a ROM desse modelo (veja o README)",
 	"Falta esa ROM en roms/ (o no tiene 8 KB)": "Falta essa ROM em roms/ (ou não tem 8 KB)",
 	"%s: %s (Spectrum reiniciado)": "%s: %s (Spectrum reiniciado)",
