@@ -8,7 +8,7 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 
 | Key | Function |
 | --- | --- |
-| F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives, T the list of all keys and A the credits |
+| F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives, P the pokes, T the list of all keys and A the credits |
 | Alt+F1 | The settings directly (ESC goes back to the Spectrum) |
 | Alt+U | Drives: see, mount and empty each drive |
 | Alt+K | Keyboard help |
@@ -35,6 +35,8 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 | Alt+F / Alt+E | +3 disk: new / eject |
 | Alt+D | Keyboard diagnostics: what arrives over USB, the keys the Spectrum sees, frames per second and frame times |
 | Alt+V | Press keys simultaneously (cheats like VICTOR in Profanation) |
+| Alt+C | Pokes and cheats for the loaded game (see below) |
+| Alt+O | Manual POKE |
 | F12 or Alt+R | Reset |
 | Pause or Alt+P | Pause |
 
@@ -54,6 +56,22 @@ Some cheats need many keys pressed together, like **VICTOR** in Profanation for 
 **Alt+V** opens a line where you type the keys (letters, digits and space) and, with ENTER, the emulator holds them all down together for 1.5 seconds. It works with any keyboard. With a real Spectrum keyboard over GPIO or a Recreated ZX it is not needed: all of them can be pressed at once, as on the Spectrum.
 
 If the USB keyboard cannot handle a combination and reports too many keys at once, the emulator keeps the keys it already had pressed until the next valid report, as the USB standard says, instead of releasing them all.
+
+## Pokes and cheats (Alt+C and Alt+O)
+
+**Alt+C** (or P in the F1 help) opens the list of cheats for the loaded game: infinite lives, energy, level skip… They come from a **.POK** file, the format of the ZXDB and The Tipshop pokes, which the emulator looks for in the `pokes` folder of the SD card by the game's name: for `games/Barbarian.tzx`, `pokes/Barbarian.pok` or, as in the ZXDB collection (folders by initial), `pokes/b/Barbarian.pok` (`pokes/123/` if it starts with a digit). If it is not found, the list says "no .pok" and its last line, **Open a .pok...**, opens the file browser in `pokes` to choose one. A .pok chosen in the file browser also opens the list.
+
+- Each cheat is chosen with its key (1-9, 0, A-Z) or with ENTER, and **it is applied at once**: it is marked `[x]`. Choosing it again removes it and memory goes back to how it was (with the original value in the .POK or, if there is none, the one there was when it was applied).
+- Cheats that let you choose a number (lives, level…; value 256 in the .POK) ask for it: 0 to 255, or hexadecimal with H at the end (`C9H`).
+- **Apply them with the game already loaded** and running: if applied before, the loading overwrites them. Some games need them in a given part (`[Pt1]`, `[Pt2]`, `[L3]` in the cheat's name).
+- The pokes in a .POK are for a particular release of the game: on another one (a re-release, a compilation…) they may do nothing or crash it.
+- Pokes with a bank (128K) go to that memory page, whether it is paged in or not. On 48K models the bank is ignored.
+
+**Alt+O** (or the **Manual POKE...** line in the list) opens a line to type a POKE as in the magazines: the address and the value separated by a space (`35136 0` is `POKE 35136,0`), or in hexadecimal with H at the end (`8940H C9H`). Several fit in a row (`35136 0 35137 201`). They are applied at once to memory as it is paged and stay in the Alt+C list, so they can be removed. The address goes from 16384 to 65535: the ROM is not written.
+
+Loading another game empties the list. After a reset the cheats stay in the list but not applied, because memory has been cleared. There are no pokes on the ZX81.
+
+With the **GPIO keyboard**: extended mode + SYMBOL SHIFT + C opens the pokes and extended mode + SYMBOL SHIFT + O the manual POKE (like every Alt combination). In the list and the input line everything is done with the Spectrum keys: digits and letters, ENTER, BREAK to go back, CAPS SHIFT + 0 to delete and CAPS SHIFT + 5-8 to move.
 
 ## Keyboard diagnostics (Alt+D)
 

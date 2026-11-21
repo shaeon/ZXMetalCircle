@@ -162,6 +162,11 @@ public:
 	u8 ReadMemory (u16 nAddress) const	{ return m_pReadPage[nAddress >> 14][nAddress & 0x3FFF]; }
 	// Escritura en la memoria tal como la ve ahora la CPU (la ROM no se escribe)
 	void WriteMemory (u16 nAddress, u8 nValue)	{ m_pWritePage[nAddress >> 14][nAddress & 0x3FFF] = nValue; }
+	// Una página de RAM (0-7) directamente, esté paginada o no (pokes del 128K)
+	u8 ReadRAM (unsigned nBank, u16 nOffset) const	{ return m_RAM[nBank & 7][nOffset & 0x3FFF]; }
+	void WriteRAM (unsigned nBank, u16 nOffset, u8 nValue)	{ m_RAM[nBank & 7][nOffset & 0x3FFF] = nValue; }
+	// Los reset que lleva: con uno, los pokes aplicados se pierden
+	unsigned GetResetCount (void) const	{ return m_nResetCount; }
 
 	// Ampliación de memoria LEC: 16 páginas de 32 KB que sustituyen a los 32 KB
 	// bajos (0x0000-0x7FFF). Necesaria para el CP/M de LEC. En los 128K (128,
@@ -281,6 +286,7 @@ private:
 
 	u8 m_nPortFE;
 	u8 m_nPort7FFD;
+	unsigned m_nResetCount;
 	u8 m_nPort1FFD;
 	boolean m_bEarOut;
 	boolean m_bIssue2;

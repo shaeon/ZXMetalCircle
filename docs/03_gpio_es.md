@@ -212,7 +212,7 @@ Si al pulsar una tecla se ilumina otra, lo más probable es que una cinta esté 
   | --- | --- |
   | **Modo extendido:** 1 … 0 | F1 … F10 |
   | **Modo extendido:** Q, W | F11, F12 (como en ESPectrum) |
-  | **Modo extendido:** SYMBOL SHIFT + tecla | Alt + tecla (SS+1 = Alt+F1, SS+K ayuda del teclado, SS+R reset, SS+P pausa) |
+  | **Modo extendido:** SYMBOL SHIFT + tecla | Alt + tecla (SS+1 = Alt+F1, SS+K ayuda del teclado, SS+R reset, SS+P pausa, SS+C pokes, SS+O POKE a mano) |
   | CAPS SHIFT + 1, 2 | Inicio, Fin |
   | CAPS SHIFT + 3, 4 | RePág, AvPág |
   | CAPS SHIFT + 5, 6, 7, 8 | cursores |

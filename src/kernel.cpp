@@ -109,7 +109,9 @@ enum TAction
 	ActionUnits,
 	ActionVolumeUp,			// Alt + +: subir el volumen
 	ActionVolumeDown,		// Alt + -: bajarlo
-	ActionMute			// Alt+0: silencio sí/no
+	ActionMute,			// Alt+0: silencio sí/no
+	ActionPokes,			// Alt+C: pokes y trucos del juego
+	ActionPokeManual		// Alt+O: un POKE a mano
 };
 
 static const unsigned Speeds[] = {1, 2, 4, 10};
@@ -216,6 +218,8 @@ static const TKeyBinding KeyBindings[] =
 	{0x0E,           TRUE,  ActionKeyHelp,      "Alt+K",     GroupOther, N_("Teclado del Spectrum/ZX81")},
 	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D",     GroupOther, N_("Diagnóstico del teclado")},
 	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",     GroupOther, N_("Pulsar teclas simultáneas")},
+	{0x06,           TRUE,  ActionPokes,        "Alt+C",     GroupOther, N_("Pokes y trucos")},
+	{0x12,           TRUE,  ActionPokeManual,   "Alt+O",     GroupOther, N_("POKE a mano")},
 };
 
 // Ayuda corta (F1): las teclas de todos los días. Las demás, en la lista (T).
@@ -326,6 +330,13 @@ CKernel::CKernel (void)
 	m_nZipChoices = 0;
 	m_bZipChoice = FALSE;
 	m_bZXDBInput = FALSE;
+	m_PokeGame[0] = '\0';
+	m_PokeTitle[0] = '\0';
+	m_bPokeTried = FALSE;
+	m_nPokeResets = 0;
+	m_nPokeStage = 0;
+	m_nPokePending = 0;
+	m_bPokeManualFromList = FALSE;
 	m_bZXDBChoice = FALSE;
 	m_nZXDBResults = 0;
 	m_ZXDBQuery[0] = '\0';
@@ -2055,7 +2066,15 @@ void CKernel::LoadAnyFile (const char *pPath)
 
 	size_t nLen = strlen (pPath);
 	const char *pExt = nLen > 4 ? pPath + nLen - 4 : "";
-	if (nLen > 2 && strcasecmp (pPath + nLen - 2, ".p") == 0)
+	if (strcasecmp (pExt, ".pok") == 0)
+	{
+		// pokes: los del juego que hay cargado, en su pantalla
+		if (PokeAvailable () && PokeLoadFile (pPath, FALSE))
+		{
+			PokeShowList (0);
+		}
+	}
+	else if (nLen > 2 && strcasecmp (pPath + nLen - 2, ".p") == 0)
 	{
 		StartZX81 (pPath);		// programa del ZX81
 	}
@@ -4325,6 +4344,11 @@ void CKernel::InsertDisk (const char *pPath, int nForceUnit)
 		m_DSKPath[nUnit][0] = '\0';	// se le dará nombre al grabarlo
 	}
 
+	if (pPath != 0)
+	{
+		PokeSetGame (pPath);
+	}
+
 	CString Message;
 	const char *pName = pPath != 0 ? pPath : T ("disco nuevo");
 	for (const char *p = pName; *p != '\0'; p++)
@@ -4818,6 +4842,7 @@ boolean CKernel::LoadCartridge (const char *pPath)
 	}
 	strncpy (m_CartridgeName, pName, sizeof m_CartridgeName - 1);
 	m_CartridgeName[sizeof m_CartridgeName - 1] = '\0';
+	PokeSetGame (pPath);
 
 	m_nNextFrameTime = 0;
 
@@ -4858,6 +4883,7 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 	}
 
 	ApplySpeaker ();		// el snapshot puede haber cambiado de máquina
+	PokeSetGame (pPath);
 	m_nNextFrameTime = 0;
 	if (m_pSpectrum->IsCartridgeInserted ())
 	{
@@ -5056,6 +5082,7 @@ boolean CKernel::LoadTape (const char *pPath)
 	}
 
 	m_pSpectrum->TapeInserted ();
+	PokeSetGame (pPath);
 
 	strncpy (m_TapePath, pPath, sizeof m_TapePath - 1);
 	m_TapePath[sizeof m_TapePath - 1] = '\0';
@@ -5238,6 +5265,10 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			// página 5: la pantalla de botones del mando (antes que nada: usa
 			// listas y la línea de texto, como otras pantallas)
+		}
+		else if (PokeMenuResult (Result))
+		{
+			// pokes (Alt+C, Alt+O, P en la ayuda): su lista y sus líneas de texto
 		}
 		else if (Result == MenuResultFileSelected)
 		{
@@ -5460,6 +5491,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 
 		if (!m_Menu.IsOpen ())
 		{
+			m_nPokeStage = 0;		// ninguna pantalla de pokes a medias
 			MenuClosed ();
 			m_Keyboard.SetCaptured (FALSE);
 			m_Keyboard.ReleaseAll ();
@@ -5652,6 +5684,14 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		EsxFolderToImage (TRUE);	// esxDOS: lo nuevo de la carpeta, antes de arrancar
 		m_pSpectrum->Reset ();
 		ShowMessage (T ("Reset"));
+		break;
+
+	case ActionPokes:
+		PokeOpen ();
+		break;
+
+	case ActionPokeManual:
+		PokeOpenManual (FALSE);
 		break;
 
 	case ActionPause:

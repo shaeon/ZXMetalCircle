@@ -8,7 +8,7 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 
 | Tecla | Función |
 | --- | --- |
-| F1 | Ayuda y estado; desde ahí, ENTER abre el selector, C la configuración, U las unidades, T la lista de todas las teclas y A los créditos |
+| F1 | Ayuda y estado; desde ahí, ENTER abre el selector, C la configuración, U las unidades, P los pokes, T la lista de todas las teclas y A los créditos |
 | Alt+F1 | La configuración directamente (ESC vuelve al Spectrum) |
 | Alt+U | Unidades: ver, montar y vaciar cada unidad |
 | Alt+K | Ayuda de teclado |
@@ -35,6 +35,8 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 | Alt+F / Alt+E | Disco +3: nuevo / expulsar |
 | Alt+D | Diagnóstico del teclado: lo que llega por USB, las teclas que ve el Spectrum, los cuadros por segundo y el tiempo de cada cuadro |
 | Alt+V | Pulsar teclas simultáneas (trucos como VICTOR en Profanation) |
+| Alt+C | Pokes y trucos del juego cargado (ver abajo) |
+| Alt+O | POKE a mano |
 | F12 o Alt+R | Reset |
 | Pausa o Alt+P | Pausa |
 
@@ -54,6 +56,22 @@ Algunos trucos piden pulsar muchas teclas juntas, como **VICTOR** en Profanation
 **Alt+V** abre una línea donde se escriben las teclas (letras, números y espacio) y, con ENTER, el emulador las mantiene pulsadas todas a la vez durante 1,5 segundos. Funciona con cualquier teclado. Con un teclado real de Spectrum por GPIO o con un Recreated ZX no hace falta: se pueden pulsar todas a la vez, como en el Spectrum.
 
 Si el teclado USB no puede con una combinación y manda un aviso de demasiadas teclas a la vez, el emulador mantiene las teclas que ya tenía pulsadas hasta el siguiente informe válido, como dice la norma USB, en lugar de soltarlas todas.
+
+## Pokes y trucos (Alt+C y Alt+O)
+
+**Alt+C** (o P en la ayuda de F1) abre la lista de trucos del juego cargado: vidas infinitas, energía, saltar de nivel… Salen de un fichero **.POK**, el formato de los pokes de ZXDB y The Tipshop, que el emulador busca solo en la carpeta `pokes` de la SD por el nombre del juego: para `juegos/Barbarian.tzx`, `pokes/Barbarian.pok` o, como en la colección de ZXDB (carpetas por inicial), `pokes/b/Barbarian.pok` (`pokes/123/` si empieza por número). Si no lo encuentra, la lista dice «no hay .pok» y su última línea, **Abrir un .pok...**, abre el navegador en `pokes` para elegirlo. Un .pok elegido en el navegador también abre la lista.
+
+- Cada truco se elige con su tecla (1-9, 0, A-Z) o con ENTER, y **se aplica al momento**: sale marcado `[x]`. Otra vez, se quita y la memoria vuelve a estar como antes (con el valor original que trae el .POK o, si no lo trae, el que había al aplicarlo).
+- Los trucos que dejan elegir un número (vidas, nivel…; valor 256 en el .POK) lo preguntan: de 0 a 255, o en hexadecimal con H al final (`C9H`).
+- **Aplícalos con el juego ya cargado** y en marcha: si se aplican antes, la carga los pisa. En algunos juegos hay que aplicarlos en una parte concreta (`[Pt1]`, `[Pt2]`, `[L3]` en el nombre del truco).
+- Los pokes de un .POK son para una edición concreta del juego: en otra (una reedición, una recopilación…) pueden no hacer nada o colgarlo.
+- Los pokes con banco (128K) van a esa página de la memoria, esté paginada o no. En los modelos de 48K el banco no cuenta.
+
+**Alt+O** (o la línea **POKE a mano...** de la lista) abre una línea para escribir un POKE como en las revistas: la dirección y el valor separados por un espacio (`35136 0` es `POKE 35136,0`), o en hexadecimal con H al final (`8940H C9H`). Caben varios seguidos (`35136 0 35137 201`). Se aplican al momento en la memoria tal como está paginada y se quedan en la lista de Alt+C, para poder quitarlos. La dirección va de 16384 a 65535: en la ROM no se escribe.
+
+Al cargar otro juego, la lista se vacía. Con un reset los trucos siguen en la lista pero sin aplicar, porque la memoria se ha borrado. Con el ZX81 no hay pokes.
+
+Con el **teclado GPIO**: modo extendido + SYMBOL SHIFT + C abre los pokes y modo extendido + SYMBOL SHIFT + O el POKE a mano (como todas las combinaciones con Alt). En la lista y en la línea, todo se hace con las teclas del Spectrum: los números y las letras, ENTER, BREAK para volver, CAPS SHIFT + 0 para borrar y CAPS SHIFT + 5-8 para moverse.
 
 ## Diagnóstico del teclado (Alt+D)
 

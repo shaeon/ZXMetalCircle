@@ -54,7 +54,8 @@ enum TMenuResult
 	MenuResultInput,		// línea de texto: ENTER (GetInput ())
 	MenuResultInputCancel,		// línea de texto: ESC
 	MenuResultListKey,		// lista de dos columnas: una tecla (GetListKey (), GetListSelected ())
-	MenuResultZXDBSearch		// navegador: buscar en ZXDB (la línea de la raíz o F3)
+	MenuResultZXDBSearch,		// navegador: buscar en ZXDB (la línea de la raíz o F3)
+	MenuResultOpenPokes		// P en la ayuda: los pokes del juego (Alt+C)
 };
 
 class CMenu : public CTNFSListener
@@ -64,6 +65,7 @@ public:
 	~CMenu (void);
 
 	boolean OpenBrowser (void);
+	boolean OpenBrowserIn (const char *pDir);	// en esa carpeta (si no existe, donde estaba)
 	void OpenHelp (void);			// ayuda general (F1); ENTER abre el selector
 	void OpenKeyHelp (boolean bZX81 = FALSE);	// ayuda del teclado (Alt+K); del ZX81 si está puesto
 	void SetSettings (CSettings *pSettings)	{ m_pSettings = pSettings; }

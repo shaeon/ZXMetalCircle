@@ -63,6 +63,7 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_nLastFEPC (0),
 	m_nLastFEPort (0)
 {
+	m_nResetCount = 0;
 	m_pSaveHandler = 0;
 	m_bRecording = FALSE;
 	m_bRecordEar = FALSE;
@@ -288,6 +289,7 @@ void CSpectrum::SetModel (TModel Model)
 void CSpectrum::Reset (void)
 {
 	memset (m_RAM, 0, sizeof m_RAM);
+	m_nResetCount++;
 
 	m_nPortFE = 0;
 	m_nPort7FFD = 0;

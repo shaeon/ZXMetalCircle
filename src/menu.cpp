@@ -525,6 +525,22 @@ boolean CMenu::OpenBrowser (void)
 	return TRUE;
 }
 
+boolean CMenu::OpenBrowserIn (const char *pDir)
+{
+	DIR Directory;
+	if (f_opendir (&Directory, pDir) == FR_OK)
+	{
+		f_closedir (&Directory);
+		strncpy (m_CurrentDir, pDir, sizeof m_CurrentDir - 1);
+		m_CurrentDir[sizeof m_CurrentDir - 1] = '\0';
+		m_nEntries = 0;			// sin recordar la fila de otra carpeta
+		m_nSelected = 0;
+		m_nTop = 0;
+	}
+	m_nUnitTarget = -1;
+	return OpenBrowser ();
+}
+
 void CMenu::ClearKeyList (void)
 {
 	m_nKeyListPages = 0;
@@ -585,7 +601,8 @@ static boolean IsLoadableName (const char *pName)
 	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".z80", ".sna", ".szx", ".csw", ".rom", ".mdr",
 				    ".mdv", ".dsk", ".vhd", ".img", ".raw", ".hdf", ".zip",
 				    ".p",	// programas del ZX81
-				    ".sp"};	// snapshots de Pedro Gimeno
+				    ".sp",	// snapshots de Pedro Gimeno
+				    ".pok"};	// pokes (abre su pantalla)
 	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
 	{
 		if (HasExtension (pName, Ext[i]))
@@ -1058,6 +1075,10 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		else if (nKey == 0x18)		// U: unidades (las líneas las rellena el kernel)
 		{
 			Result = MenuResultOpenUnits;
+		}
+		else if (nKey == 0x13)		// P: pokes del juego
+		{
+			Result = MenuResultOpenPokes;
 		}
 		else if (nKey == 0x17 && m_nKeyListPages > 0)	// T: todas las teclas
 		{
@@ -1759,6 +1780,7 @@ void CMenu::Draw (TPixel *pScreen)
 			{"ENTER", N_("Cintas / ficheros")},
 			{"C",     N_("Configuración")},
 			{"U",     N_("Unidades")},
+			{"P",     N_("Pokes y trucos")},
 			{"T",     N_("Todas las teclas...")},
 		};
 		nRow++;

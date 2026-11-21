@@ -49,6 +49,7 @@
 #include "i18n.h"
 #include "videocore.h"
 #include "zx81.h"
+#include "pokfile.h"
 #include <circle/gpiomanager.h>
 #include <circle/sched/scheduler.h>
 
@@ -186,6 +187,16 @@ private:
 	void PadEditKey (u8 nKey, unsigned nRow);
 	void PadEditBackToList (unsigned nRow);
 	boolean PadEditMenuResult (TMenuResult Result);
+	// Pokes (kernelpokes.cpp): Alt+C los trucos del juego, Alt+O un POKE a mano
+	void PokeSetGame (const char *pPath);		// se ha cargado otro juego
+	void PokeOpen (void);				// Alt+C
+	void PokeOpenManual (boolean bFromList);	// Alt+O, o la línea de la lista
+	boolean PokeLoadFile (const char *pPath, boolean bQuiet);	// un .POK
+	void PokeShowList (unsigned nSelected);
+	void PokeEnterMenu (void);
+	void PokeToggle (unsigned nTrainer);
+	boolean PokeMenuResult (TMenuResult Result);
+	boolean PokeAvailable (void);			// no con el ZX81 (avisa)
 	void PadEditPoll (void);
 	void UpdatePadPlayers (void);
 	void LoadPadProfile (unsigned nPad, TJoystickMode Mode);	// joysticks/VVVV-PPPP/<tipo>.txt		// a qué jugador va cada mando (pad1, pad2, padextra)
@@ -431,6 +442,15 @@ private:
 	TUpdateBootResult	m_UpdateBootResult;
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZXDBInput;		// la línea de texto es el título para ZXDB
+	// Pokes (kernelpokes.cpp)
+	CPokFile		m_Pokes;
+	char			m_PokeGame[MENU_NAME_LEN];	// el juego cargado, sin carpeta ni extensión
+	char			m_PokeTitle[MENU_NAME_LEN];	// el .POK que se ve
+	boolean			m_bPokeTried;		// ya se ha buscado su .POK en pokes/
+	unsigned		m_nPokeResets;		// los reset al aplicar (si cambian, se perdieron)
+	unsigned		m_nPokeStage;		// qué espera el menú (PokeStage...)
+	unsigned		m_nPokePending;		// el truco que pide un valor
+	boolean			m_bPokeManualFromList;	// el POKE a mano vuelve a la lista
 	boolean			m_bZXDBChoice;		// la lista es la de los resultados de ZXDB
 	TZXInfoResult		m_ZXDBResults[ZXINFO_MAX_RESULTS];
 	unsigned		m_nZXDBResults;

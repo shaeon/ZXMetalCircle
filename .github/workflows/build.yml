@@ -78,6 +78,8 @@ jobs:
           ./webfiles_test
           g++ -O2 -std=c++17 -I. -I$S -o padprofile_test padprofile_test.cpp $S/padprofile.cpp
           ./padprofile_test
+          g++ -O2 -std=c++17 -I. -I$S -o pok_test pok_test.cpp $S/pokfile.cpp
+          ./pok_test
           g++ -O2 -std=c++17 -I. -I$S -o keyboard_hold_test keyboard_hold_test.cpp $S/zxkeyboard.cpp
           ./keyboard_hold_test
           g++ -O2 -std=c++17 -I. -I$S -o gpio_keys_test gpio_keys_test.cpp $S/zxkeyboard.cpp
