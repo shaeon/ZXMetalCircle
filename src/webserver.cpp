@@ -1621,6 +1621,7 @@ static void EnsureCertificates (void)
 // servidor web espera (cediendo el control) a que termine.
 struct TNetJob
 {
+	boolean bPokes;			// el .pok de un juego (ZXDBFetchPok)
 	boolean bSearch;
 	boolean bRequestLoad;		// descarga: pedir la carga (la web) o solo devolver SDPath (el menú)
 	char Arg[256];
@@ -1629,11 +1630,15 @@ struct TNetJob
 	int nCount;
 	char Error[96];
 	char Message[160];
+	char Hash[132];			// pokes: la huella del juego ("" = se sabe su ficha)
+	char EntryID[12];		// pokes: su ficha de ZXDB ("" = buscarla por la huella)
+	int nPokResult;			// pokes: 1 guardado, 0 no lo hay, -1 error
 	volatile boolean bDone;
 };
 
 static void DoSearch (TNetJob *pJob);
 static void DoDownload (TNetJob *pJob);
+static void DoPokes (TNetJob *pJob);
 
 class CNetJobTask : public CTask
 {
@@ -1642,7 +1647,11 @@ public:
 	void Run (void)
 	{
 		EnsureCertificates ();
-		if (m_pJob->bSearch)
+		if (m_pJob->bPokes)
+		{
+			DoPokes (m_pJob);
+		}
+		else if (m_pJob->bSearch)
 		{
 			DoSearch (m_pJob);
 		}
@@ -1706,6 +1715,7 @@ THTTPStatus CZXWebServer::SendSearch (const char *pQuery, u8 *pBuffer, unsigned 
 	TNetJob *pJob = pQuery[0] != '\0' ? new TNetJob : 0;
 	if (pJob != 0)
 	{
+		pJob->bPokes = FALSE;
 		pJob->bSearch = TRUE;
 		strncpy (pJob->Arg, pQuery, sizeof pJob->Arg - 1);
 		pJob->Arg[sizeof pJob->Arg - 1] = '\0';
@@ -1778,6 +1788,7 @@ CString CZXWebServer::Download (const char *pPath)
 		Message = T ("No hay memoria para la descarga");
 		return Message;
 	}
+	pJob->bPokes = FALSE;
 	pJob->bSearch = FALSE;
 	pJob->bRequestLoad = TRUE;
 	strncpy (pJob->Arg, pPath, sizeof pJob->Arg - 1);
@@ -1799,6 +1810,7 @@ int ZXDBSearch (const char *pQuery, TZXInfoResult *pResults, unsigned nMaxResult
 		*pError = T ("No hay memoria");
 		return -1;
 	}
+	pJob->bPokes = FALSE;
 	pJob->bSearch = TRUE;
 	strncpy (pJob->Arg, pQuery, sizeof pJob->Arg - 1);
 	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
@@ -1825,6 +1837,7 @@ boolean ZXDBDownload (const char *pPath, CString *pSDPath, CString *pMessage)
 		*pMessage = T ("No hay memoria para la descarga");
 		return FALSE;
 	}
+	pJob->bPokes = FALSE;
 	pJob->bSearch = FALSE;
 	pJob->bRequestLoad = FALSE;
 	pJob->SDPath[0] = '\0';
@@ -1911,4 +1924,159 @@ static void DoDownload (TNetJob *pJob)
 	Message.Format (T ("Descargado y cargando en el Spectrum: %s (%u KB)"), Name, (unsigned) (nSize + 1023) / 1024);
 	strncpy (pJob->Message, Message, sizeof pJob->Message - 1);
 	pJob->Message[sizeof pJob->Message - 1] = '\0';
+}
+
+// Pokes: busca en ZXDB el .pok del juego (por su huella o por su ficha) y lo
+// guarda en SD:/pokes/<pSaveName>.pok. Devuelve 1 si lo ha guardado (en
+// *pSDPath), 0 si ZXDB no lo tiene y -1 si ha fallado (*pMessage dice por qué)
+int ZXDBFetchPok (const char *pHash, const char *pEntryID, const char *pSaveName,
+		  CString *pSDPath, CString *pMessage)
+{
+	TNetJob *pJob = new TNetJob;
+	if (pJob == 0)
+	{
+		*pMessage = T ("No hay memoria");
+		return -1;
+	}
+	pJob->bPokes = TRUE;
+	pJob->bSearch = FALSE;
+	pJob->bRequestLoad = FALSE;
+	pJob->SDPath[0] = '\0';
+	pJob->Message[0] = '\0';
+	strncpy (pJob->Hash, pHash != 0 ? pHash : "", sizeof pJob->Hash - 1);
+	pJob->Hash[sizeof pJob->Hash - 1] = '\0';
+	strncpy (pJob->EntryID, pEntryID != 0 ? pEntryID : "", sizeof pJob->EntryID - 1);
+	pJob->EntryID[sizeof pJob->EntryID - 1] = '\0';
+	strncpy (pJob->Arg, pSaveName != 0 ? pSaveName : "", sizeof pJob->Arg - 1);
+	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
+	RunJob (pJob);
+	*pMessage = pJob->Message;
+	*pSDPath = pJob->SDPath;
+	int nResult = pJob->nPokResult;
+	delete pJob;
+	return nResult;
+}
+
+static void PokMessage (TNetJob *pJob, const char *pText, int nResult)
+{
+	strncpy (pJob->Message, pText, sizeof pJob->Message - 1);
+	pJob->Message[sizeof pJob->Message - 1] = '\0';
+	pJob->nPokResult = nResult;
+}
+
+static void DoPokes (TNetJob *pJob)
+{
+	WebBusy (T ("Red: buscando pokes en ZXDB..."));
+	pJob->nPokResult = -1;
+
+	#define POK_WORK_SIZE	(1024 * 1024)		// las fichas tienen muchos datos
+	u8 *pWork = new u8[POK_WORK_SIZE];
+	if (pWork == 0)
+	{
+		PokMessage (pJob, T ("No hay memoria"), -1);
+		return;
+	}
+
+	CCircleTransport Transport;
+	CHTTPSClient Client (&Transport);
+	const char *pError = "";
+	char Title[64] = "";
+	CString Message;
+
+	// 1. la ficha, si no se sabe: por la huella del fichero
+	char ID[12];
+	strncpy (ID, pJob->EntryID, sizeof ID - 1);
+	ID[sizeof ID - 1] = '\0';
+	if (ID[0] == '\0')
+	{
+		int n = ZXInfoFileCheck (&Client, pJob->Hash, ID, sizeof ID, Title, sizeof Title,
+					 pWork, POK_WORK_SIZE, &pError);
+		if (n <= 0)
+		{
+			delete [] pWork;
+			PokMessage (pJob, n == 0 ? T ("ZXDB no conoce este fichero: busca el juego por su nombre")
+						 : T (pError), n);
+			return;
+		}
+	}
+
+	// 2. el .pok de la ficha
+	char Path[192];
+	char EntryTitle[64];
+	int n = ZXInfoPokPath (&Client, ID, Path, sizeof Path, EntryTitle, sizeof EntryTitle,
+			       pWork, POK_WORK_SIZE, &pError);
+	if (EntryTitle[0] != '\0')
+	{
+		strcpy (Title, EntryTitle);
+	}
+	if (n <= 0)
+	{
+		delete [] pWork;
+		if (n == 0)
+		{
+			Message.Format (T ("ZXDB no tiene pokes de %s"), Title[0] != '\0' ? Title : ID);
+			PokMessage (pJob, Message, 0);
+		}
+		else
+		{
+			PokMessage (pJob, T (pError), -1);
+		}
+		return;
+	}
+
+	// 3. descargarlo (los .pok de Spectrum Computing van sin comprimir)
+	WebBusy (T ("Red: descargando pokes de ZXDB..."));
+	#define POK_MAX_SIZE	(64 * 1024)
+	u8 *pFile = new u8[POK_MAX_SIZE];
+	char Name[128];
+	size_t nSize = pFile != 0 ? ZXInfoDownload (&Client, Path, pFile, POK_MAX_SIZE, Name, sizeof Name,
+						    pWork, POK_WORK_SIZE, &pError)
+				  : 0;
+	delete [] pWork;
+	if (nSize == 0)
+	{
+		delete [] pFile;
+		Message.Format (T ("No se pudo descargar: %s"), T (pError));
+		PokMessage (pJob, Message, -1);
+		return;
+	}
+
+	// 4. a SD:/pokes, con el nombre del juego (así la próxima vez está)
+	char Save[128];
+	strncpy (Save, pJob->Arg[0] != '\0' ? pJob->Arg : Name, sizeof Save - 1);
+	Save[sizeof Save - 1] = '\0';
+	for (char *p = Save; *p != '\0'; p++)
+	{
+		if (*p == '/' || *p == '\\' || *p == ':' || *p == '*' || *p == '?' || *p == '"'
+		    || *p == '<' || *p == '>' || *p == '|')
+		{
+			*p = '_';
+		}
+	}
+	size_t nSaveLen = strlen (Save);
+	if (nSaveLen > 4 && strcasecmp (Save + nSaveLen - 4, ".pok") == 0)
+	{
+		Save[nSaveLen - 4] = '\0';
+	}
+
+	f_mkdir ("SD:/pokes");
+	CString SDPath;
+	SDPath.Format ("SD:/pokes/%s.pok", Save);
+	FIL File;
+	unsigned nWritten = 0;
+	boolean bOK =    f_open (&File, SDPath, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK
+		      && f_write (&File, pFile, nSize, &nWritten) == FR_OK && nWritten == nSize;
+	f_close (&File);
+	delete [] pFile;
+	if (!bOK)
+	{
+		Message.Format (T ("No se pudo guardar %s"), (const char *) SDPath);
+		PokMessage (pJob, Message, -1);
+		return;
+	}
+
+	strncpy (pJob->SDPath, SDPath, sizeof pJob->SDPath - 1);
+	pJob->SDPath[sizeof pJob->SDPath - 1] = '\0';
+	Message.Format (T ("Pokes de ZXDB: %s"), Title[0] != '\0' ? Title : Save);
+	PokMessage (pJob, Message, 1);
 }

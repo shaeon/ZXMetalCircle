@@ -61,5 +61,9 @@ private:
 #include "download/zxinfo.h"
 int ZXDBSearch (const char *pQuery, TZXInfoResult *pResults, unsigned nMaxResults, CString *pError);
 boolean ZXDBDownload (const char *pPath, CString *pSDPath, CString *pMessage);
+// El .pok de un juego, por su huella (SHA-512 en hexadecimal) o su ficha, a
+// SD:/pokes/<pSaveName>.pok: 1 guardado, 0 ZXDB no lo tiene, -1 error
+int ZXDBFetchPok (const char *pHash, const char *pEntryID, const char *pSaveName,
+		  CString *pSDPath, CString *pMessage);
 
 #endif

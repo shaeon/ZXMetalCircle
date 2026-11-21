@@ -9,9 +9,14 @@
 //   pokes/<inicial>/<juego>.pok, como en la colección de ZXDB). Al elegir un
 //   truco se aplica al momento y se marca [x]; otra vez, se quita y la
 //   memoria vuelve a estar como antes. Los de valor 256 preguntan el valor.
-// - Las dos últimas líneas: "POKE a mano..." y "Abrir un .pok..." (el
+// - Si no está en la SD y hay red, se busca en ZXDB: por la huella del
+//   fichero cargado (SHA-512, /v5/filecheck de ZXInfo) o, si se descargó con
+//   el buscador de ZXDB, por su ficha. Su .pok se descarga de Spectrum
+//   Computing a pokes/<juego>.pok (la próxima vez ya está). Una vez por juego.
+// - Las tres últimas líneas: "POKE a mano...", "Abrir un .pok..." (el
 //   navegador, en SD:/pokes; un .pok elegido en el navegador también abre
-//   esta pantalla).
+//   esta pantalla) y "Buscar pokes en ZXDB..." (por el título, para los
+//   ficheros que ZXDB no reconoce).
 // - Alt+O (modo extendido + SYMBOL SHIFT + O): el POKE a mano directamente:
 //   "35136 0" (POKE 35136,0), en hexadecimal con H al final ("8940H C9H"),
 //   varios pares seguidos. Se quedan en la lista, para poder quitarlos.
@@ -30,6 +35,9 @@
 #include <circle/util.h>
 #include <fatfs/ff.h>
 #include <string.h>
+#include "webserver.h"		// ZXDBFetchPok, ZXDBSearch
+#include "network.h"
+#include "mbedtls/sha512.h"
 
 #define POKES_DIR		"SD:/pokes"
 #define POK_FILE_MAX		(64 * 1024)	// el mayor de ZXDB tiene 11 KB
@@ -40,7 +48,9 @@ enum
 	PokeStageNone,
 	PokeStageList,		// la lista de trucos
 	PokeStageValue,		// un truco con valor 256: el valor
-	PokeStageManual		// el POKE a mano
+	PokeStageManual,	// el POKE a mano
+	PokeStageSearch,	// buscar en ZXDB: el título
+	PokeStageResults	// buscar en ZXDB: los resultados
 };
 
 // La memoria del Spectrum para CPokFile: las páginas del 128K, o la memoria
@@ -114,7 +124,53 @@ void CKernel::PokeSetGame (const char *pPath)
 	m_PokeTitle[0] = '\0';
 	m_bPokeTried = FALSE;
 	BaseName (pPath != 0 ? pPath : "", m_PokeGame, sizeof m_PokeGame);
+	strncpy (m_PokeGamePath, pPath != 0 ? pPath : "", sizeof m_PokeGamePath - 1);
+	m_PokeGamePath[sizeof m_PokeGamePath - 1] = '\0';
+	m_PokeZXDBID[0] = '\0';
+	m_bPokeOnline = FALSE;
 	m_nPokeResets = m_pSpectrum->GetResetCount ();
+}
+
+void CKernel::PokeSetZXDBID (const char *pID)
+{
+	strncpy (m_PokeZXDBID, pID, sizeof m_PokeZXDBID - 1);
+	m_PokeZXDBID[sizeof m_PokeZXDBID - 1] = '\0';
+}
+
+// Busca en ZXDB el .pok del juego cargado (por su ficha o por la huella del
+// fichero) y lo carga; TRUE si lo ha encontrado
+boolean CKernel::PokeFetchOnline (void)
+{
+	m_bPokeOnline = TRUE;			// una vez por juego
+
+	char Hash[129] = "";
+	if (m_PokeZXDBID[0] == '\0')
+	{
+		// SHA-512 del fichero, tal cual está en la SD (o en el ZIP)
+		int nSize = SourceSize (m_PokeGamePath);
+		if (nSize <= 0 || (unsigned) nSize > WORK_BUFFER_SIZE
+		    || !ReadSource (m_PokeGamePath, m_pWork, (unsigned) nSize))
+		{
+			return FALSE;
+		}
+		u8 Digest[64];
+		if (mbedtls_sha512 (m_pWork, (size_t) nSize, Digest, 0) != 0)
+		{
+			return FALSE;
+		}
+		static const char Hex[] = "0123456789abcdef";
+		for (unsigned i = 0; i < 64; i++)
+		{
+			Hash[2 * i] = Hex[Digest[i] >> 4];
+			Hash[2 * i + 1] = Hex[Digest[i] & 15];
+		}
+		Hash[128] = '\0';
+	}
+
+	CString SDPath, Message;
+	int nResult = ZXDBFetchPok (Hash, m_PokeZXDBID, m_PokeGame, &SDPath, &Message);
+	ShowMessage (Message);
+	return nResult > 0 && PokeLoadFile (SDPath, FALSE);
 }
 
 boolean CKernel::PokeAvailable (void)
@@ -192,7 +248,8 @@ void CKernel::PokeShowList (unsigned nSelected)
 	}
 	m_Menu.SetChoiceItem (nCount, T ("POKE a mano..."));
 	m_Menu.SetChoiceItem (nCount + 1, T ("Abrir un .pok..."));
-	m_Menu.SetChoiceSelected (nSelected <= nCount + 1 ? nSelected : 0);
+	m_Menu.SetChoiceItem (nCount + 2, T ("Buscar pokes en ZXDB..."));
+	m_Menu.SetChoiceSelected (nSelected <= nCount + 2 ? nSelected : 0);
 }
 
 void CKernel::PokeOpen (void)
@@ -228,7 +285,45 @@ void CKernel::PokeOpen (void)
 		}
 	}
 
+	// si no está en la SD, en ZXDB (una vez por juego, y con red)
+	if (   m_Pokes.GetFileCount () == 0 && !m_bPokeOnline && m_PokeGamePath[0] != '\0'
+	    && CNetworkManager::IsNetRunning ())
+	{
+		PokeEnterMenu ();		// el aviso de la red sale ya con el menú
+		PokeFetchOnline ();
+	}
+
 	PokeShowList (0);
+}
+
+void CKernel::PokeAskSearch (void)
+{
+	m_nPokeStage = PokeStageSearch;
+	m_Menu.OpenInput (T ("Buscar pokes en ZXDB"), T ("Escribe el título del juego"),
+			  T ("(letras, números y espacios)"), T ("ENTER buscar   ESC volver"));
+}
+
+void CKernel::PokeShowResults (unsigned nSelected)
+{
+	m_nPokeStage = PokeStageResults;
+	CString Title;
+	Title.Format (T ("Pokes en ZXDB: %s"), m_ZXDBQuery);
+	m_Menu.OpenChoice (Title);
+	for (unsigned i = 0; i < m_nZXDBResults; i++)
+	{
+		const TZXInfoResult &R = m_ZXDBResults[i];
+		CString Item;
+		if (R.nYear != 0)
+		{
+			Item.Format ("%s (%u, %s)", R.Title, R.nYear, R.Publisher);
+		}
+		else
+		{
+			Item.Format ("%s (%s)", R.Title, R.Publisher);
+		}
+		m_Menu.SetChoiceItem (i, Item);
+	}
+	m_Menu.SetChoiceSelected (nSelected);
 }
 
 void CKernel::PokeToggle (unsigned nTrainer)
@@ -293,10 +388,19 @@ boolean CKernel::PokeMenuResult (TMenuResult Result)
 			{
 				PokeOpenManual (TRUE);
 			}
-			else
+			else if (nChoice == nCount + 1)
 			{
 				m_nPokeStage = PokeStageNone;
 				m_Menu.OpenBrowserIn (POKES_DIR);
+			}
+			else if (!CNetworkManager::IsNetRunning ())
+			{
+				ShowMessage (T ("Sin red"));
+				PokeShowList (nChoice);
+			}
+			else
+			{
+				PokeAskSearch ();
 			}
 			return TRUE;
 		}
@@ -397,6 +501,56 @@ boolean CKernel::PokeMenuResult (TMenuResult Result)
 			{
 				m_nPokeStage = PokeStageNone;
 			}
+			return TRUE;
+		}
+		return FALSE;
+
+	case PokeStageSearch:
+		if (Result == MenuResultInput && m_Menu.GetInput ()[0] != '\0')
+		{
+			strncpy (m_ZXDBQuery, m_Menu.GetInput (), sizeof m_ZXDBQuery - 1);
+			m_ZXDBQuery[sizeof m_ZXDBQuery - 1] = '\0';
+			CString Error;
+			int nCount = ZXDBSearch (m_ZXDBQuery, m_ZXDBResults, ZXINFO_MAX_RESULTS, &Error);
+			if (nCount <= 0)
+			{
+				ShowMessage (nCount < 0 ? (const char *) Error : T ("ZXDB: no se ha encontrado nada"));
+				PokeAskSearch ();
+				return TRUE;
+			}
+			m_nZXDBResults = nCount;
+			PokeShowResults (0);
+			return TRUE;
+		}
+		if (Result == MenuResultInput || Result == MenuResultInputCancel)
+		{
+			PokeShowList (m_Pokes.GetCount () + 2);		// vacío o ESC: a la lista
+			return TRUE;
+		}
+		return FALSE;
+
+	case PokeStageResults:
+		if (Result == MenuResultChoice && m_Menu.GetChoice () < m_nZXDBResults)
+		{
+			unsigned nChoice = m_Menu.GetChoice ();
+			const TZXInfoResult &R = m_ZXDBResults[nChoice];
+			CString SDPath, Message;
+			int nResult = ZXDBFetchPok ("", R.ID, m_PokeGame[0] != '\0' ? m_PokeGame : R.Title,
+						    &SDPath, &Message);
+			ShowMessage (Message);
+			if (nResult > 0 && PokeLoadFile (SDPath, FALSE))
+			{
+				PokeShowList (0);
+			}
+			else
+			{
+				PokeShowResults (nChoice);		// otro de la lista
+			}
+			return TRUE;
+		}
+		if (Result == MenuResultChoiceCancel)
+		{
+			PokeAskSearch ();				// ESC: otra búsqueda
 			return TRUE;
 		}
 		return FALSE;

@@ -332,6 +332,9 @@ CKernel::CKernel (void)
 	m_bZXDBInput = FALSE;
 	m_PokeGame[0] = '\0';
 	m_PokeTitle[0] = '\0';
+	m_PokeGamePath[0] = '\0';
+	m_PokeZXDBID[0] = '\0';
+	m_bPokeOnline = FALSE;
 	m_bPokeTried = FALSE;
 	m_nPokeResets = 0;
 	m_nPokeStage = 0;
@@ -2360,6 +2363,10 @@ void CKernel::ZXDBChoose (unsigned nResult)
 	}
 	m_Menu.Close ();
 	LoadAnyFile (SDPath);			// queda en SD:/descargas para la próxima vez
+	if (strcmp (m_PokeGamePath, SDPath) == 0)
+	{
+		PokeSetZXDBID (R.ID);		// sus pokes, por su ficha (Alt+C)
+	}
 }
 
 void CKernel::LoadZipEntry (unsigned nEntry)

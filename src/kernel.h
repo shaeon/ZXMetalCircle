@@ -197,6 +197,10 @@ private:
 	void PokeToggle (unsigned nTrainer);
 	boolean PokeMenuResult (TMenuResult Result);
 	boolean PokeAvailable (void);			// no con el ZX81 (avisa)
+	void PokeSetZXDBID (const char *pID);		// el juego vino del buscador de ZXDB
+	boolean PokeFetchOnline (void);			// su .pok, de ZXDB
+	void PokeAskSearch (void);
+	void PokeShowResults (unsigned nSelected);
 	void PadEditPoll (void);
 	void UpdatePadPlayers (void);
 	void LoadPadProfile (unsigned nPad, TJoystickMode Mode);	// joysticks/VVVV-PPPP/<tipo>.txt		// a qué jugador va cada mando (pad1, pad2, padextra)
@@ -446,6 +450,9 @@ private:
 	CPokFile		m_Pokes;
 	char			m_PokeGame[MENU_NAME_LEN];	// el juego cargado, sin carpeta ni extensión
 	char			m_PokeTitle[MENU_NAME_LEN];	// el .POK que se ve
+	char			m_PokeGamePath[MENU_PATH_LEN];	// el fichero del juego (para su huella)
+	char			m_PokeZXDBID[12];	// su ficha de ZXDB, si vino del buscador
+	boolean			m_bPokeOnline;		// ya se ha buscado su .pok en ZXDB
 	boolean			m_bPokeTried;		// ya se ha buscado su .POK en pokes/
 	unsigned		m_nPokeResets;		// los reset al aplicar (si cambian, se perdieron)
 	unsigned		m_nPokeStage;		// qué espera el menú (PokeStage...)
