@@ -326,7 +326,11 @@ defecto.
                   pueden renombrar, mover, sustituir ni borrar: kernels,
                   config.txt, cmdline.txt, locales...), 0 = sin proteger
                   (se pide confirmacion). Lo que esta en uso, siempre
-                  protegido. Desde la web no se puede cambiar
+                  protegido. Desde la web no se puede cambiar. Vale
+                  tambien para F2 en el navegador de ficheros de la Pi
+
+ filechanges=1    F2 en el navegador de ficheros de la Pi (Alt+F5): renombrar,
+                  borrar y crear carpetas en la SD. 0 = sin F2 (solo cargar)
 
  ip=              IP fija. Si no se pone, se usa DHCP (lo normal).
  mask=            Mascara de red        (por defecto 255.255.255.0)

@@ -16,7 +16,7 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 | F3 | Tape: block browser (list of what is on the tape; ENTER leaves it at the chosen block, Home = rewind) |
 | F4 | Change joystick |
 | F5 | NMI: Multiface, esxDOS browser or Spectranet menu |
-| Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI |
+| Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI. Inside, F2 renames, deletes or creates folders (see below) |
 | F6 | Loading speed: instant / fast / real |
 | F7 | List of models to choose from (the current one highlighted; those without a ROM say so) |
 | Alt+F7 | Switch to the next model (16K, 48K, 128K, +2, +2A, +3, +3e) |
@@ -48,6 +48,16 @@ PC keyboard to Spectrum keyboard mapping:
 - **Cursor keys**: they are always the Spectrum's cursor keys (CAPS SHIFT + 5/6/7/8). With a joystick selected, they also move the joystick, and **the Windows keys** (or keypad 0) are fire; **both Ctrl keys are SYMBOL SHIFT**. This can be changed with `cursors=` and, the fire key, with `kbdfire=` or on page 5 of the settings: Windows keys, right Ctrl (as before 1.08) or none. With no joystick, or with `cursors=keys`, the fire key does not fire.
 
 To load a tape: press F1 and then ENTER, choose the `.TAP`, `.TZX`, `.PZX` or `.CSW` and type `LOAD ""` (on the 128K/+2A, choose "Tape Loader" or "Loader" in the menu). The tape starts by itself when the ROM or a custom loader starts reading it, and stops by itself when the program stops reading it like a loader for 2 seconds. What counts is reading like a loader (the same IN over and over, with a counter that advances, as Fuse does), not reading a lot: menus that poll the keyboard non-stop neither start the tape nor keep it running, so multiloads find the next block where they left it. In fast mode, the emulator runs at full speed while loading.
+
+## SD card files from the file browser (F2)
+
+In the file browser (Alt+F5, or F1 and ENTER), **F2** opens a list of what can be done with the selected entry: **Rename...**, **Delete...** and **New folder...** (on `[..]`, only the new folder). With the GPIO keyboard, F2 is extended mode + 2.
+
+- **Rename** opens a line with the current name and the cursor before the extension. It types lowercase; capitals with Shift or CAPS SHIFT + letter; symbols with Ctrl or SYMBOL SHIFT + the key, as on the Spectrum: SS+8 `(`, SS+9 `)`, SS+0 `_`, SS+J `-`, SS+M `.`, SS+N `,`, SS+K `+`, SS+L `=`, SS+1 `!`, SS+2 `@`, SS+3 `#`, SS+4 `$`, SS+5 `%`, SS+6 `&`, SS+7 `'`, SS+Y `[`, SS+U `]`. The dot and hyphen of a USB keyboard work too. The cursor keys move the cursor, Home and End (CAPS SHIFT + 1 and 2) go to the ends, DELETE (CAPS SHIFT + 0) deletes the character on the left and Del (CAPS SHIFT + 9) the one under the cursor.
+- **Delete** always asks, with "No, keep it" selected on entry. Folders only if they are empty.
+- **New folder** creates one in the current folder.
+
+The same checks as on the web page apply: system files (kernels, `cmdline.txt`, `config.txt`, the emulator's folders...) are not touched while "System files" is set to "protected" (`webprotect=1`, page 9), and what is in use (a +3 disk, a microdrive, the hard disk, the tape if SAVE writes to it) cannot be renamed or deleted: it says "In use". F2 does not work in TNFS folders or when the browser has been opened to choose a drive's file (Alt+U). "Changes in the browser" (page 8, `filechanges=0`) removes it altogether.
 
 ## Simultaneous keys (Alt+V)
 

@@ -55,7 +55,8 @@ enum TMenuResult
 	MenuResultInputCancel,		// línea de texto: ESC
 	MenuResultListKey,		// lista de dos columnas: una tecla (GetListKey (), GetListSelected ())
 	MenuResultZXDBSearch,		// navegador: buscar en ZXDB (la línea de la raíz o F3)
-	MenuResultOpenPokes		// P en la ayuda: los pokes del juego (Alt+C)
+	MenuResultOpenPokes,		// P en la ayuda: los pokes del juego (Alt+C)
+	MenuResultFileOptions		// F2 en el navegador: renombrar, borrar... (GetBrowserSelection)
 };
 
 class CMenu : public CTNFSListener
@@ -66,6 +67,14 @@ public:
 
 	boolean OpenBrowser (void);
 	boolean OpenBrowserIn (const char *pDir);	// en esa carpeta (si no existe, donde estaba)
+	// Lo elegido en el navegador, para F2: la carpeta (siempre) y el nombre
+	// (FALSE si es "..", la línea de ZXDB o de TNFS, o no hay nada)
+	boolean GetBrowserSelection (char *pDir, unsigned nDirSize, char *pName, unsigned nNameSize,
+				     boolean *pIsDir) const;
+	// Vuelta al navegador (tras F2) con pSelect elegido y un aviso arriba
+	void ReturnToBrowser (const char *pSelect, const char *pMessage);
+	// F2 en el navegador (los cambios en la SD: "Cambios en el navegador")
+	void SetFileChanges (boolean bAllowed)	{ m_bFileChanges = bAllowed; }
 	void OpenHelp (void);			// ayuda general (F1); ENTER abre el selector
 	void OpenKeyHelp (boolean bZX81 = FALSE);	// ayuda del teclado (Alt+K); del ZX81 si está puesto
 	void SetSettings (CSettings *pSettings)	{ m_pSettings = pSettings; }
@@ -103,6 +112,14 @@ public:
 	// pFooter: la línea de abajo (0 = la de Alt+V: "ENTER pulsar...")
 	void OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter = 0);
 	const char *GetInput (void) const	{ return m_InputBuf; }
+	// Línea de texto libre (nombres de fichero): minúsculas, mayúsculas con
+	// Mayúsculas o CAPS SHIFT, símbolos con Ctrl o SYMBOL SHIFT (como en el
+	// Spectrum: SS+8 '(', SS+0 '_', SS+J '-', SS+M '.'...), cursores, Inicio,
+	// Fin, retroceso y SUPR. Empieza con pInitial (bytes de la SD, CP850) y el
+	// cursor en nCursor. Mismos resultados que OpenInput.
+	void OpenText (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter,
+		       const char *pInitial, unsigned nCursor);
+	boolean IsTyping (void) const		{ return m_Mode == ModeInput && m_bInputText; }
 
 	// Lista de dos columnas (nombre y valor), como la configuración: la lleva
 	// quien la abre. El menú mueve la selección (cursores, RePág, AvPág,
@@ -227,7 +244,12 @@ private:
 	boolean m_bSettingsFromShortcut;	// configuración abierta con Alt+F1
 	char m_InputHelp[2][48];
 	char m_InputFooter[48];
-	char m_InputBuf[20];		// lo escrito en la línea de texto
+	char m_InputBuf[MENU_NAME_LEN];	// lo escrito en la línea de texto
+	unsigned m_nInputMax;		// lo más que cabe (19 en OpenInput)
+	boolean m_bInputText;		// OpenText: texto libre con cursor
+	unsigned m_nInputCursor;
+	boolean m_bFileChanges;		// F2 en el navegador
+	char m_PendingSelect[MENU_NAME_LEN];	// ReturnToBrowser: el que se elige al volver
 	char m_Choice[MENU_CHOICE_ITEMS][100];	// nombres de ZIP de hasta 96
 	unsigned m_nChoices;
 	unsigned m_nChoiceSelected;

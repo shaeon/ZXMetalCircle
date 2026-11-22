@@ -23,7 +23,7 @@
 #define PANEL_COLS	42
 #define PANEL_ROWS	35
 #define LIST_ROW	4
-#define LIST_LINES	27
+#define LIST_LINES	26	// y una línea libre antes de las de abajo
 #define TAPE_LIST_LINES	(PANEL_ROWS - 8)	// filas de bloques en el navegador de la cinta
 #define TEXT_COLS	(PANEL_COLS - 2)
 
@@ -74,6 +74,11 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nChoiceSelected = 0;
 	m_ChoiceTitle[0] = '\0';
 	m_InputTitle[0] = m_InputHelp[0][0] = m_InputHelp[1][0] = m_InputBuf[0] = '\0';
+	m_nInputMax = 19;
+	m_bInputText = FALSE;
+	m_nInputCursor = 0;
+	m_bFileChanges = TRUE;
+	m_PendingSelect[0] = '\0';
 	m_bUnitsFromShortcut = FALSE;
 	m_bSettingsFromShortcut = FALSE;
 	m_nAboutTop = 0;
@@ -318,7 +323,59 @@ void CMenu::OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp
 	strncpy (m_InputHelp[1], pHelp2 != 0 ? pHelp2 : "", sizeof m_InputHelp[1] - 1);
 	m_InputHelp[1][sizeof m_InputHelp[1] - 1] = '\0';
 	m_InputBuf[0] = '\0';
+	m_nInputMax = 19;		// como siempre: títulos de ZXDB, pokes, teclas...
+	m_bInputText = FALSE;
 	m_Mode = ModeInput;
+}
+
+void CMenu::OpenText (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter,
+		      const char *pInitial, unsigned nCursor)
+{
+	OpenInput (pTitle, pHelp1, pHelp2, pFooter);
+	m_bInputText = TRUE;
+	m_nInputMax = sizeof m_InputBuf - 1;
+	strncpy (m_InputBuf, pInitial != 0 ? pInitial : "", sizeof m_InputBuf - 1);
+	m_InputBuf[sizeof m_InputBuf - 1] = '\0';
+	unsigned nLen = strlen (m_InputBuf);
+	m_nInputCursor = nCursor <= nLen ? nCursor : nLen;
+}
+
+// La letra o el símbolo de una tecla en la línea de texto libre (0 si no es
+// para escribir). Con Ctrl o SYMBOL SHIFT, los símbolos de las teclas del
+// Spectrum que valen en un nombre de fichero
+static char TextChar (u8 nKey, boolean bShift, boolean bSymbol)
+{
+	if (bSymbol)
+	{
+		static const struct { u8 nKey; char c; } Symbols[] =
+		{
+			{0x1E, '!'}, {0x1F, '@'}, {0x20, '#'}, {0x21, '$'}, {0x22, '%'},	// 1-5
+			{0x23, '&'}, {0x24, '\''}, {0x25, '('}, {0x26, ')'}, {0x27, '_'},	// 6-0
+			{0x0D, '-'}, {0x10, '.'}, {0x11, ','}, {0x0E, '+'}, {0x0F, '='},	// J M N K L
+			{0x12, ';'}, {0x1C, '['}, {0x18, ']'}, {0x0B, '^'},		// O Y U H
+			{0x04, '~'}, {0x09, '{'}, {0x0A, '}'}				// A F G (modo extendido en el 48K)
+		};
+		for (unsigned i = 0; i < sizeof Symbols / sizeof Symbols[0]; i++)
+		{
+			if (Symbols[i].nKey == nKey)
+			{
+				return Symbols[i].c;
+			}
+		}
+		return 0;
+	}
+	if (nKey >= 0x04 && nKey <= 0x1D)
+	{
+		return (bShift ? 'A' : 'a') + (nKey - 0x04);
+	}
+	if (nKey >= 0x1E && nKey <= 0x26)	return '1' + (nKey - 0x1E);
+	if (nKey == 0x27)			return '0';
+	if (nKey >= 0x59 && nKey <= 0x61)	return '1' + (nKey - 0x59);	// teclado numérico
+	if (nKey == 0x62)			return '0';
+	if (nKey == HID_KEY_SPACE)		return ' ';
+	if (nKey == 0x37 || nKey == 0x63)	return '.';			// punto (y el del teclado numérico)
+	if (nKey == 0x2D || nKey == 0x56)	return bShift ? '_' : '-';	// el - de la tecla de al lado del 0 y el numérico
+	return 0;
 }
 
 static void Copy (char *pDest, const char *pSrc, unsigned nSize)
@@ -496,6 +553,11 @@ boolean CMenu::OpenBrowser (void)
 		LastName[sizeof LastName - 1] = '\0';
 		nLastRow = m_nSelected >= m_nTop ? m_nSelected - m_nTop : 0;
 	}
+	if (m_PendingSelect[0] != '\0')	// ReturnToBrowser: otro nombre (renombrado, nuevo)
+	{
+		strcpy (LastName, m_PendingSelect);
+		m_PendingSelect[0] = '\0';
+	}
 
 	boolean bOK = ReadDirectory ();
 	if (bOK)
@@ -539,6 +601,44 @@ boolean CMenu::OpenBrowserIn (const char *pDir)
 	}
 	m_nUnitTarget = -1;
 	return OpenBrowser ();
+}
+
+boolean CMenu::GetBrowserSelection (char *pDir, unsigned nDirSize, char *pName, unsigned nNameSize,
+				    boolean *pIsDir) const
+{
+	strncpy (pDir, m_CurrentDir, nDirSize - 1);
+	pDir[nDirSize - 1] = '\0';
+	pName[0] = '\0';
+	*pIsDir = FALSE;
+	if (IsRemote () || m_nEntries == 0 || m_nSelected >= m_nEntries)
+	{
+		return FALSE;
+	}
+	const TEntry *pEntry = &m_pEntries[m_Order[m_nSelected]];
+	if (pEntry->bRemoteRoot || pEntry->bZXDB || strcmp (pEntry->Name, "..") == 0)
+	{
+		return FALSE;
+	}
+	strncpy (pName, pEntry->Name, nNameSize - 1);
+	pName[nNameSize - 1] = '\0';
+	*pIsDir = pEntry->bDir;
+	return TRUE;
+}
+
+void CMenu::ReturnToBrowser (const char *pSelect, const char *pMessage)
+{
+	if (pSelect != 0 && pSelect[0] != '\0')
+	{
+		strncpy (m_PendingSelect, pSelect, sizeof m_PendingSelect - 1);
+		m_PendingSelect[sizeof m_PendingSelect - 1] = '\0';
+	}
+	m_nUnitTarget = -1;
+	OpenBrowser ();
+	if (pMessage != 0 && pMessage[0] != '\0')
+	{
+		strncpy (m_Error, pMessage, sizeof m_Error - 1);
+		m_Error[sizeof m_Error - 1] = '\0';
+	}
 }
 
 void CMenu::ClearKeyList (void)
@@ -1195,6 +1295,63 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		return Result;
 	}
 
+	if (m_Mode == ModeInput && m_bInputText)
+	{
+		unsigned nLen = strlen (m_InputBuf);
+		boolean bShift = (rEvent.nModifiers & (HID_MOD_LSHIFT | HID_MOD_RSHIFT)) != 0;
+		boolean bSymbol = (rEvent.nModifiers & (HID_MOD_LCTRL | HID_MOD_RCTRL)) != 0;
+		char c = TextChar (nKey, bShift, bSymbol);
+		if (c != 0)
+		{
+			if (nLen < m_nInputMax)
+			{
+				memmove (m_InputBuf + m_nInputCursor + 1, m_InputBuf + m_nInputCursor,
+					 nLen - m_nInputCursor + 1);
+				m_InputBuf[m_nInputCursor++] = c;
+			}
+		}
+		else switch (nKey)
+		{
+		case HID_KEY_LEFT:	if (m_nInputCursor > 0) m_nInputCursor--;	break;
+		case HID_KEY_RIGHT:	if (m_nInputCursor < nLen) m_nInputCursor++;	break;
+		case HID_KEY_HOME:	m_nInputCursor = 0;				break;
+		case HID_KEY_END:	m_nInputCursor = nLen;				break;
+
+		case HID_KEY_BACKSPACE:		// el de antes del cursor
+			if (m_nInputCursor > 0)
+			{
+				memmove (m_InputBuf + m_nInputCursor - 1, m_InputBuf + m_nInputCursor,
+					 nLen - m_nInputCursor + 1);
+				m_nInputCursor--;
+			}
+			break;
+
+		case 0x4C:			// SUPR: el del cursor
+			if (m_nInputCursor < nLen)
+			{
+				memmove (m_InputBuf + m_nInputCursor, m_InputBuf + m_nInputCursor + 1,
+					 nLen - m_nInputCursor);
+			}
+			break;
+
+		case HID_KEY_ENTER:
+		case 0x58:
+			m_Mode = ModeClosed;
+			Result = MenuResultInput;
+			break;
+
+		case HID_KEY_ESC:
+		case HID_KEY_F1:
+			m_Mode = ModeClosed;
+			Result = MenuResultInputCancel;
+			break;
+
+		default:
+			break;
+		}
+		return Result;
+	}
+
 	if (m_Mode == ModeInput)
 	{
 		unsigned nLen = strlen (m_InputBuf);
@@ -1218,7 +1375,7 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 
 		if (c != '\0')
 		{
-			if (nLen + 1 < sizeof m_InputBuf)
+			if (nLen < m_nInputMax)
 			{
 				m_InputBuf[nLen] = c;
 				m_InputBuf[nLen + 1] = '\0';
@@ -1675,6 +1832,13 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		GoParent ();
 		break;
 
+	case HID_KEY_F1 + 1:		// F2: renombrar, borrar... (no al elegir para una unidad)
+		if (m_nUnitTarget < 0 && m_bFileChanges && !IsRemote ())
+		{
+			Result = MenuResultFileOptions;
+		}
+		break;
+
 	case HID_KEY_F1 + 2:		// F3: buscar en ZXDB (con red, no al elegir para una unidad)
 		if (m_nUnitTarget < 0 && CNetworkManager::IsNetRunning ())
 		{
@@ -1995,10 +2159,36 @@ void CMenu::Draw (TPixel *pScreen)
 	if (m_Mode == ModeInput)
 	{
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), m_InputTitle, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
-		CString Line;
-		Line.Format ("> %s_", m_InputBuf);
 		m_pVideo->FillRect (pScreen, tx - 2, ROW_Y (4) - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (4), Line, COLOR_UI_PANEL, COLOR_UI_HILITE, TEXT_COLS);
+		if (m_bInputText)
+		{
+			// texto libre: se ve el trozo donde está el cursor (subrayado)
+			const unsigned nCols = TEXT_COLS - 3;
+			unsigned nLen = strlen (m_InputBuf);
+			unsigned nFirst = m_nInputCursor >= nCols ? m_nInputCursor - nCols + 1 : 0;
+			char Visible[TEXT_COLS + 1];
+			unsigned n = 0;
+			for (unsigned i = nFirst; i < nLen && n < nCols; i++)
+			{
+				Visible[n++] = m_InputBuf[i];
+			}
+			Visible[n] = '\0';
+			char UTF8[TEXT_COLS * 3 + 8] = "> ";
+			CP850ToUTF8 (Visible, UTF8 + 2, sizeof UTF8 - 2);
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (4), UTF8, COLOR_UI_PANEL, COLOR_UI_HILITE, TEXT_COLS);
+			if (nFirst > 0)
+			{
+				m_pVideo->DrawText (pScreen, tx, ROW_Y (4), "<", COLOR_UI_PANEL, COLOR_UI_HILITE, 1);
+			}
+			m_pVideo->FillRect (pScreen, tx + (2 + m_nInputCursor - nFirst) * 8, ROW_Y (4) + 7, 8, 2,
+					    COLOR_UI_PANEL);
+		}
+		else
+		{
+			CString Line;
+			Line.Format ("> %s_", m_InputBuf);
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (4), Line, COLOR_UI_PANEL, COLOR_UI_HILITE, TEXT_COLS);
+		}
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (7), m_InputHelp[0], COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS);
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (8), m_InputHelp[1], COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS);
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), m_InputFooter[0] != '\0' ? m_InputFooter : T ("ENTER pulsar  BORRAR corregir  ESC salir"),
@@ -2463,11 +2653,18 @@ void CMenu::Draw (TPixel *pScreen)
 				    COLOR_UI_DIM, COLOR_UI_PANEL);
 	}
 
-	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 3), T ("ENTER cargar  ESC salir  BORRAR subir"),
+	// con F2 (no al elegir para una unidad ni en TNFS), una línea más
+	boolean bF2 = m_nUnitTarget < 0 && m_bFileChanges && !IsRemote ();
+	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - (bF2 ? 4 : 3)), T ("ENTER cargar  ESC salir  BORRAR subir"),
 			    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+	if (bF2)
+	{
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("F2: renombrar, borrar, carpeta nueva"),
+				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+	}
 	// con red, la tecla de la búsqueda en ZXDB (F3)
 	boolean bZXDBKey = m_nUnitTarget < 0 && CNetworkManager::IsNetRunning ();
-	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2),
+	m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - (bF2 ? 3 : 2)),
 			    bZXDBKey ? T ("Letra: saltar  RePág/AvPág  F3: ZXDB") : T ("Letra: saltar  RePág/AvPág: páginas"),
 			    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 }

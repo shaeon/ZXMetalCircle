@@ -199,6 +199,18 @@ private:
 	void PokeToggle (unsigned nTrainer);
 	boolean PokeMenuResult (TMenuResult Result);
 	boolean PokeAvailable (void);			// no con el ZX81 (avisa)
+	// F2 en el navegador (kernelfiles.cpp): renombrar, borrar, carpeta nueva
+	boolean FileMenuResult (TMenuResult Result);
+	boolean FileProtected (const char *pPath);
+	const char *FileCheckSource (const char *pPath);
+	void FileBack (const char *pSelect, const char *pFormat, const char *pName);
+	void FileShowOptions (void);
+	void FileAskRename (const char *pHelp, const char *pText);	// pText: lo escrito (0 = el nombre)
+	void FileAskNewFolder (const char *pHelp, const char *pText);
+	void FileAskDelete (void);
+	void FileRename (const char *pNewName);
+	void FileNewFolder (const char *pName);
+	void FileDelete (void);
 	void PokeSetZXDBID (const char *pID);		// el juego vino del buscador de ZXDB
 	boolean PokeFetchOnline (void);			// su .pok, de ZXDB
 	void PokeAskSearch (void);
@@ -448,6 +460,15 @@ private:
 	TUpdateBootResult	m_UpdateBootResult;
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZXDBInput;		// la línea de texto es el título para ZXDB
+	// F2 en el navegador (kernelfiles.cpp)
+	unsigned		m_nFileStage;
+	char			m_FileDir[MENU_PATH_LEN];	// la carpeta del navegador
+	char			m_FileName[MENU_NAME_LEN];	// lo elegido (CP850, como en la SD)
+	boolean			m_bFileHasEntry;	// hay algo elegido (no "..")
+	boolean			m_bFileIsDir;
+	unsigned		m_FileOption[4];	// línea de la lista -> opción
+	unsigned		m_nFileOptions;
+
 	// Pokes (kernelpokes.cpp)
 	CPokFile		m_Pokes;
 	char			m_PokeGame[MENU_NAME_LEN];	// el juego cargado, sin carpeta ni extensión

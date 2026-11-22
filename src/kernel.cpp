@@ -330,6 +330,10 @@ CKernel::CKernel (void)
 	m_nZipChoices = 0;
 	m_bZipChoice = FALSE;
 	m_bZXDBInput = FALSE;
+	m_nFileStage = 0;
+	m_FileDir[0] = m_FileName[0] = '\0';
+	m_bFileHasEntry = m_bFileIsDir = FALSE;
+	m_nFileOptions = 0;
 	m_PokeGame[0] = '\0';
 	m_PokeTitle[0] = '\0';
 	m_PokeGamePath[0] = '\0';
@@ -772,6 +776,9 @@ void CKernel::ParseOptions (void)
 	m_bSaveTZX = strcasecmp (m_Options.GetAppOptionString ("savefmt", "tap"), "tzx") == 0;
 	const char *pSnapFormat = m_Options.GetAppOptionString ("snapformat", "z80");
 	m_nSnapFormat = strcasecmp (pSnapFormat, "sna") == 0 ? 1 : (strcasecmp (pSnapFormat, "szx") == 0 ? 2 : 0);
+
+	// F2 en el navegador: renombrar, borrar, carpeta nueva (filechanges=0 lo quita)
+	m_Menu.SetFileChanges (m_Options.GetAppOptionDecimal ("filechanges", 1) != 0);
 
 	// Grabación con SAVE en la carpeta "saves" de la SD; savetrap=0 la desactiva
 	if (m_bSDMounted && m_Options.GetAppOptionDecimal ("savetrap", 1) != 0)
@@ -2965,6 +2972,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 				       CNetworkManager::ParseSummerTime (m_Settings.GetValue (m_Settings.Find ("dst"))));
 	}
 	else if (strcmp (pKey, "tlsverify") == 0)	m_Network.SetTLSVerify (strcmp (pValue, "0") != 0);
+	else if (strcmp (pKey, "filechanges") == 0)	m_Menu.SetFileChanges (strcmp (pValue, "0") != 0);
 	else if (strcmp (pKey, "earinvert") == 0)
 	{
 		if (m_pEarSource != 0)
@@ -5278,6 +5286,10 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			// pokes (Alt+C, Alt+O, P en la ayuda): su lista y sus líneas de texto
 		}
+		else if (FileMenuResult (Result))
+		{
+			// F2 en el navegador: renombrar, borrar, carpeta nueva
+		}
 		else if (Result == MenuResultFileSelected)
 		{
 			int nUnit = m_Menu.TakeUnitTarget ();
@@ -5500,6 +5512,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		if (!m_Menu.IsOpen ())
 		{
 			m_nPokeStage = 0;		// ninguna pantalla de pokes a medias
+			m_nFileStage = 0;		// ni de F2
 			MenuClosed ();
 			m_Keyboard.SetCaptured (FALSE);
 			m_Keyboard.ReleaseAll ();
@@ -6046,6 +6059,24 @@ void CKernel::HandleGPIOKeyboard (void)
 			{
 				m_Keyboard.InjectKeyEvent (0x37, 0);	// '.'
 				continue;
+			}
+
+			// Escribiendo un nombre (línea de texto libre, p. ej. renombrar
+			// con F2): CAPS SHIFT + letra es la mayúscula y SYMBOL SHIFT +
+			// tecla el símbolo, como en el Spectrum (el menú los ve como
+			// Mayúsculas y Ctrl, igual que con un teclado USB)
+			if (m_Menu.IsOpen () && m_Menu.IsTyping () && !m_bExtendedMode)
+			{
+				if (bCS && nHID >= 0x04 && nHID <= 0x1D)
+				{
+					m_Keyboard.InjectKeyEvent (nHID, HID_MOD_LSHIFT);
+					continue;
+				}
+				if (bSS)
+				{
+					m_Keyboard.InjectKeyEvent (nHID, HID_MOD_LCTRL);
+					continue;
+				}
 			}
 
 			nHID = CZXKeyboard::TranslateGPIOKey (nHID, bCS, m_bExtendedMode);

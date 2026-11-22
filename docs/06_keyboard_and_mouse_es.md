@@ -16,7 +16,7 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 | F3 | Cinta: navegador de bloques (lista de lo que hay en la cinta; ENTER la deja en el bloque elegido, Inicio = rebobinar) |
 | F4 | Cambiar joystick |
 | F5 | NMI: Multiface, navegador de esxDOS o menú de la Spectranet |
-| Alt+F5 | Navegador de ficheros (como F1 y ENTER). Con `f5=files` se intercambian: F5 abre los ficheros y Alt+F5 hace la NMI |
+| Alt+F5 | Navegador de ficheros (como F1 y ENTER). Con `f5=files` se intercambian: F5 abre los ficheros y Alt+F5 hace la NMI. Dentro, F2 renombra, borra o crea carpetas (ver abajo) |
 | F6 | Velocidad de carga: instantánea / rápida / real |
 | F7 | Lista de modelos para elegir (con el actual marcado; los que no tienen ROM lo indican) |
 | Alt+F7 | Pasar al siguiente modelo (16K, 48K, 128K, +2, +2A, +3, +3e) |
@@ -48,6 +48,16 @@ Correspondencia del teclado del PC con el del Spectrum:
 - **Cursores**: siempre son las teclas de cursor del Spectrum (CAPS SHIFT + 5/6/7/8). Con un joystick elegido, además mueven el joystick, y **las teclas Windows** (o el 0 del teclado numérico) son el disparo; **los dos Ctrl son SYMBOL SHIFT**. Se puede cambiar con `cursors=` y, la tecla de disparo, con `kbdfire=` o en la página 5 de la configuración: teclas Windows, Ctrl derecho (como antes de la 1.08) o ninguna. Sin joystick, o con `cursors=keys`, la tecla de disparo no dispara.
 
 Para cargar una cinta: pulsa F1 y luego ENTER, elige el `.TAP`, `.TZX`, `.PZX` o `.CSW` y escribe `LOAD ""` (en el 128K/+2A, elige "Tape Loader" o "Loader" en el menú). La cinta arranca sola cuando la ROM o un cargador propio empiezan a leerla, y se para sola cuando el programa deja de leerla como un cargador durante 2 segundos. Lo que cuenta es leer como un cargador (el mismo IN una y otra vez, con un contador que avanza, como hace Fuse), no leer mucho: los menús que miran el teclado sin parar no arrancan la cinta ni la mantienen en marcha, y así las multicargas encuentran el siguiente bloque donde lo dejaron. En el modo rápido, el emulador va a toda velocidad mientras dura la carga.
+
+## Ficheros de la SD desde el navegador (F2)
+
+En el navegador de ficheros (Alt+F5, o F1 y ENTER), **F2** abre una lista con lo que se puede hacer con lo elegido: **Renombrar...**, **Borrar...** y **Nueva carpeta...** (en `[..]`, solo la carpeta nueva). Con el teclado GPIO, F2 es modo extendido + 2.
+
+- **Renombrar** abre una línea con el nombre de ahora y el cursor delante de la extensión. Se escribe en minúsculas; las mayúsculas, con Mayúsculas o CAPS SHIFT + letra; los símbolos, con Ctrl o SYMBOL SHIFT + la tecla, como en el Spectrum: SS+8 `(`, SS+9 `)`, SS+0 `_`, SS+J `-`, SS+M `.`, SS+N `,`, SS+K `+`, SS+L `=`, SS+1 `!`, SS+2 `@`, SS+3 `#`, SS+4 `$`, SS+5 `%`, SS+6 `&`, SS+7 `'`, SS+Y `[`, SS+U `]`. El punto y el guion de un teclado USB también valen. Los cursores mueven el cursor, Inicio y Fin (CAPS SHIFT + 1 y 2) van a los extremos, BORRAR (CAPS SHIFT + 0) borra el de la izquierda y SUPR (CAPS SHIFT + 9) el del cursor.
+- **Borrar** siempre pregunta, con «No, dejarlo» elegido al entrar. Las carpetas, solo si están vacías.
+- **Nueva carpeta** crea una en la carpeta en la que estás.
+
+Se comprueba lo mismo que en la página web: lo del sistema (kernels, `cmdline.txt`, `config.txt`, las carpetas del emulador...) no se toca mientras «Ficheros del sistema» esté en «protegidos» (`webprotect=1`, página 9), y lo que se está usando (un disco del +3, un microdrive, el disco duro, la cinta si SAVE graba en ella) no se renombra ni se borra: sale «En uso». F2 no funciona en las carpetas de TNFS ni cuando el navegador se ha abierto para elegir lo de una unidad (Alt+U). «Cambios en el navegador» (página 8, `filechanges=0`) lo quita del todo.
 
 ## Teclas simultáneas (Alt+V)
 

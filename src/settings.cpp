@@ -117,6 +117,7 @@ static TSettingDef Settings[] =
 	{"romesx",	N_("ROM de esxDOS"),	7, "default", "esxmmc.bin",				"default", TRUE},
 	{"romsnet",	N_("Flash Spectranet"),	7, "default", "spectranet.rom",				"default", FALSE},
 	{"esxdir",	N_("Importar a esxDOS desde"), 7, "esxdos_i|0", N_("esxdos_i|no"),		"esxdos_i", FALSE},
+	{"filechanges",	N_("Cambios en el navegador"), 7, "1|0", N_("sí (F2)|no"),		"1",	TRUE},
 	{"web",		N_("Página web"),	8, "1|ro|0", N_("sí|solo lectura|no"),			"1",	FALSE},
 	{"webpass",	N_("Contraseña de la web"),	8, "*pass", N_("sin contraseña"),			"",	FALSE},
 	{"webprotect",	N_("Ficheros del sistema"),	8, "1|0", N_("protegidos|sin proteger"),		"1",	TRUE},
