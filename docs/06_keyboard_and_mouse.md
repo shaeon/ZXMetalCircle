@@ -69,7 +69,7 @@ If the USB keyboard cannot handle a combination and reports too many keys at onc
 
 **Alt+O** (or the **Manual POKE...** line in the list) opens a line to type a POKE as in the magazines: the address and the value separated by a space (`35136 0` is `POKE 35136,0`), or in hexadecimal with H at the end (`8940H C9H`). Several fit in a row (`35136 0 35137 201`). They are applied at once to memory as it is paged and stay in the Alt+C list, so they can be removed. The address goes from 16384 to 65535: the ROM is not written.
 
-Loading another game empties the list. After a reset the cheats stay in the list but not applied, because memory has been cleared. There are no pokes on the ZX81.
+Loading another game empties the list. A reset clears memory: if the game was a snapshot, or its tape, disk or cartridge has been removed, there is no game any more (Alt+C shows as when the emulator starts); if its tape, disk or cartridge is still in, its cheats stay in the list, not applied, for when it is loaded again. There are no pokes on the ZX81.
 
 With the **GPIO keyboard**: extended mode + SYMBOL SHIFT + C opens the pokes and extended mode + SYMBOL SHIFT + O the manual POKE (like every Alt combination). In the list and the input line everything is done with the Spectrum keys: digits and letters, ENTER, BREAK to go back, CAPS SHIFT + 0 to delete and CAPS SHIFT + 5-8 to move.
 

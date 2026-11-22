@@ -333,6 +333,7 @@ CKernel::CKernel (void)
 	m_PokeGame[0] = '\0';
 	m_PokeTitle[0] = '\0';
 	m_PokeGamePath[0] = '\0';
+	m_nPokeGameKind = 0;
 	m_PokeZXDBID[0] = '\0';
 	m_bPokeOnline = FALSE;
 	m_bPokeTried = FALSE;
@@ -4353,7 +4354,7 @@ void CKernel::InsertDisk (const char *pPath, int nForceUnit)
 
 	if (pPath != 0)
 	{
-		PokeSetGame (pPath);
+		PokeSetGame (pPath, PokeGameDisk);
 	}
 
 	CString Message;
@@ -4849,7 +4850,7 @@ boolean CKernel::LoadCartridge (const char *pPath)
 	}
 	strncpy (m_CartridgeName, pName, sizeof m_CartridgeName - 1);
 	m_CartridgeName[sizeof m_CartridgeName - 1] = '\0';
-	PokeSetGame (pPath);
+	PokeSetGame (pPath, PokeGameCartridge);
 
 	m_nNextFrameTime = 0;
 
@@ -4890,7 +4891,7 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 	}
 
 	ApplySpeaker ();		// el snapshot puede haber cambiado de máquina
-	PokeSetGame (pPath);
+	PokeSetGame (pPath, PokeGameSnapshot);
 	m_nNextFrameTime = 0;
 	if (m_pSpectrum->IsCartridgeInserted ())
 	{
@@ -5089,7 +5090,7 @@ boolean CKernel::LoadTape (const char *pPath)
 	}
 
 	m_pSpectrum->TapeInserted ();
-	PokeSetGame (pPath);
+	PokeSetGame (pPath, PokeGameTape);
 
 	strncpy (m_TapePath, pPath, sizeof m_TapePath - 1);
 	m_TapePath[sizeof m_TapePath - 1] = '\0';

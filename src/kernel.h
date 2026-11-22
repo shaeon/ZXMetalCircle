@@ -188,7 +188,9 @@ private:
 	void PadEditBackToList (unsigned nRow);
 	boolean PadEditMenuResult (TMenuResult Result);
 	// Pokes (kernelpokes.cpp): Alt+C los trucos del juego, Alt+O un POKE a mano
-	void PokeSetGame (const char *pPath);		// se ha cargado otro juego
+	// Se ha cargado otro juego (nKind: PokeGame..., de kernelpokes.cpp)
+	void PokeSetGame (const char *pPath, unsigned nKind);
+	boolean PokeGameStillThere (void);		// tras un reset
 	void PokeOpen (void);				// Alt+C
 	void PokeOpenManual (boolean bFromList);	// Alt+O, o la línea de la lista
 	boolean PokeLoadFile (const char *pPath, boolean bQuiet);	// un .POK
@@ -451,10 +453,19 @@ private:
 	char			m_PokeGame[MENU_NAME_LEN];	// el juego cargado, sin carpeta ni extensión
 	char			m_PokeTitle[MENU_NAME_LEN];	// el .POK que se ve
 	char			m_PokeGamePath[MENU_PATH_LEN];	// el fichero del juego (para su huella)
+	unsigned		m_nPokeGameKind;	// snapshot, cinta, disco o cartucho
 	char			m_PokeZXDBID[12];	// su ficha de ZXDB, si vino del buscador
 	boolean			m_bPokeOnline;		// ya se ha buscado su .pok en ZXDB
 	boolean			m_bPokeTried;		// ya se ha buscado su .POK en pokes/
 	unsigned		m_nPokeResets;		// los reset al aplicar (si cambian, se perdieron)
+	enum				// lo que se cargó (PokeSetGame)
+	{
+		PokeGameNone,
+		PokeGameSnapshot,	// con un reset se va
+		PokeGameTape,		// se queda mientras la cinta siga puesta
+		PokeGameDisk,		// mientras el disco siga en la unidad
+		PokeGameCartridge	// mientras el cartucho siga puesto
+	};
 	unsigned		m_nPokeStage;		// qué espera el menú (PokeStage...)
 	unsigned		m_nPokePending;		// el truco que pide un valor
 	boolean			m_bPokeManualFromList;	// el POKE a mano vuelve a la lista

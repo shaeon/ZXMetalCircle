@@ -21,8 +21,10 @@
 //   "35136 0" (POKE 35136,0), en hexadecimal con H al final ("8940H C9H"),
 //   varios pares seguidos. Se quedan en la lista, para poder quitarlos.
 //
-// Al cargar otro juego se olvidan los trucos; con un reset, se quedan pero
-// sin aplicar (la memoria se ha borrado).
+// Al cargar otro juego se olvidan los trucos. Con un reset la memoria se
+// borra: si el juego era un snapshot (o ya no está su cinta, disco o
+// cartucho), no queda juego, como al encender; si sigue puesto, los trucos se
+// quedan sin aplicar, para cuando se vuelva a cargar.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -118,8 +120,9 @@ static void BaseName (const char *pPath, char *pBase, unsigned nSize)
 	}
 }
 
-void CKernel::PokeSetGame (const char *pPath)
+void CKernel::PokeSetGame (const char *pPath, unsigned nKind)
 {
+	m_nPokeGameKind = pPath != 0 ? nKind : PokeGameNone;
 	m_Pokes.Clear ();
 	m_PokeTitle[0] = '\0';
 	m_bPokeTried = FALSE;
@@ -181,13 +184,42 @@ boolean CKernel::PokeAvailable (void)
 		return FALSE;
 	}
 
-	// un reset desde que se aplicaron: la memoria se ha borrado
+	// un reset desde que se aplicaron: la memoria se ha borrado. Si el juego
+	// era un snapshot (o se ha quitado su cinta, disco o cartucho), ya no hay
+	// juego, como al encender; si sigue puesto, se puede volver a cargar: sus
+	// trucos se quedan, sin aplicar
 	if (m_nPokeResets != m_pSpectrum->GetResetCount ())
 	{
-		m_Pokes.Forget ();
-		m_nPokeResets = m_pSpectrum->GetResetCount ();
+		if (PokeGameStillThere ())
+		{
+			m_Pokes.Forget ();
+			m_nPokeResets = m_pSpectrum->GetResetCount ();
+		}
+		else
+		{
+			PokeSetGame (0, PokeGameNone);
+		}
 	}
 	return TRUE;
+}
+
+boolean CKernel::PokeGameStillThere (void)
+{
+	switch (m_nPokeGameKind)
+	{
+	case PokeGameTape:
+		return m_Tape.IsInserted () && strcmp (m_TapePath, m_PokeGamePath) == 0;
+
+	case PokeGameDisk:
+		return    strcmp (m_DSKPath[0], m_PokeGamePath) == 0
+		       || strcmp (m_DSKPath[1], m_PokeGamePath) == 0;
+
+	case PokeGameCartridge:
+		return m_pSpectrum->IsCartridgeInserted ();
+
+	default:			// un snapshot: con el reset se ha ido
+		return FALSE;
+	}
 }
 
 boolean CKernel::PokeLoadFile (const char *pPath, boolean bQuiet)

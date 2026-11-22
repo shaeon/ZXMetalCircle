@@ -69,7 +69,7 @@ Si el teclado USB no puede con una combinación y manda un aviso de demasiadas t
 
 **Alt+O** (o la línea **POKE a mano...** de la lista) abre una línea para escribir un POKE como en las revistas: la dirección y el valor separados por un espacio (`35136 0` es `POKE 35136,0`), o en hexadecimal con H al final (`8940H C9H`). Caben varios seguidos (`35136 0 35137 201`). Se aplican al momento en la memoria tal como está paginada y se quedan en la lista de Alt+C, para poder quitarlos. La dirección va de 16384 a 65535: en la ROM no se escribe.
 
-Al cargar otro juego, la lista se vacía. Con un reset los trucos siguen en la lista pero sin aplicar, porque la memoria se ha borrado. Con el ZX81 no hay pokes.
+Al cargar otro juego, la lista se vacía. Con un reset la memoria se borra: si el juego era un snapshot, o ya se ha quitado su cinta, disco o cartucho, ya no hay juego (Alt+C sale como al encender el emulador); si su cinta, disco o cartucho siguen puestos, sus trucos se quedan en la lista sin aplicar, para cuando se vuelva a cargar. Con el ZX81 no hay pokes.
 
 Con el **teclado GPIO**: modo extendido + SYMBOL SHIFT + C abre los pokes y modo extendido + SYMBOL SHIFT + O el POKE a mano (como todas las combinaciones con Alt). En la lista y en la línea, todo se hace con las teclas del Spectrum: los números y las letras, ENTER, BREAK para volver, CAPS SHIFT + 0 para borrar y CAPS SHIFT + 5-8 para moverse.
 
