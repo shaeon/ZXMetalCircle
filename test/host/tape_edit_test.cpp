@@ -172,6 +172,44 @@ int main (void)
 	S.InsertTZX (Jump.data (), Jump.size (), "s");
 	chk ("TZX con saltos: no se edita", S.CanEdit () == CTape::EditJumps && !S.DeleteBlocks (0, 1) && !S.IsModified ());
 
+	// pegar en otra cinta: de TAP a TZX (bloques 0x10 con 1 s de pausa)
+	{
+		CTape A, B;
+		A.InsertTAP (Tap.data (), Tap.size (), "a");
+		B.InsertTZX (Tzx.data (), Tzx.size (), "b");
+		chk ("otra cinta, otro número", A.GetSerial () != B.GetSerial ());
+		unsigned nClip;
+		u8 *pClip = A.ExtractBlocks (2, 2, &nClip);		// B y sus datos
+		chk ("TAP -> TZX: pegado", pClip != 0 && B.InsertBlocks (pClip, nClip, false, 0) == 1
+					    && Order (B) == "B,d,UNO,d,d,DOS,d" && B.IsModified ());
+		const u8 *p = B.GetData (&n);
+		chk ("TAP -> TZX: bloque 0x10 con pausa de 1 s", p[10] == 0x10 && p[11] == 0xE8 && p[12] == 0x03
+					    && n == Tzx.size () + (21 + 3) + (6 + 3) && memcmp (p + 13, Tap.data () + 21 + 6, 21) == 0);
+		delete [] pClip;
+
+		// de TZX a TAP: los 0x10 sí (sin el ID ni la pausa)
+		CTape C;
+		C.InsertTAP (Tap.data (), Tap.size (), "c");
+		pClip = B.ExtractBlocks (2, 2, &nClip);			// UNO y sus datos
+		chk ("TZX -> TAP: pegado al final", C.InsertBlocks (pClip, nClip, true, 5) == 1
+					    && Order (C) == "A,d,B,d,d,UNO,d");
+		delete [] pClip;
+
+		// el texto (0x30) no cabe en un TAP: no se pega nada
+		pClip = B.ExtractBlocks (4, 1, &nClip);
+		chk ("TZX -> TAP: un bloque de texto no cabe", C.InsertBlocks (pClip, nClip, true, 0) == -1
+					    && C.GetBlockCount () == 7);
+		delete [] pClip;
+
+		// la cinta sigue a su bloque
+		C.SeekBlock (1);
+		pClip = A.ExtractBlocks (4, 1, &nClip);
+		chk ("pegar delante: la cinta se corre", C.InsertBlocks (pClip, nClip, false, 0) == 1 && C.GetBlock () == 2);
+		delete [] pClip;
+		C.DiscardEdits ();
+		chk ("pegar y descartar", SameAsFile (C, Tap));
+	}
+
 	// expulsar con cambios: se pierden
 	Z.DeleteBlocks (2, 1);
 	Z.Eject ();

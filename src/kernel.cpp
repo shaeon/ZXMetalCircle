@@ -352,6 +352,11 @@ CKernel::CKernel (void)
 	m_nTapeClipFirst = 0;
 	m_nTapeClipCount = 0;
 	m_bTapeClipMove = FALSE;
+	m_pTapeClipData = 0;
+	m_nTapeClipSize = 0;
+	m_bTapeClipTZX = FALSE;
+	m_nTapeClipSerial = 0;
+	m_TapeClipName[0] = '\0';
 	m_nPokePending = 0;
 	m_bPokeManualFromList = FALSE;
 	m_bZXDBChoice = FALSE;
@@ -5108,7 +5113,6 @@ boolean CKernel::LoadTape (const char *pPath)
 
 	m_pSpectrum->TapeInserted ();
 	PokeSetGame (pPath, PokeGameTape);
-	TapeForgetClip ();		// lo marcado era de la otra cinta
 
 	strncpy (m_TapePath, pPath, sizeof m_TapePath - 1);
 	m_TapePath[sizeof m_TapePath - 1] = '\0';
@@ -5626,10 +5630,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			OpenMenu ();
 			m_Keyboard.SetCaptured (TRUE);
 		}
-		if (m_nTapeClipCount > 0 && m_nTapeClipFirst + m_nTapeClipCount > m_Tape.GetBlockCount ())
-		{
-			TapeForgetClip ();		// de otra cinta
-		}
+		TapeUpdateClip ();		// lo marcado: de esta cinta o de otra
 		m_Menu.OpenTape (&m_Tape);
 		break;
 

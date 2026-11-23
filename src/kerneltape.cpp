@@ -7,7 +7,12 @@
 //
 // - Una cabecera y sus datos van juntos (con "Solo este bloque" se elige uno).
 // - Copiar y Mover marcan los bloques (abajo se ve "Para copiar: ..."); en el
-//   bloque de destino, F2 > Pegar delante o detrás de este.
+//   bloque de destino, F2 > Pegar delante o detrás de este. Lo marcado se
+//   guarda (una copia), así que se puede pegar también en otra cinta: se pone
+//   la otra y F2 en su navegador. Mover, solo dentro de la misma; en otra se
+//   pega una copia. De un TAP a un TZX, cada bloque pasa a ser uno estándar
+//   (0x10, con 1 s de pausa); de un TZX a un TAP solo van los estándar: si
+//   hay alguno más (turbo, tonos, textos...), no se pega nada y se avisa.
 // - Borrar pregunta, con "No" elegido al entrar.
 // - Al salir (ESC, F3 o ENTER) con cambios: seguir editando, guardar en el
 //   mismo fichero, guardar como otro o descartarlos. Se guarda con un nombre
@@ -101,6 +106,13 @@ void CKernel::TapeBack (unsigned nBlock, const char *pMessage)
 	m_Menu.OpenTape (&m_Tape, (int) nBlock, pMessage);
 }
 
+// Lo marcado es de la cinta puesta (y sus números siguen valiendo): solo
+// así se puede mover; si no, se pega una copia
+boolean CKernel::TapeClipSame (void)
+{
+	return m_nTapeClipCount > 0 && m_nTapeClipSerial == m_Tape.GetSerial ();
+}
+
 void CKernel::TapeUpdateClip (void)
 {
 	if (m_nTapeClipCount == 0)
@@ -108,16 +120,59 @@ void CKernel::TapeUpdateClip (void)
 		m_Menu.SetTapeClip ("");
 		return;
 	}
-	CString Range, Text;
-	BlockRange (m_nTapeClipFirst, m_nTapeClipCount, &Range);
-	Text.Format (m_bTapeClipMove ? T ("Para mover: %s") : T ("Para copiar: %s"), (const char *) Range);
+	CString Text;
+	if (TapeClipSame ())
+	{
+		CString Range;
+		BlockRange (m_nTapeClipFirst, m_nTapeClipCount, &Range);
+		Text.Format (m_bTapeClipMove ? T ("Para mover: %s") : T ("Para copiar: %s"), (const char *) Range);
+	}
+	else
+	{
+		char UTF8[sizeof m_TapeClipName * 2];
+		CP850ToUTF8 (m_TapeClipName, UTF8, sizeof UTF8);
+		if (m_nTapeClipCount > 1)
+		{
+			Text.Format (T ("Para copiar: %u bloques de %s"), m_nTapeClipCount, UTF8);
+		}
+		else
+		{
+			Text.Format (T ("Para copiar: un bloque de %s"), UTF8);
+		}
+	}
 	m_Menu.SetTapeClip (Text);
 }
 
 void CKernel::TapeForgetClip (void)
 {
 	m_nTapeClipCount = 0;
+	delete [] m_pTapeClipData;
+	m_pTapeClipData = 0;
+	m_nTapeClipSize = 0;
 	TapeUpdateClip ();
+}
+
+// Copiar o Mover: se marca y se guarda una copia de los bloques (para
+// pegarlos también en otra cinta)
+void CKernel::TapeMark (boolean bMove)
+{
+	TapeForgetClip ();
+	unsigned nCount = TapeEditCount ();
+	m_pTapeClipData = m_Tape.ExtractBlocks (m_nTapeEditBlock, nCount, &m_nTapeClipSize);
+	if (m_pTapeClipData == 0)
+	{
+		TapeBack (m_nTapeEditBlock, T ("No hay memoria para marcarlo"));
+		return;
+	}
+	m_nTapeClipFirst = m_nTapeEditBlock;
+	m_nTapeClipCount = nCount;
+	m_bTapeClipMove = bMove;
+	m_bTapeClipTZX = m_Tape.IsTZX ();
+	m_nTapeClipSerial = m_Tape.GetSerial ();
+	strncpy (m_TapeClipName, m_Tape.GetName (), sizeof m_TapeClipName - 1);
+	m_TapeClipName[sizeof m_TapeClipName - 1] = '\0';
+	TapeUpdateClip ();
+	TapeBack (m_nTapeEditBlock, T ("Elige dónde ponerlo y pulsa F2"));
 }
 
 // Cuántos bloques van con este: la cabecera y sus datos, o solo él
@@ -140,12 +195,13 @@ void CKernel::TapeShowOptions (boolean bSingle)
 
 	if (m_nTapeClipCount > 0)		// lo marcado: pegarlo u olvidarlo
 	{
+		boolean bMove = m_bTapeClipMove && TapeClipSame ();	// en otra cinta, una copia
 		m_TapeOption[m_nTapeOptions] = TapeOptionPasteBefore;
-		m_Menu.SetChoiceItem (m_nTapeOptions++, m_bTapeClipMove ? T ("Mover delante de este")
-									: T ("Pegar delante de este"));
+		m_Menu.SetChoiceItem (m_nTapeOptions++, bMove ? T ("Mover delante de este")
+							      : T ("Pegar delante de este"));
 		m_TapeOption[m_nTapeOptions] = TapeOptionPasteAfter;
-		m_Menu.SetChoiceItem (m_nTapeOptions++, m_bTapeClipMove ? T ("Mover detrás de este")
-									: T ("Pegar detrás de este"));
+		m_Menu.SetChoiceItem (m_nTapeOptions++, bMove ? T ("Mover detrás de este")
+							      : T ("Pegar detrás de este"));
 		m_TapeOption[m_nTapeOptions] = TapeOptionForget;
 		m_Menu.SetChoiceItem (m_nTapeOptions++, T ("Olvidar lo marcado"));
 	}
@@ -208,15 +264,30 @@ void CKernel::TapePaste (boolean bAfter)
 	}
 
 	unsigned nFirst = m_nTapeClipFirst, nCount = m_nTapeClipCount;
-	boolean bMove = m_bTapeClipMove;
+	boolean bMove = m_bTapeClipMove && TapeClipSame ();
 	if (bMove && nBefore > nFirst && nBefore < nFirst + nCount)
 	{
 		TapeBack (m_nTapeEditBlock, T ("Dentro de lo marcado: elige otro bloque"));
 		return;
 	}
 
-	boolean bOK = bMove ? m_Tape.MoveBlocks (nFirst, nCount, nBefore)
-			    : m_Tape.CopyBlocks (nFirst, nCount, nBefore);
+	boolean bOK;
+	if (bMove)
+	{
+		bOK = m_Tape.MoveBlocks (nFirst, nCount, nBefore);
+	}
+	else
+	{
+		// la copia guardada, en el formato de esta cinta (de TZX a TAP
+		// solo los bloques estándar: si no, nada y se avisa)
+		int nResult = m_Tape.InsertBlocks (m_pTapeClipData, m_nTapeClipSize, m_bTapeClipTZX, nBefore);
+		if (nResult < 0)
+		{
+			TapeBack (m_nTapeEditBlock, T ("No caben en un TAP: turbo, tonos, textos"));
+			return;			// lo marcado sigue, para pegarlo en un TZX
+		}
+		bOK = nResult > 0;
+	}
 	TapeForgetClip ();		// los números de los bloques ya no son los mismos
 	if (!bOK)
 	{
@@ -373,7 +444,11 @@ boolean CKernel::TapeWrite (const char *pPath, boolean bBackup)
 void CKernel::TapeLeave (const char *pMessage, boolean bSeek)
 {
 	m_nTapeStage = TapeStageNone;
-	TapeForgetClip ();
+	if (!bSeek)
+	{
+		m_nTapeClipSerial = 0;		// descartado: lo marcado ya solo se puede copiar
+		TapeUpdateClip ();
+	}
 	m_Menu.Close ();
 	if (bSeek && m_Menu.IsTapeLeaveSeek ())
 	{
@@ -482,13 +557,7 @@ boolean CKernel::TapeMenuResult (TMenuResult Result)
 			{
 			case TapeOptionCopy:
 			case TapeOptionMove:
-				{
-					m_nTapeClipFirst = m_nTapeEditBlock;
-					m_nTapeClipCount = TapeEditCount ();
-					m_bTapeClipMove = m_TapeOption[m_Menu.GetChoice ()] == TapeOptionMove;
-					TapeUpdateClip ();
-					TapeBack (m_nTapeEditBlock, T ("Elige dónde ponerlo y pulsa F2"));
-				}
+				TapeMark (m_TapeOption[m_Menu.GetChoice ()] == TapeOptionMove);
 				break;
 
 			case TapeOptionRename:

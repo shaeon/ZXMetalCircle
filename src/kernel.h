@@ -225,6 +225,8 @@ private:
 	void TapeBack (unsigned nBlock, const char *pMessage);
 	void TapeUpdateClip (void);
 	void TapeForgetClip (void);
+	boolean TapeClipSame (void);
+	void TapeMark (boolean bMove);
 	unsigned TapeEditCount (void);
 	void TapeShowOptions (boolean bSingle);
 	void TapeAskDelete (void);
@@ -506,6 +508,11 @@ private:
 	unsigned		m_nTapeClipFirst;	// marcado para copiar o mover
 	unsigned		m_nTapeClipCount;	// (0 = nada)
 	boolean			m_bTapeClipMove;
+	u8			*m_pTapeClipData;	// una copia (CTape::ExtractBlocks)
+	unsigned		m_nTapeClipSize;
+	boolean			m_bTapeClipTZX;		// de un TZX (si no, de un TAP)
+	unsigned		m_nTapeClipSerial;	// de qué cinta (CTape::GetSerial)
+	char			m_TapeClipName[64];
 
 	// Pokes (kernelpokes.cpp)
 	CPokFile		m_Pokes;

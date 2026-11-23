@@ -87,6 +87,14 @@ public:
 	const u8 *GetData (unsigned *pSize) const	{ *pSize = m_nSize; return m_pData; }	// el fichero entero
 	void SetName (const char *pName);
 
+	// Pegar en otra cinta: los bloques (se libera con delete []) y meterlos
+	// delante de nBefore, convertidos al formato de esta. 1 bien; 0 error (no
+	// caben, sin memoria); -1 no se pueden convertir (de TZX a TAP solo van
+	// los bloques estándar)
+	u8 *ExtractBlocks (unsigned nFirst, unsigned nCount, unsigned *pSize) const;
+	int InsertBlocks (const u8 *pBlocks, unsigned nSize, boolean bFromTZX, unsigned nBefore);
+	unsigned GetSerial (void) const		{ return m_nSerial; }	// cambia con cada cinta
+
 	// Bloque 0x33 del TZX (información de hardware): qué dice la cinta de la
 	// máquina nId (tipo 0 = ordenadores: 0x00 16K, 0x01 48K, 0x03 128K, 0x04
 	// +2, 0x05 +2A/+3). -1 si no dice nada; si no, 0 = funciona, 1 = usa sus
@@ -140,6 +148,9 @@ private:
 	unsigned BlockSize (unsigned nBlock) const;
 	const u8 *StandardData (unsigned nBlock, unsigned *pLength) const;	// flag + datos + paridad
 	boolean Rebuild (const unsigned *pOrder, unsigned nCount, unsigned nNewBlock);
+	void SetEdited (u8 *pNew, unsigned nNewSize, unsigned nNewBlock);
+	unsigned ConvertBlock (const u8 *pBlock, unsigned nLen, boolean bFromTZX, u8 *pOut) const;
+	unsigned m_nSerial;
 	boolean EditOrder (unsigned nFirst, unsigned nCount, unsigned nBefore, boolean bKeep, boolean bInsert);
 	boolean m_bFromCSW;		// un CSW pasado a TZX: no tiene bloques que editar
 	u8 *m_pOriginal;		// la cinta antes de editarla (0 = sin cambios)

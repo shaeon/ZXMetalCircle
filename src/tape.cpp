@@ -25,7 +25,8 @@
 #define TSTATES_PER_MS		3500
 
 CTape::CTape (void)
-:	m_bFromCSW (FALSE),
+:	m_nSerial (0),
+	m_bFromCSW (FALSE),
 	m_pOriginal (0),
 	m_nOriginalSize (0),
 	m_pData (0),
@@ -469,6 +470,8 @@ boolean CTape::IndexTZX (void)
 
 void CTape::Eject (void)
 {
+	static unsigned s_nSerial = 0;
+	m_nSerial = ++s_nSerial;	// otra cinta (para lo marcado en la anterior)
 	m_bPlaying = FALSE;
 	m_nBlocks = 0;
 	m_nBlock = 0;
@@ -2042,6 +2045,13 @@ boolean CTape::Rebuild (const unsigned *pOrder, unsigned nCount, unsigned nNewBl
 		nOffset += nSize;
 	}
 
+	SetEdited (pNew, nNewSize, nNewBlock);
+	return TRUE;
+}
+
+// La cinta pasa a ser pNew (la de antes de la primera edición se guarda)
+void CTape::SetEdited (u8 *pNew, unsigned nNewSize, unsigned nNewBlock)
+{
 	if (m_pOriginal == 0)		// la primera edición: se guarda cómo estaba
 	{
 		m_pOriginal = m_pData;
@@ -2066,7 +2076,6 @@ boolean CTape::Rebuild (const unsigned *pOrder, unsigned nCount, unsigned nNewBl
 
 	Rewind ();			// parada, sin bucles ni llamadas a medias
 	m_nBlock = nNewBlock < m_nBlocks ? nNewBlock : m_nBlocks;
-	return TRUE;
 }
 
 // Borrar (bKeep FALSE, bInsert FALSE), copiar (bKeep TRUE, bInsert TRUE) o
@@ -2200,4 +2209,117 @@ void CTape::SetName (const char *pName)
 {
 	strncpy (m_Name, pName, sizeof m_Name - 1);
 	m_Name[sizeof m_Name - 1] = '\0';
+}
+
+// Los bloques para pegarlos en otra cinta: cada uno, su longitud (4 bytes) y
+// el bloque tal cual (del TAP, con su longitud de 2 bytes; del TZX, con su ID)
+u8 *CTape::ExtractBlocks (unsigned nFirst, unsigned nCount, unsigned *pSize) const
+{
+	if (nCount == 0 || nFirst + nCount > m_nBlocks || m_bPZX)
+	{
+		return 0;
+	}
+	unsigned nSize = 0;
+	for (unsigned i = 0; i < nCount; i++)
+	{
+		nSize += 4 + BlockSize (nFirst + i);
+	}
+	u8 *pOut = new u8[nSize];
+	if (pOut == 0)
+	{
+		return 0;
+	}
+	u8 *p = pOut;
+	for (unsigned i = 0; i < nCount; i++)
+	{
+		unsigned nLen = BlockSize (nFirst + i);
+		p[0] = nLen; p[1] = nLen >> 8; p[2] = nLen >> 16; p[3] = nLen >> 24;
+		memcpy (p + 4, m_pData + m_BlockOffset[nFirst + i], nLen);
+		p += 4 + nLen;
+	}
+	*pSize = nSize;
+	return pOut;
+}
+
+// Un bloque de ExtractBlocks en el formato de esta cinta: su tamaño (0 = no
+// se puede: de un TZX a un TAP solo van los bloques estándar 0x10) y, con
+// pOut, el bloque
+unsigned CTape::ConvertBlock (const u8 *pBlock, unsigned nLen, boolean bFromTZX, u8 *pOut) const
+{
+	if (bFromTZX == m_bTZX)
+	{
+		if (pOut != 0) memcpy (pOut, pBlock, nLen);
+		return nLen;
+	}
+	if (!bFromTZX)			// del TAP al TZX: un bloque estándar con 1 s de pausa
+	{
+		if (pOut != 0)
+		{
+			pOut[0] = 0x10;
+			pOut[1] = 1000 & 0xFF;
+			pOut[2] = 1000 >> 8;
+			memcpy (pOut + 3, pBlock, nLen);
+		}
+		return nLen + 3;
+	}
+	if (nLen < 5 || pBlock[0] != 0x10)	// turbo, tonos, CSW, textos...: no caben
+	{
+		return 0;
+	}
+	if (pOut != 0)			// del 0x10 al TAP: sin el ID ni la pausa
+	{
+		memcpy (pOut, pBlock + 3, nLen - 3);
+	}
+	return nLen - 3;
+}
+
+int CTape::InsertBlocks (const u8 *pBlocks, unsigned nSize, boolean bFromTZX, unsigned nBefore)
+{
+	if (CanEdit () != EditOK || nBefore > m_nBlocks)
+	{
+		return 0;
+	}
+
+	// cuánto ocupan ya convertidos (y si se pueden convertir todos)
+	unsigned nAdd = 0, nCount = 0;
+	for (unsigned o = 0; o + 4 <= nSize; )
+	{
+		unsigned nLen = DWord (pBlocks + o);
+		if (nLen > nSize - o - 4)
+		{
+			return 0;
+		}
+		unsigned nNew = ConvertBlock (pBlocks + o + 4, nLen, bFromTZX, 0);
+		if (nNew == 0)
+		{
+			return -1;
+		}
+		nAdd += nNew;
+		nCount++;
+		o += 4 + nLen;
+	}
+	if (nCount == 0 || m_nBlocks + nCount > TAPE_MAX_BLOCKS || m_nSize + nAdd > TAPE_MAX_SIZE)
+	{
+		return 0;
+	}
+
+	unsigned nAt = nBefore < m_nBlocks ? m_BlockOffset[nBefore] : m_nSize;
+	u8 *pNew = new u8[m_nSize + nAdd];
+	if (pNew == 0)
+	{
+		return 0;
+	}
+	memcpy (pNew, m_pData, nAt);
+	u8 *p = pNew + nAt;
+	for (unsigned o = 0; o + 4 <= nSize; )
+	{
+		unsigned nLen = DWord (pBlocks + o);
+		p += ConvertBlock (pBlocks + o + 4, nLen, bFromTZX, p);
+		o += 4 + nLen;
+	}
+	memcpy (p, m_pData + nAt, m_nSize - nAt);
+
+	unsigned nBlock = m_nBlock >= nBefore ? m_nBlock + nCount : m_nBlock;
+	SetEdited (pNew, m_nSize + nAdd, nBlock);
+	return 1;
 }
