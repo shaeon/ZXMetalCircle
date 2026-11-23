@@ -43,7 +43,7 @@ All the options go on a single line:
 | `issue=` | `3` (Issue 3), `2` (Issue 2, only affects the 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |
 | `ulaplus=` | `1` (ULAplus available), `0` (disabled) | `1` |
-| `snow=` | `1` (16K/48K snow effect, like the real machine), `0` (no snow) | `1` |
+| `snow=` | `1` (16K, 48K, 128K and +2 snow effect, like the real machine), `0` (no snow) | `1` |
 | `lang=` | `es` (Spanish), `en` (English), `pt` (European Portuguese), `pt-br` (Brazilian Portuguese) or any other language in `locales/` | `es` |
 | `net=` | `auto` (WiFi if there is a `wpa_supplicant.conf`, otherwise cable), `wifi`, `eth`, `0` | `auto` |
 | `tz=` | time offset in minutes (60 = mainland Spain, 0 = UK and Canary Islands) | `60` |

@@ -185,8 +185,9 @@ public:
 
 	// ULAplus (64 colores, puertos 0xBF3B/0xFF3B)
 	void SetULAplusEnabled (boolean bEnabled)	{ m_bULAplusEnabled = bEnabled; }
-	// Efecto nieve del 16K/48K (snow=1): con I en 0x40-0x7F, el refresco de
-	// la memoria choca con la lectura de la pantalla de la ULA
+	// Efecto nieve del 16K, 48K, 128K y +2 (snow=1): si I apunta a memoria
+	// lenta, el refresco de la memoria choca con la lectura de la pantalla de
+	// la ULA
 	void SetSnowEnabled (boolean bEnabled)	{ m_bSnowEnabled = bEnabled; UpdateSnow (); }
 	// negro puro (#000000) también en la paleta del 16K/48K (pureblack=1)
 	void SetPureBlack (boolean bPureBlack);
@@ -236,8 +237,12 @@ private:
 
 	void UpdateScreen (int nTstates);
 	inline void DrawCell (unsigned nAddr, u8 nByte, u8 nAttr);
-	void Snow (void);		// en cada M1, si I apunta a la pantalla
-	void UpdateSnow (void)		{ m_bSnow = m_bSnowEnabled && (m_Model == Model48K || m_Model == Model16K); }
+	void Snow (const u8 *pPage);	// en cada M1, si I apunta a memoria lenta
+	void UpdateSnow (void)
+	{
+		m_bSnow = m_bSnowEnabled && (m_Model == Model48K || m_Model == Model16K);
+		m_bSnow128 = m_bSnowEnabled && (m_Model == Model128K || m_Model == ModelPlus2);
+	}
 	void UpdateBorder (int nTstates);
 
 	void PreIO (uint16_t nPort);
@@ -315,7 +320,8 @@ private:
 	boolean m_bFlash;
 	u8 m_nLastByte, m_nLastAttr;	// lo último que leyó la ULA (para el doble efecto)
 	boolean m_bSnowEnabled;		// snow=1
-	boolean m_bSnow;		// y el modelo la tiene (16K y 48K)
+	boolean m_bSnow;		// y el modelo la tiene: 16K y 48K...
+	boolean m_bSnow128;		// ... o 128K y +2 (no los +2A/+3 ni los clónicos)
 
 	// ULAplus
 	void ULAplusWrite (uint16_t nPort, u8 nValue);

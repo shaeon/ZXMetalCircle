@@ -789,7 +789,7 @@ void CKernel::ParseOptions (void)
 
 	// ULAplus (64 colores); ulaplus=0 lo desactiva
 	m_pSpectrum->SetULAplusEnabled (m_Options.GetAppOptionDecimal ("ulaplus", 1) != 0);
-	// efecto nieve del 16K/48K; snow=0 lo quita
+	// efecto nieve del 16K, 48K, 128K y +2; snow=0 lo quita
 	m_pSpectrum->SetSnowEnabled (m_Options.GetAppOptionDecimal ("snow", 1) != 0);
 	m_pSpectrum->SetPureBlack (m_Options.GetAppOptionDecimal ("pureblack", 0) != 0);
 

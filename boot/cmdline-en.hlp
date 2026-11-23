@@ -84,8 +84,8 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                     1, 2, 4 or 10 (x1 = real speed; faster ones are silent)
 
  ulaplus=1        ULAplus (64 colours):  1 = available,  0 = disabled
- snow=1           16K/48K snow effect (with the I register between 0x40 and
-                  0x7F, like the real machine):  1 = yes,  0 = no
+ snow=1           16K, 48K, 128K and +2 snow effect (with the I register in
+                  slow memory, like the real machine):  1 = yes,  0 = no
 
  rs232=1          Interface 1 RS232 on the Pi's TCP port 2323 (or to
                   saves/rs232.txt if nobody is connected). 0 = off.

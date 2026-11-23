@@ -113,7 +113,7 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	UpdatePalette ();
 	m_bULAplusEnabled = TRUE;
 	m_bSnowEnabled = TRUE;
-	m_bSnow = FALSE;
+	m_bSnow = m_bSnow128 = FALSE;
 	m_nLastByte = m_nLastAttr = 0;
 	m_bULAplusActive = FALSE;
 	m_nULAplusRegister = 0;
@@ -822,9 +822,21 @@ inline void CSpectrum::WriteByte (uint16_t nAddress, uint8_t nValue)
 uint8_t CSpectrum::fetchOpcode (uint16_t address)
 {
 	Contend (address, 4);
-	if (m_bSnow && (m_CPU.getRegI () & 0xC0) == 0x40)
+	if (m_bSnow || m_bSnow128)
 	{
-		Snow ();
+		u8 nI = m_CPU.getRegI () & 0xC0;
+		if (nI == 0x40)
+		{
+			Snow (m_pScreenPage);
+		}
+		else if (nI == 0xC0 && m_bSnow128 && (m_nPort7FFD & 0x01))
+		{
+			// 128K y +2 con una página lenta (impar) arriba: la fila
+			// equivocada sale del banco 1 o 3 (si es la 1 o la 3) o del 5
+			// o 7 (si es la 5 o la 7), el de la pantalla que se ve (Weiv,
+			// como ESPectrum)
+			Snow (m_RAM[(m_nPort7FFD & 0x04) | ((m_nPort7FFD & 0x08) ? 2 : 0) | 1]);
+		}
 	}
 	if (m_bDivActive)
 	{
@@ -1847,20 +1859,20 @@ void CSpectrum::UpdateScreen (int nTstates)
 	}
 }
 
-// Efecto nieve (16K y 48K). En los T3 y T4 de cada M1 el Z80 refresca la
-// memoria con I:R en el bus; si I está entre 0x40 y 0x7F, ese refresco cae en
-// la memoria de la pantalla y choca con la lectura de la ULA, que lee 16
-// píxeles cada 8 t-states: imagen y atributo del primer par en las fases 2 y
-// 3, y del segundo en las 4 y 5 (la fase 0 es el primer t-state de
-// contención de la línea: 14335 en el 48K, como en Spectramine de Weiv y en
-// ESPectrum). Según en qué fase cae el T4 de la lectura de la instrucción:
+// Efecto nieve (16K, 48K, 128K y +2). En los T3 y T4 de cada M1 el Z80
+// refresca la memoria con I:R en el bus; si I apunta a memoria lenta (0x40-
+// 0x7F, o en el 128K 0xC0-0xFF con una página impar arriba), ese refresco
+// choca con la lectura de la ULA, que lee 16 píxeles cada 8 t-states: imagen
+// y atributo del primer par en las fases 2 y 3, y del segundo en las 4 y 5
+// (la fase 0 es el primer t-state de contención de la línea: 14335 en el
+// 48K y 14361 en el 128K, como en Spectramine de Weiv y en ESPectrum). Según en qué fase cae el T4 de la lectura de la instrucción:
 //   - fase 2 (nieve): la fila de la memoria (A0-A6) del primer par sale de R
 //     y no de la ULA: se leen la imagen y el atributo de (dirección & ~0x7F)
 //     | R, del mismo bloque de 128 bytes (por eso el dibujo se reconoce)
 //   - fase 4 (doble): el segundo par no se lee y se repite el primero
 // R es el de después de sumarle 1 en este M1, como dice Weiv (ESPectrum usa
 // el de antes).
-void CSpectrum::Snow (void)
+void CSpectrum::Snow (const u8 *pPage)
 {
 	const TMachineTiming *T = m_pTiming;
 	int nRel = m_nTstates - 1 - (T->nFirstScrByte - 1);	// el T4, desde 14335
@@ -1892,8 +1904,8 @@ void CSpectrum::Snow (void)
 	if (nPhase == 2)
 	{
 		unsigned nRow = (m_CPU.getRegR () + 1) & 0x7F;	// ya sumado (Weiv); z80cpp lo suma al volver
-		DrawCell (nAddr, m_pScreenPage[(nAddr & ~0x7F) | nRow],
-			  m_pScreenPage[(m_Scr2Attr[nAddr] & ~0x7F) | nRow]);
+		DrawCell (nAddr, pPage[(nAddr & ~0x7F) | nRow],
+			  pPage[(m_Scr2Attr[nAddr] & ~0x7F) | nRow]);
 	}
 	else
 	{

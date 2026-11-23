@@ -35,7 +35,7 @@ static TSettingDef Settings[] =
 	{"issue",	N_("Teclado"),		0, "3|2", "Issue 3|Issue 2",				"3",	TRUE},
 	{"speed",	N_("Velocidad"),	0, "1|2|4|10", "x1|x2|x4|x10",				"1",	TRUE},
 	{"ulaplus",	N_("ULAplus (64 colores)"), 0, "1|0", N_("sí|no"),			"1",	TRUE},
-	{"snow",	N_("Efecto nieve 16K/48K"), 0, "1|0", N_("sí|no"),			"1",	TRUE},
+	{"snow",	N_("Efecto nieve"), 0, "1|0", N_("sí|no"),			"1",	TRUE},
 	{"p3elang",	N_("Idioma del +3e"),	0, "es|en", N_("español|inglés"),		"es",	TRUE},
 	{"tkula",	N_("ULA del TK"),		0, "50|60|ferranti", N_("Microdigital 50Hz|Microdigital 60Hz|Ferranti"), "50", TRUE},
 	{"tkrom",	N_("ROM del TK90X"),	0, "v3|v1|v2", N_("Rodolfo Guerra v3|original v1|original v2"), "v3", TRUE},
@@ -658,11 +658,15 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 		return n >= 0 && strcmp (GetValue (n), pValue) == 0;
 	};
 
-	// el teclado Issue 2/3 y el efecto nieve solo cambian algo en el 16K y
-	// el 48K
-	if (strcmp (pKey, "issue") == 0 || strcmp (pKey, "snow") == 0)
+	// el teclado Issue 2/3 solo cambia algo en el 16K y el 48K
+	if (strcmp (pKey, "issue") == 0)
 	{
 		return Is ("model", "16k") || Is ("model", "48k");
+	}
+	// el efecto nieve, en el 16K, 48K, 128K y +2 (no en los +2A/+3 ni los TK)
+	if (strcmp (pKey, "snow") == 0)
+	{
+		return Is ("model", "16k") || Is ("model", "48k") || Is ("model", "128k") || Is ("model", "plus2");
 	}
 	// idioma y disco duro del +3e
 	if (strcmp (pKey, "p3elang") == 0 || strcmp (pKey, "hdd") == 0)
