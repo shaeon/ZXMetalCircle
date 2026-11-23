@@ -218,6 +218,24 @@ private:
 	void FilePaste (void);
 	void FilePasteAs (const char *pName, boolean bReplace);
 	void FileCopyPoll (void);			// cada cuadro con el menú abierto
+
+	// F2 en el navegador de la cinta (kerneltape.cpp)
+	boolean TapeMenuResult (TMenuResult Result);
+	boolean TapeCanSaveInPlace (void);
+	void TapeBack (unsigned nBlock, const char *pMessage);
+	void TapeUpdateClip (void);
+	void TapeForgetClip (void);
+	unsigned TapeEditCount (void);
+	void TapeShowOptions (boolean bSingle);
+	void TapeAskDelete (void);
+	void TapeAskRename (void);
+	void TapePaste (boolean bAfter);
+	void TapeAskLeave (void);
+	void TapeSaveDir (char *pDir, unsigned nSize);
+	void TapeAskSaveAs (const char *pHelp, const char *pText);
+	boolean TapeWrite (const char *pPath, boolean bBackup);
+	void TapeLeave (const char *pMessage, boolean bSeek);
+	void TapeSaveAs (const char *pName);
 	void PokeSetZXDBID (const char *pID);		// el juego vino del buscador de ZXDB
 	boolean PokeFetchOnline (void);			// su .pok, de ZXDB
 	void PokeAskSearch (void);
@@ -480,6 +498,14 @@ private:
 	char			m_PasteFree[MENU_NAME_LEN];	// "nombre (2).ext"
 	boolean			m_bPasteCanReplace;
 	unsigned		m_nFileOptions;
+	unsigned		m_nTapeStage;		// F2 en la cinta
+	unsigned		m_nTapeEditBlock;	// el bloque elegido
+	boolean			m_bTapeSingle;		// solo ese bloque (no con sus datos)
+	unsigned		m_TapeOption[8];
+	unsigned		m_nTapeOptions;
+	unsigned		m_nTapeClipFirst;	// marcado para copiar o mover
+	unsigned		m_nTapeClipCount;	// (0 = nada)
+	boolean			m_bTapeClipMove;
 
 	// Pokes (kernelpokes.cpp)
 	CPokFile		m_Pokes;

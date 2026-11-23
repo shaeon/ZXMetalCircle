@@ -68,6 +68,25 @@ public:
 	boolean GetBlockInfo (unsigned nBlock, TBlockInfo *pInfo) const;
 	void SeekBlock (unsigned nBlock);	// para la cinta al principio de ese bloque
 
+	// Edición de bloques (F2 en el navegador): borrar, copiar, mover y
+	// renombrar cabeceras, en memoria hasta que se guarde (GetData). Solo
+	// TAP y TZX sin saltos (los bloques 0x23-0x28 apuntan a otros contando
+	// bloques: moverlos los descolocaría).
+	enum TEditCheck { EditOK, EditNotBlocks, EditJumps };
+	TEditCheck CanEdit (void) const;
+	boolean IsHeader (unsigned nBlock) const;	// cabecera de la ROM (se puede renombrar)
+	unsigned GetGroup (unsigned nBlock) const;	// 2: cabecera con sus datos detrás; si no, 1
+	boolean GetHeaderName (unsigned nBlock, char *pName) const;	// 10 letras, sin los espacios de detrás
+	boolean RenameHeader (unsigned nBlock, const char *pName);	// y su paridad
+	boolean DeleteBlocks (unsigned nFirst, unsigned nCount);
+	boolean CopyBlocks (unsigned nFirst, unsigned nCount, unsigned nBefore);	// una copia delante de nBefore
+	boolean MoveBlocks (unsigned nFirst, unsigned nCount, unsigned nBefore);	// nBefore = n: al final
+	boolean IsModified (void) const		{ return m_pOriginal != 0; }
+	void DiscardEdits (void);		// la cinta como estaba antes de editarla
+	void KeepEdits (void);			// guardada: lo de ahora es lo bueno
+	const u8 *GetData (unsigned *pSize) const	{ *pSize = m_nSize; return m_pData; }	// el fichero entero
+	void SetName (const char *pName);
+
 	// Bloque 0x33 del TZX (información de hardware): qué dice la cinta de la
 	// máquina nId (tipo 0 = ordenadores: 0x00 16K, 0x01 48K, 0x03 128K, 0x04
 	// +2, 0x05 +2A/+3). -1 si no dice nada; si no, 0 = funciona, 1 = usa sus
@@ -118,6 +137,14 @@ public:
 	void NextBlock (void);
 
 private:
+	unsigned BlockSize (unsigned nBlock) const;
+	const u8 *StandardData (unsigned nBlock, unsigned *pLength) const;	// flag + datos + paridad
+	boolean Rebuild (const unsigned *pOrder, unsigned nCount, unsigned nNewBlock);
+	boolean EditOrder (unsigned nFirst, unsigned nCount, unsigned nBefore, boolean bKeep, boolean bInsert);
+	boolean m_bFromCSW;		// un CSW pasado a TZX: no tiene bloques que editar
+	u8 *m_pOriginal;		// la cinta antes de editarla (0 = sin cambios)
+	unsigned m_nOriginalSize;
+
 	boolean IndexTAP (void);
 	boolean IndexTZX (void);
 	unsigned TZXBlockSize (unsigned nOffset) const;

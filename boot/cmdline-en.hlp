@@ -333,8 +333,9 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                   also applies to F2 in the Pi's file browser
 
  filechanges=1    F2 in the Pi's file browser (Alt+F5): copy, move, rename,
-                  delete and create folders on the SD card. 0 = no F2
-                  (load only)
+                  delete and create folders on the SD card; and in the
+                  tape browser (F3): copy, move, delete and rename blocks.
+                  0 = no F2 (load only)
 
  ip=              Fixed IP. Without it, DHCP is used (the normal case).
  mask=            Network mask          (default 255.255.255.0)

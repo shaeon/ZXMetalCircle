@@ -13,7 +13,7 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 | Alt+U | Drives: see, mount and empty each drive |
 | Alt+K | Keyboard help |
 | F2 | Tape: play / stop |
-| F3 | Tape: block browser (list of what is on the tape; ENTER leaves it at the chosen block, Home = rewind) |
+| F3 | Tape: block browser (list of what is on the tape; ENTER leaves it at the chosen block, Home = rewind; F2 copies, moves, deletes or renames blocks, see below) |
 | F4 | Change joystick |
 | F5 | NMI: Multiface, esxDOS browser or Spectranet menu |
 | Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI. Inside, F2 copies, moves, renames, deletes or creates folders (see below) |
@@ -60,6 +60,18 @@ In the file browser (Alt+F5, or F1 and ENTER), **F2** opens a list of what can b
 - The **web page** also has "copy" next to "move", and it is pasted the same way ("Paste here"). If there is already one with that name, the copy is made as "name (2)".
 
 The same checks as on the web page apply: system files (kernels, `cmdline.txt`, `config.txt`, the emulator's folders...) are not touched while "System files" is set to "protected" (`webprotect=1`, page 9), and what is in use (a +3 disk, a microdrive, the hard disk, the tape if SAVE writes to it) cannot be renamed or deleted: it says "In use". F2 does not work in TNFS folders or when the browser has been opened to choose a drive's file (Alt+U). "Changes in the browser" (page 8, `filechanges=0`) removes it altogether.
+
+## Editing the blocks of a tape (F3 and F2)
+
+In the tape browser (F3), **F2** (extended mode + 2 on the GPIO keyboard) opens a list of what can be done with the selected block. A header and its data go together: **Copy header and data**, **Move header and data**, **Rename the header...** and **Delete header and data...**; **Only the header, not its data...** does the same with that block alone. On a single block: **Copy this block**, **Move this block** and **Delete this block...**.
+
+- **Copy** and **Move** mark the blocks (at the bottom it shows "To copy: blocks 1-2"). Select the destination block and F2 offers **Paste before this one**, **Paste after this one** (or **Move...**) and **Forget the marked blocks**. Nothing is ever pasted between a header and its data: after a header goes after its data, and before some data, before their header.
+- **Rename the header** changes the name shown when loading (up to 10 letters) and recalculates its checksum.
+- **Delete** asks, with "No" selected on entry. The tape cannot be left empty.
+
+The changes are made to the inserted tape, in memory (the title shows a `*`), and the file is not touched until it is saved. When leaving the browser (ESC, F3 or ENTER) with changes, it asks: **Keep editing** (selected on entry), **Save to** the same file, **Save as...** another one (in the same folder; if the tape does not come from a .TAP or .TZX on the SD card, for example from a ZIP, in `saves`) or **Discard the changes**. When saving to the same file, the original is kept as `name.tap.bak` (the first time; if there is already a .bak, that is the original and it is left alone), and it is written with a temporary name that only becomes its own at the end, so if it fails (card full) the file stays as it was.
+
+TAP and TZX tapes only. TZX files with jumps, loops or calls (blocks 0x23 to 0x28: they count blocks and moving them would break them) cannot be edited, nor can CSW or PZX files. "Changes in the browser" (`filechanges=0`) also removes it.
 
 ## Simultaneous keys (Alt+V)
 

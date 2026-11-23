@@ -345,6 +345,13 @@ CKernel::CKernel (void)
 	m_bPokeTried = FALSE;
 	m_nPokeResets = 0;
 	m_nPokeStage = 0;
+	m_nTapeStage = 0;
+	m_nTapeEditBlock = 0;
+	m_bTapeSingle = FALSE;
+	m_nTapeOptions = 0;
+	m_nTapeClipFirst = 0;
+	m_nTapeClipCount = 0;
+	m_bTapeClipMove = FALSE;
 	m_nPokePending = 0;
 	m_bPokeManualFromList = FALSE;
 	m_bZXDBChoice = FALSE;
@@ -5101,6 +5108,7 @@ boolean CKernel::LoadTape (const char *pPath)
 
 	m_pSpectrum->TapeInserted ();
 	PokeSetGame (pPath, PokeGameTape);
+	TapeForgetClip ();		// lo marcado era de la otra cinta
 
 	strncpy (m_TapePath, pPath, sizeof m_TapePath - 1);
 	m_TapePath[sizeof m_TapePath - 1] = '\0';
@@ -5291,6 +5299,10 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		else if (FileMenuResult (Result))
 		{
 			// F2 en el navegador: renombrar, borrar, carpeta nueva
+		}
+		else if (TapeMenuResult (Result))
+		{
+			// F2 en el navegador de la cinta: copiar, mover, borrar bloques
 		}
 		else if (Result == MenuResultFileSelected)
 		{
@@ -5515,6 +5527,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			m_nPokeStage = 0;		// ninguna pantalla de pokes a medias
 			m_nFileStage = 0;		// ni de F2
+			m_nTapeStage = 0;		// ni de F2 en la cinta
 			MenuClosed ();
 			m_Keyboard.SetCaptured (FALSE);
 			m_Keyboard.ReleaseAll ();
@@ -5612,6 +5625,10 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			OpenMenu ();
 			m_Keyboard.SetCaptured (TRUE);
+		}
+		if (m_nTapeClipCount > 0 && m_nTapeClipFirst + m_nTapeClipCount > m_Tape.GetBlockCount ())
+		{
+			TapeForgetClip ();		// de otra cinta
 		}
 		m_Menu.OpenTape (&m_Tape);
 		break;

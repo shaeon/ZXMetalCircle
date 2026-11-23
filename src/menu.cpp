@@ -24,7 +24,7 @@
 #define PANEL_ROWS	35
 #define LIST_ROW	4
 #define LIST_LINES	26	// y una línea libre antes de las de abajo
-#define TAPE_LIST_LINES	(PANEL_ROWS - 8)	// filas de bloques en el navegador de la cinta
+#define TAPE_LIST_LINES	(PANEL_ROWS - 10)	// filas de bloques en el navegador de la cinta
 #define TEXT_COLS	(PANEL_COLS - 2)
 
 static boolean HasExtension (const char *pName, const char *pExt)
@@ -91,6 +91,8 @@ CMenu::CMenu (CVideo *pVideo)
 	m_pTape = 0;
 	m_nTapeSelected = 0;
 	m_nTapeTop = 0;
+	m_bTapeLeaveSeek = FALSE;
+	m_TapeClip[0] = m_TapeMessage[0] = '\0';
 	m_bEditing = FALSE;
 	m_bEditBad = FALSE;
 	m_EditBuf[0] = '\0';
@@ -214,13 +216,23 @@ static const char *AboutLines[] =
 #define ABOUT_LINES	(sizeof AboutLines / sizeof AboutLines[0])
 #define ABOUT_VISIBLE	(PANEL_ROWS - 7)
 
-void CMenu::OpenTape (const CTape *pTape)
+void CMenu::OpenTape (const CTape *pTape, int nSelect, const char *pMessage)
 {
 	m_pTape = pTape;
 	unsigned nCount = pTape->GetBlockCount ();
-	m_nTapeSelected = pTape->GetBlock () < nCount ? pTape->GetBlock () : (nCount > 0 ? nCount - 1 : 0);
-	m_nTapeTop = m_nTapeSelected > LIST_LINES / 2 ? m_nTapeSelected - LIST_LINES / 2 : 0;
+	unsigned nBlock = nSelect >= 0 ? (unsigned) nSelect : pTape->GetBlock ();
+	m_nTapeSelected = nBlock < nCount ? nBlock : (nCount > 0 ? nCount - 1 : 0);
+	m_nTapeTop = m_nTapeSelected > TAPE_LIST_LINES / 2 ? m_nTapeSelected - TAPE_LIST_LINES / 2 : 0;
+	m_bTapeLeaveSeek = FALSE;
+	strncpy (m_TapeMessage, pMessage != 0 ? pMessage : "", sizeof m_TapeMessage - 1);
+	m_TapeMessage[sizeof m_TapeMessage - 1] = '\0';
 	m_Mode = ModeTape;
+}
+
+void CMenu::SetTapeClip (const char *pText)
+{
+	strncpy (m_TapeClip, pText != 0 ? pText : "", sizeof m_TapeClip - 1);
+	m_TapeClip[sizeof m_TapeClip - 1] = '\0';
 }
 
 // Una línea del navegador de la cinta: número y lo que hay en el bloque
@@ -331,11 +343,11 @@ void CMenu::OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp
 }
 
 void CMenu::OpenText (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter,
-		      const char *pInitial, unsigned nCursor)
+		      const char *pInitial, unsigned nCursor, unsigned nMax)
 {
 	OpenInput (pTitle, pHelp1, pHelp2, pFooter);
 	m_bInputText = TRUE;
-	m_nInputMax = sizeof m_InputBuf - 1;
+	m_nInputMax = nMax > 0 && nMax < sizeof m_InputBuf ? nMax : sizeof m_InputBuf - 1;
 	strncpy (m_InputBuf, pInitial != 0 ? pInitial : "", sizeof m_InputBuf - 1);
 	m_InputBuf[sizeof m_InputBuf - 1] = '\0';
 	unsigned nLen = strlen (m_InputBuf);
@@ -1263,18 +1275,37 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		{
 		case HID_KEY_UP:	if (m_nTapeSelected > 0) m_nTapeSelected--;			break;
 		case HID_KEY_DOWN:	if (m_nTapeSelected + 1 < nCount) m_nTapeSelected++;		break;
-		case 0x4B:		m_nTapeSelected = m_nTapeSelected > LIST_LINES ? m_nTapeSelected - LIST_LINES : 0;	break;	// RePág
-		case 0x4E:		m_nTapeSelected = m_nTapeSelected + LIST_LINES < nCount ? m_nTapeSelected + LIST_LINES : nCount - 1;	break;	// AvPág
+		case 0x4B:		m_nTapeSelected = m_nTapeSelected > TAPE_LIST_LINES ? m_nTapeSelected - TAPE_LIST_LINES : 0;	break;	// RePág
+		case 0x4E:		m_nTapeSelected = m_nTapeSelected + TAPE_LIST_LINES < nCount ? m_nTapeSelected + TAPE_LIST_LINES : nCount - 1;	break;	// AvPág
 		case HID_KEY_HOME:	m_nTapeSelected = 0;							break;
 		case HID_KEY_END:	m_nTapeSelected = nCount - 1;						break;
 		case HID_KEY_ENTER:
 		case 0x58:		// ENTER del teclado numérico
+			m_TapeMessage[0] = '\0';
+			if (m_pTape->IsModified ())
+			{
+				m_bTapeLeaveSeek = TRUE;	// antes, qué hacer con los cambios
+				return MenuResultTapeLeave;
+			}
 			m_Mode = ModeClosed;
 			return MenuResultTapeSeek;
 		case 0x13:		// P: invertir la polaridad (el menú sigue abierto)
 			return MenuResultTapeInvert;
+		case HID_KEY_F1 + 1:	// F2: copiar, mover, borrar... (lo abre el kernel)
+			m_TapeMessage[0] = '\0';
+			if (m_bFileChanges)
+			{
+				return MenuResultTapeOptions;
+			}
+			break;
 		case HID_KEY_ESC:
 		case HID_KEY_F1 + 2:	// F3 otra vez: cerrar
+			m_TapeMessage[0] = '\0';
+			if (m_pTape->IsModified ())
+			{
+				m_bTapeLeaveSeek = FALSE;
+				return MenuResultTapeLeave;
+			}
 			m_Mode = ModeClosed;
 			return MenuResultClose;
 		default:
@@ -2119,7 +2150,15 @@ void CMenu::Draw (TPixel *pScreen)
 		CP850ToUTF8 (m_pTape->GetName (), Name, sizeof Name);
 		CString Title;
 		Title.Format (T ("Cinta: %s"), Name);
+		if (m_pTape->IsModified ())
+		{
+			Title.Append (" *");		// cambios sin guardar
+		}
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		if (m_TapeMessage[0] != '\0')
+		{
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (2), m_TapeMessage, COLOR_UI_HILITE, COLOR_UI_PANEL, TEXT_COLS);
+		}
 
 		unsigned nCount = m_pTape->GetBlockCount ();
 		unsigned nCurrent = m_pTape->GetBlock ();
@@ -2154,10 +2193,22 @@ void CMenu::Draw (TPixel *pScreen)
 		{
 			Where.Format (T ("La cinta está al final (%u bloques)"), nCount);
 		}
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 4), Where, COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 3),
+		if (m_TapeClip[0] != '\0')
+		{
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 6), m_TapeClip, COLOR_UI_HILITE,
+					    COLOR_UI_PANEL, TEXT_COLS);
+		}
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 5), Where, COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 4),
 				    m_pTape->IsInverted () ? T ("P polaridad: INVERTIDA") : T ("P polaridad: normal"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);	// tecla que se puede pulsar
+		if (m_bFileChanges)
+		{
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 3),
+					    m_TapeClip[0] != '\0' ? T ("F2: pegar delante o detrás...")
+								 : T ("F2: copiar, mover, borrar, renombrar"),
+					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		}
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ENTER poner aquí  Inicio/Fin  ESC volver"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		return;

@@ -330,8 +330,9 @@ defecto.
                   tambien para F2 en el navegador de ficheros de la Pi
 
  filechanges=1    F2 en el navegador de ficheros de la Pi (Alt+F5): copiar,
-                  mover, renombrar, borrar y crear carpetas en la SD.
-                  0 = sin F2 (solo cargar)
+                  mover, renombrar, borrar y crear carpetas en la SD; y en
+                  el de la cinta (F3): copiar, mover, borrar y renombrar
+                  bloques. 0 = sin F2 (solo cargar)
 
  ip=              IP fija. Si no se pone, se usa DHCP (lo normal).
  mask=            Mascara de red        (por defecto 255.255.255.0)

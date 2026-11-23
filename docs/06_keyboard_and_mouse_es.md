@@ -13,7 +13,7 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 | Alt+U | Unidades: ver, montar y vaciar cada unidad |
 | Alt+K | Ayuda de teclado |
 | F2 | Cinta: reproducir / parar |
-| F3 | Cinta: navegador de bloques (lista de lo que hay en la cinta; ENTER la deja en el bloque elegido, Inicio = rebobinar) |
+| F3 | Cinta: navegador de bloques (lista de lo que hay en la cinta; ENTER la deja en el bloque elegido, Inicio = rebobinar; F2 copia, mueve, borra o renombra bloques, ver abajo) |
 | F4 | Cambiar joystick |
 | F5 | NMI: Multiface, navegador de esxDOS o menú de la Spectranet |
 | Alt+F5 | Navegador de ficheros (como F1 y ENTER). Con `f5=files` se intercambian: F5 abre los ficheros y Alt+F5 hace la NMI. Dentro, F2 copia, mueve, renombra, borra o crea carpetas (ver abajo) |
@@ -60,6 +60,18 @@ En el navegador de ficheros (Alt+F5, o F1 y ENTER), **F2** abre una lista con lo
 - En la **página web** también hay «copiar» junto a «mover», y se pega igual («Pegar aquí»). Si ya hay uno con ese nombre, la copia se hace como «nombre (2)».
 
 Se comprueba lo mismo que en la página web: lo del sistema (kernels, `cmdline.txt`, `config.txt`, las carpetas del emulador...) no se toca mientras «Ficheros del sistema» esté en «protegidos» (`webprotect=1`, página 9), y lo que se está usando (un disco del +3, un microdrive, el disco duro, la cinta si SAVE graba en ella) no se renombra ni se borra: sale «En uso». F2 no funciona en las carpetas de TNFS ni cuando el navegador se ha abierto para elegir lo de una unidad (Alt+U). «Cambios en el navegador» (página 8, `filechanges=0`) lo quita del todo.
+
+## Editar los bloques de una cinta (F3 y F2)
+
+En el navegador de la cinta (F3), **F2** (modo extendido + 2 en el teclado GPIO) abre una lista con lo que se puede hacer con el bloque elegido. Una cabecera y sus datos van juntos: **Copiar cabecera y datos**, **Mover cabecera y datos**, **Renombrar la cabecera...** y **Borrar cabecera y datos...**; con **Solo la cabecera, sin sus datos...** se hace lo mismo con ese bloque solo. En un bloque suelto: **Copiar este bloque**, **Mover este bloque** y **Borrar este bloque...**.
+
+- **Copiar** y **Mover** marcan los bloques (abajo se ve «Para copiar: bloques 1-2»). Se elige el bloque de destino y F2 da **Pegar delante de este**, **Pegar detrás de este** (o **Mover...**) y **Olvidar lo marcado**. Nunca se pega entre una cabecera y sus datos: detrás de una cabecera va detrás de sus datos, y delante de unos datos, delante de su cabecera.
+- **Renombrar la cabecera** cambia el nombre que sale al cargar (hasta 10 letras) y recalcula su suma de comprobación.
+- **Borrar** pregunta, con «No» elegido al entrar. La cinta no puede quedarse vacía.
+
+Los cambios se hacen en la cinta puesta, en memoria (el título lleva un `*`), y el fichero no se toca hasta guardarlo. Al salir del navegador (ESC, F3 o ENTER) con cambios, pregunta: **Seguir editando** (elegido al entrar), **Guardar en** el mismo fichero, **Guardar como...** otro (en la misma carpeta; si la cinta no viene de un .TAP o .TZX de la SD, por ejemplo de un ZIP, en `saves`) o **Descartar los cambios**. Al guardar en el mismo, el original se queda como `nombre.tap.bak` (la primera vez; si ya hay un .bak, ese es el original y no se toca), y se escribe con un nombre temporal que solo al terminar pasa a ser el suyo, así que si falla (tarjeta llena) el fichero sigue como estaba.
+
+Solo cintas TAP y TZX. No se editan las TZX con saltos, bucles o llamadas (bloques 0x23 a 0x28: cuentan bloques y moverlos los descolocaría), ni las CSW ni las PZX. «Cambios en el navegador» (`filechanges=0`) también lo quita.
 
 ## Teclas simultáneas (Alt+V)
 

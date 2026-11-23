@@ -51,6 +51,8 @@ enum TMenuResult
 	MenuResultUnitEject,		// SUPR en la pantalla de unidades (GetSelectedUnit ())
 	MenuResultTapeSeek,		// ENTER en el navegador de la cinta (GetSelectedTapeBlock ())
 	MenuResultTapeInvert,		// P en el navegador de la cinta: invertir la polaridad
+	MenuResultTapeOptions,		// F2 en el navegador de la cinta: copiar, mover, borrar...
+	MenuResultTapeLeave,		// ESC, F3 o ENTER con la cinta cambiada (IsTapeLeaveSeek)
 	MenuResultInput,		// línea de texto: ENTER (GetInput ())
 	MenuResultInputCancel,		// línea de texto: ESC
 	MenuResultListKey,		// lista de dos columnas: una tecla (GetListKey (), GetListSelected ())
@@ -94,8 +96,13 @@ public:
 	// selector solo con los ficheros de esa unidad (lo elegido se devuelve con
 	// MenuResultFileSelected y TakeUnitTarget () dice la unidad); SUPR la vacía.
 	void OpenUnits (void);
-	void OpenTape (const CTape *pTape);	// navegador de bloques de la cinta (F3)
+	// Navegador de bloques de la cinta (F3), con nSelect elegido (-1: donde
+	// está la cinta) y un aviso arriba
+	void OpenTape (const CTape *pTape, int nSelect = -1, const char *pMessage = 0);
 	unsigned GetSelectedTapeBlock (void) const	{ return m_nTapeSelected; }
+	boolean IsTapeLeaveSeek (void) const	{ return m_bTapeLeaveSeek; }	// salir con ENTER
+	// Lo marcado para copiar o mover: una línea encima de las de abajo ("" = nada)
+	void SetTapeClip (const char *pText);
 	// bFromShortcut: abierta con Alt+U (ESC cierra el menú en lugar de volver a la ayuda)
 	void SetUnitsFromShortcut (boolean bFromShortcut)	{ m_bUnitsFromShortcut = bFromShortcut; }
 	// Alt+F1: ESC en la configuración cierra el menú en lugar de volver a la ayuda
@@ -125,8 +132,9 @@ public:
 	// Spectrum: SS+8 '(', SS+0 '_', SS+J '-', SS+M '.'...), cursores, Inicio,
 	// Fin, retroceso y SUPR. Empieza con pInitial (bytes de la SD, CP850) y el
 	// cursor en nCursor. Mismos resultados que OpenInput.
+	// nMax: lo más largo (0 = lo que quepa)
 	void OpenText (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter,
-		       const char *pInitial, unsigned nCursor);
+		       const char *pInitial, unsigned nCursor, unsigned nMax = 0);
 	boolean IsTyping (void) const		{ return m_Mode == ModeInput && m_bInputText; }
 
 	// Lista de dos columnas (nombre y valor), como la configuración: la lleva
@@ -273,6 +281,9 @@ private:
 	const CTape *m_pTape;		// navegador de la cinta
 	unsigned m_nTapeSelected;
 	unsigned m_nTapeTop;
+	boolean m_bTapeLeaveSeek;
+	char m_TapeClip[64];		// "Marcados: bloques 3-4"
+	char m_TapeMessage[64];		// aviso arriba (tras una edición)
 	boolean m_bEditing;		// escribiendo una opción (IP) de la configuración
 	boolean m_bEditBad;		// lo escrito no es una IP válida
 	char m_EditBuf[16];
