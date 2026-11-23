@@ -78,6 +78,8 @@ defecto.
                     1, 2, 4 o 10 (x1 = velocidad real; a mas, sin sonido)
 
  ulaplus=1        ULAplus (64 colores):  1 = disponible,  0 = desactivado
+ snow=1           Efecto nieve del 16K/48K (con el registro I entre 0x40 y
+                  0x7F, como la máquina real):  1 = sí,  0 = no
 
  rs232=1          RS232 del Interface 1 por el puerto TCP 2323 de la Pi (o a
                   saves/rs232.txt si no hay nadie conectado). 0 = no.

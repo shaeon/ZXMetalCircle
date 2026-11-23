@@ -789,6 +789,8 @@ void CKernel::ParseOptions (void)
 
 	// ULAplus (64 colores); ulaplus=0 lo desactiva
 	m_pSpectrum->SetULAplusEnabled (m_Options.GetAppOptionDecimal ("ulaplus", 1) != 0);
+	// efecto nieve del 16K/48K; snow=0 lo quita
+	m_pSpectrum->SetSnowEnabled (m_Options.GetAppOptionDecimal ("snow", 1) != 0);
 	m_pSpectrum->SetPureBlack (m_Options.GetAppOptionDecimal ("pureblack", 0) != 0);
 
 	// Recreated ZX: recreated=0 (por defecto: teclado normal sin ningún retardo),
@@ -2948,6 +2950,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "issue") == 0)		m_pSpectrum->SetIssue2 (strcmp (pValue, "2") == 0);
 	else if (strcmp (pKey, "speed") == 0)		m_nSpeed = atoi (pValue);
 	else if (strcmp (pKey, "ulaplus") == 0)		m_pSpectrum->SetULAplusEnabled (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "snow") == 0)		m_pSpectrum->SetSnowEnabled (strcmp (pValue, "0") != 0);
 	else if (strcmp (pKey, "pureblack") == 0)	m_pSpectrum->SetPureBlack (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "indicators") == 0)	m_bIndicators = strcmp (pValue, "1") == 0;
 	else if (strcmp (pKey, "border") == 0 || strcmp (pKey, "scanlines") == 0)

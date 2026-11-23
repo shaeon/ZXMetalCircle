@@ -112,6 +112,9 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_bPureBlack = FALSE;
 	UpdatePalette ();
 	m_bULAplusEnabled = TRUE;
+	m_bSnowEnabled = TRUE;
+	m_bSnow = FALSE;
+	m_nLastByte = m_nLastAttr = 0;
 	m_bULAplusActive = FALSE;
 	m_nULAplusRegister = 0;
 	for (unsigned i = 0; i < 64; i++)
@@ -228,6 +231,7 @@ void CSpectrum::SetModel (TModel Model)
 	}
 
 	m_Model = Model;
+	UpdateSnow ();
 	m_pTiming = &MachineTiming[Model];
 	// TK90X/TK95 con la ULA de Microdigital (50 o 60 Hz): sus propios tiempos
 	m_bTKMicro = (Model == ModelTK90X || Model == ModelTK95) && m_nTKULA != TKULAFerranti;
@@ -818,6 +822,10 @@ inline void CSpectrum::WriteByte (uint16_t nAddress, uint8_t nValue)
 uint8_t CSpectrum::fetchOpcode (uint16_t address)
 {
 	Contend (address, 4);
+	if (m_bSnow && (m_CPU.getRegI () & 0xC0) == 0x40)
+	{
+		Snow ();
+	}
 	if (m_bDivActive)
 	{
 		return DivFetch (address);
@@ -1835,10 +1843,69 @@ void CSpectrum::UpdateScreen (int nTstates)
 	while (m_nStep < m_nSteps && m_StepStates[m_nStep] <= nTstates)
 	{
 		unsigned nAddr = m_StepAddr[m_nStep++];
+		DrawCell (nAddr, m_pScreenPage[nAddr], m_pScreenPage[m_Scr2Attr[nAddr]]);
+	}
+}
 
-		u8 nByte = m_pScreenPage[nAddr];
-		u8 nAttr = m_pScreenPage[m_Scr2Attr[nAddr]];
+// Efecto nieve (16K y 48K). En los T3 y T4 de cada M1 el Z80 refresca la
+// memoria con I:R en el bus; si I está entre 0x40 y 0x7F, ese refresco cae en
+// la memoria de la pantalla y choca con la lectura de la ULA, que lee 16
+// píxeles cada 8 t-states: imagen y atributo del primer par en las fases 2 y
+// 3, y del segundo en las 4 y 5 (la fase 0 es el primer t-state de
+// contención de la línea: 14335 en el 48K, como en Spectramine de Weiv y en
+// ESPectrum). Según en qué fase cae el T4 de la lectura de la instrucción:
+//   - fase 2 (nieve): la fila de la memoria (A0-A6) del primer par sale de R
+//     y no de la ULA: se leen la imagen y el atributo de (dirección & ~0x7F)
+//     | R, del mismo bloque de 128 bytes (por eso el dibujo se reconoce)
+//   - fase 4 (doble): el segundo par no se lee y se repite el primero
+// R es el de después de sumarle 1 en este M1, como dice Weiv (ESPectrum usa
+// el de antes).
+void CSpectrum::Snow (void)
+{
+	const TMachineTiming *T = m_pTiming;
+	int nRel = m_nTstates - 1 - (T->nFirstScrByte - 1);	// el T4, desde 14335
+	if (nRel < 0)
+	{
+		return;
+	}
+	unsigned nLine = nRel / T->nTstatesLine;
+	unsigned nCol = nRel % T->nTstatesLine;
+	if (nLine > 191 || nCol > 127)
+	{
+		return;
+	}
+	unsigned nPhase = nCol & 7;
+	if (nPhase != 2 && nPhase != 4)
+	{
+		return;
+	}
 
+	unsigned nCell = nLine * 32 + (nCol >> 3) * 2 + (nPhase == 4);	// la celda de 8 píxeles
+	UpdateScreen (m_StepStates[nCell] - 1);		// todo lo de antes, normal
+	if (m_nStep != nCell)
+	{
+		return;
+	}
+	m_nStep++;
+
+	unsigned nAddr = m_StepAddr[nCell];
+	if (nPhase == 2)
+	{
+		unsigned nRow = (m_CPU.getRegR () + 1) & 0x7F;	// ya sumado (Weiv); z80cpp lo suma al volver
+		DrawCell (nAddr, m_pScreenPage[(nAddr & ~0x7F) | nRow],
+			  m_pScreenPage[(m_Scr2Attr[nAddr] & ~0x7F) | nRow]);
+	}
+	else
+	{
+		DrawCell (nAddr, m_nLastByte, m_nLastAttr);
+	}
+}
+
+inline void CSpectrum::DrawCell (unsigned nAddr, u8 nByte, u8 nAttr)
+{
+	m_nLastByte = nByte;
+	m_nLastAttr = nAttr;
+	{
 		TPixel nInk, nPaper;
 		if (m_bULAplusActive)
 		{
