@@ -210,7 +210,7 @@ Si al pulsar una tecla se ilumina otra, lo más probable es que una cinta esté 
 
   | Con el teclado real | Hace de |
   | --- | --- |
-  | **Modo extendido:** 1 … 0 | F1 … F10 (en el navegador de ficheros, modo extendido + 2 = F2: renombrar, borrar, carpeta nueva) |
+  | **Modo extendido:** 1 … 0 | F1 … F10 (en el navegador de ficheros, modo extendido + 2 = F2: copiar, mover, renombrar, borrar, carpeta nueva) |
   | **Modo extendido:** Q, W | F11, F12 (como en ESPectrum) |
   | **Modo extendido:** SYMBOL SHIFT + tecla | Alt + tecla (SS+1 = Alt+F1, SS+K ayuda del teclado, SS+R reset, SS+P pausa, SS+C pokes, SS+O POKE a mano) |
   | CAPS SHIFT + 1, 2 | Inicio, Fin |

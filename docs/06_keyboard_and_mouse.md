@@ -16,7 +16,7 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 | F3 | Tape: block browser (list of what is on the tape; ENTER leaves it at the chosen block, Home = rewind) |
 | F4 | Change joystick |
 | F5 | NMI: Multiface, esxDOS browser or Spectranet menu |
-| Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI. Inside, F2 renames, deletes or creates folders (see below) |
+| Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI. Inside, F2 copies, moves, renames, deletes or creates folders (see below) |
 | F6 | Loading speed: instant / fast / real |
 | F7 | List of models to choose from (the current one highlighted; those without a ROM say so) |
 | Alt+F7 | Switch to the next model (16K, 48K, 128K, +2, +2A, +3, +3e) |
@@ -51,11 +51,13 @@ To load a tape: press F1 and then ENTER, choose the `.TAP`, `.TZX`, `.PZX` or `.
 
 ## SD card files from the file browser (F2)
 
-In the file browser (Alt+F5, or F1 and ENTER), **F2** opens a list of what can be done with the selected entry: **Rename...**, **Delete...** and **New folder...** (on `[..]`, only the new folder). With the GPIO keyboard, F2 is extended mode + 2.
+In the file browser (Alt+F5, or F1 and ENTER), **F2** opens a list of what can be done with the selected entry: **Copy**, **Move**, **Rename...**, **Delete...** and **New folder...** (on `[..]`, only the new folder; folders are not copied, but they can be moved). With the GPIO keyboard, F2 is extended mode + 2.
 
 - **Rename** opens a line with the current name and the cursor before the extension. It types lowercase; capitals with Shift or CAPS SHIFT + letter; symbols with Ctrl or SYMBOL SHIFT + the key, as on the Spectrum: SS+8 `(`, SS+9 `)`, SS+0 `_`, SS+J `-`, SS+M `.`, SS+N `,`, SS+K `+`, SS+L `=`, SS+1 `!`, SS+2 `@`, SS+3 `#`, SS+4 `$`, SS+5 `%`, SS+6 `&`, SS+7 `'`, SS+Y `[`, SS+U `]`. The dot and hyphen of a USB keyboard work too. The cursor keys move the cursor, Home and End (CAPS SHIFT + 1 and 2) go to the ends, DELETE (CAPS SHIFT + 0) deletes the character on the left and Del (CAPS SHIFT + 9) the one under the cursor.
 - **Delete** always asks, with "No, keep it" selected on entry. Folders only if they are empty.
 - **New folder** creates one in the current folder.
+- **Copy** and **Move** mark the selected entry (at the bottom it shows "To copy: games/Barbarian.tzx"). Go to the destination folder with the browser and there F2 offers **Paste here** (or **Move here**) and **Forget**. If there is already one with that name, it asks: don't copy it (selected on entry), copy it as "name (2)" or replace the existing one. Pasting a copy in its own folder makes it "name (2)" directly. Moving is immediate; copying shows a progress bar with the MB copied and is cancelled with ESC (BREAK). The copy is written with a temporary name and only gets its own at the end, so if it is cancelled or fails no half-copied file is left; before starting it checks that it fits on the card.
+- The **web page** also has "copy" next to "move", and it is pasted the same way ("Paste here"). If there is already one with that name, the copy is made as "name (2)".
 
 The same checks as on the web page apply: system files (kernels, `cmdline.txt`, `config.txt`, the emulator's folders...) are not touched while "System files" is set to "protected" (`webprotect=1`, page 9), and what is in use (a +3 disk, a microdrive, the hard disk, the tape if SAVE writes to it) cannot be renamed or deleted: it says "In use". F2 does not work in TNFS folders or when the browser has been opened to choose a drive's file (Alt+U). "Changes in the browser" (page 8, `filechanges=0`) removes it altogether.
 

@@ -79,6 +79,8 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nInputCursor = 0;
 	m_bFileChanges = TRUE;
 	m_PendingSelect[0] = '\0';
+	m_BrowserClip[0] = '\0';
+	m_nProgressDone = m_nProgressTotal = 0;
 	m_bUnitsFromShortcut = FALSE;
 	m_bSettingsFromShortcut = FALSE;
 	m_nAboutTop = 0;
@@ -623,6 +625,31 @@ boolean CMenu::GetBrowserSelection (char *pDir, unsigned nDirSize, char *pName, 
 	pName[nNameSize - 1] = '\0';
 	*pIsDir = pEntry->bDir;
 	return TRUE;
+}
+
+void CMenu::SetBrowserClip (const char *pText)
+{
+	strncpy (m_BrowserClip, pText != 0 ? pText : "", sizeof m_BrowserClip - 1);
+	m_BrowserClip[sizeof m_BrowserClip - 1] = '\0';
+}
+
+void CMenu::OpenProgress (const char *pTitle, const char *pLine1, const char *pLine2)
+{
+	strncpy (m_InputTitle, pTitle, sizeof m_InputTitle - 1);
+	m_InputTitle[sizeof m_InputTitle - 1] = '\0';
+	strncpy (m_InputHelp[0], pLine1 != 0 ? pLine1 : "", sizeof m_InputHelp[0] - 1);
+	m_InputHelp[0][sizeof m_InputHelp[0] - 1] = '\0';
+	strncpy (m_InputHelp[1], pLine2 != 0 ? pLine2 : "", sizeof m_InputHelp[1] - 1);
+	m_InputHelp[1][sizeof m_InputHelp[1] - 1] = '\0';
+	m_nProgressDone = 0;
+	m_nProgressTotal = 0;
+	m_Mode = ModeProgress;
+}
+
+void CMenu::SetProgress (u64 nDone, u64 nTotal)
+{
+	m_nProgressDone = nDone;
+	m_nProgressTotal = nTotal;
 }
 
 void CMenu::ReturnToBrowser (const char *pSelect, const char *pMessage)
@@ -1291,6 +1318,15 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		{
 			m_Mode = ModeClosed;
 			Result = MenuResultClose;
+		}
+		return Result;
+	}
+
+	if (m_Mode == ModeProgress)
+	{
+		if (nKey == HID_KEY_ESC)
+		{
+			Result = MenuResultProgressCancel;	// se cierra al cancelarlo
 		}
 		return Result;
 	}
@@ -2156,6 +2192,37 @@ void CMenu::Draw (TPixel *pScreen)
 		return;
 	}
 
+	if (m_Mode == ModeProgress)
+	{
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), m_InputTitle, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (3), m_InputHelp[0], COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (4), m_InputHelp[1], COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+
+		// la barra y el tanto por ciento
+		unsigned nPercent = m_nProgressTotal > 0 ? (unsigned) (m_nProgressDone * 100 / m_nProgressTotal) : 0;
+		const unsigned nBarWidth = (TEXT_COLS - 6) * 8;
+		m_pVideo->FillRect (pScreen, tx, ROW_Y (6), nBarWidth, 8, COLOR_UI_DIM);
+		m_pVideo->FillRect (pScreen, tx, ROW_Y (6), nBarWidth * nPercent / 100, 8, COLOR_UI_HILITE);
+		CString Text;
+		Text.Format ("%3u %%", nPercent);
+		m_pVideo->DrawText (pScreen, tx + nBarWidth + 8, ROW_Y (6), Text, COLOR_UI_VALUE, COLOR_UI_PANEL, 5);
+
+		// cuánto lleva: en KB hasta 10 MB, luego en MB
+		if (m_nProgressTotal >= 10 * 1024 * 1024)
+		{
+			Text.Format (T ("%u de %u MB"), (unsigned) (m_nProgressDone >> 20), (unsigned) (m_nProgressTotal >> 20));
+		}
+		else
+		{
+			Text.Format (T ("%u de %u KB"), (unsigned) (m_nProgressDone >> 10), (unsigned) ((m_nProgressTotal + 1023) >> 10));
+		}
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (7), Text, COLOR_UI_TEXT, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (9), T ("Si se cancela o falla, no queda"), COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (10), T ("ningún fichero a medias."), COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ESC cancelar"), COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		return;
+	}
+
 	if (m_Mode == ModeInput)
 	{
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), m_InputTitle, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
@@ -2659,8 +2726,15 @@ void CMenu::Draw (TPixel *pScreen)
 			    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 	if (bF2)
 	{
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("F2: renombrar, borrar, carpeta nueva"),
+		boolean bClip = m_BrowserClip[0] != '\0';
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2),
+				    bClip ? T ("F2: pegar aquí, renombrar, borrar...") : T ("F2: copiar, mover, renombrar, borrar..."),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		if (bClip)
+		{
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 5), m_BrowserClip, COLOR_UI_HILITE,
+					    COLOR_UI_PANEL, TEXT_COLS);
+		}
 	}
 	// con red, la tecla de la búsqueda en ZXDB (F3)
 	boolean bZXDBKey = m_nUnitTarget < 0 && CNetworkManager::IsNetRunning ();

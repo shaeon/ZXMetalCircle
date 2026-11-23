@@ -1,8 +1,8 @@
 //
 // kernelfiles.cpp
 //
-// F2 en el navegador de ficheros: renombrar, borrar y crear carpetas en la SD,
-// con las mismas comprobaciones que la web:
+// F2 en el navegador de ficheros: copiar, mover, renombrar, borrar y crear
+// carpetas en la SD, con las mismas comprobaciones que la web:
 //
 // - Lo del sistema (kernels, cmdline.txt, config.txt, las carpetas del
 //   emulador...) no se toca mientras esté protegido (webprotect=1).
@@ -10,6 +10,12 @@
 //   duro, la cinta si SAVE graba en ella) no se renombra ni se borra.
 // - Las carpetas solo se borran vacías, y borrar siempre pregunta (con "No"
 //   elegido al entrar).
+// - Copiar y mover: F2 > Copiar (o Mover) marca el fichero (abajo se ve
+//   "Para copiar: ..."); en la carpeta de destino, F2 > Pegar aquí. Si ya hay
+//   uno con ese nombre, se pregunta ("No" elegido). Copiar va a trozos, con
+//   una barra de progreso y ESC para cancelar, y con un nombre temporal hasta
+//   el final (CFileCopy): nunca queda un fichero a medias. Las carpetas se
+//   mueven, pero no se copian.
 // - Solo en la SD de la Pi (no en TNFS) y no al elegir para una unidad.
 //   filechanges=0 lo quita todo (F2 no hace nada).
 //
@@ -25,6 +31,7 @@
 #include "kernel.h"
 #include "i18n.h"
 #include "webfiles.h"
+#include "filecopy.h"
 #include <circle/string.h>
 #include <circle/util.h>
 #include <fatfs/ff.h>
@@ -36,14 +43,32 @@ enum
 	FileStageOptions,	// la lista de F2
 	FileStageRename,	// el nombre nuevo
 	FileStageNewFolder,	// el nombre de la carpeta
-	FileStageDelete		// ¿borrar?
+	FileStageDelete,	// ¿borrar?
+	FileStageExists,	// pegar: ya hay uno con ese nombre
+	FileStageCopying	// la barra de progreso
 };
+
+#define COPY_TEMP_NAME		"~zxcopia.tmp"		// mientras se copia (no sale en el navegador)
+#define COPY_STEP_BYTES		(512 * 1024)		// por cuadro (unos 20 ms)
+
+static CFileCopy s_Copy;
 
 enum				// las líneas de la lista de F2
 {
 	FileOptionRename,
 	FileOptionDelete,
-	FileOptionNewFolder
+	FileOptionNewFolder,
+	FileOptionCopy,
+	FileOptionMove,
+	FileOptionPaste,
+	FileOptionForget
+};
+
+enum				// ya hay uno con ese nombre: las líneas
+{
+	ExistsNo,
+	ExistsOtherName,
+	ExistsReplace
 };
 
 // La ruta de un nombre en una carpeta del navegador
@@ -107,8 +132,27 @@ void CKernel::FileShowOptions (void)
 	m_nFileStage = FileStageOptions;
 	m_Menu.OpenChoice (UTF8);
 	m_nFileOptions = 0;
+	if (m_ClipPath[0] != '\0')		// lo marcado: pegar u olvidarlo
+	{
+		char ClipUTF8[MENU_NAME_LEN * 2];
+		CP850ToUTF8 (FileBaseName (m_ClipPath), ClipUTF8, sizeof ClipUTF8);
+		CString Item;
+		Item.Format (m_bClipMove ? T ("Mover aquí: %s") : T ("Pegar aquí: %s"), ClipUTF8);
+		m_FileOption[m_nFileOptions] = FileOptionPaste;
+		m_Menu.SetChoiceItem (m_nFileOptions++, Item);
+		Item.Format (T ("Olvidar %s"), ClipUTF8);
+		m_FileOption[m_nFileOptions] = FileOptionForget;
+		m_Menu.SetChoiceItem (m_nFileOptions++, Item);
+	}
 	if (m_bFileHasEntry)			// en ".." solo se puede crear una carpeta
 	{
+		if (!m_bFileIsDir)		// las carpetas no se copian (sí se mueven)
+		{
+			m_FileOption[m_nFileOptions] = FileOptionCopy;
+			m_Menu.SetChoiceItem (m_nFileOptions++, T ("Copiar"));
+		}
+		m_FileOption[m_nFileOptions] = FileOptionMove;
+		m_Menu.SetChoiceItem (m_nFileOptions++, T ("Mover"));
 		m_FileOption[m_nFileOptions] = FileOptionRename;
 		m_Menu.SetChoiceItem (m_nFileOptions++, T ("Renombrar..."));
 		m_FileOption[m_nFileOptions] = FileOptionDelete;
@@ -276,6 +320,256 @@ void CKernel::FileDelete (void)
 	}
 }
 
+const char *CKernel::FileBaseName (const char *pPath)
+{
+	const char *pName = pPath;
+	for (const char *p = pPath; *p != '\0'; p++)
+	{
+		if (*p == '/')
+		{
+			pName = p + 1;
+		}
+	}
+	return pName;
+}
+
+// "Para copiar: juegos/Barbarian.tzx" (lo marcado, abajo en el navegador)
+void CKernel::FileUpdateClip (void)
+{
+	if (m_ClipPath[0] == '\0')
+	{
+		m_Menu.SetBrowserClip ("");
+		return;
+	}
+	const char *pRel = m_ClipPath;
+	if (strncasecmp (pRel, "SD:/", 4) == 0)
+	{
+		pRel += 4;
+	}
+	char UTF8[MENU_PATH_LEN * 2];
+	CP850ToUTF8 (pRel, UTF8, sizeof UTF8);
+	CString Text;
+	Text.Format (m_bClipMove ? T ("Para mover: %s") : T ("Para copiar: %s"), UTF8);
+	m_Menu.SetBrowserClip (Text);
+}
+
+void CKernel::FileForgetClip (void)
+{
+	m_ClipPath[0] = '\0';
+	FileUpdateClip ();
+}
+
+// Copiar o Mover: se marca (y se comprueba ya, para avisar antes de buscar
+// la carpeta de destino)
+void CKernel::FileMark (boolean bMove)
+{
+	CString Path;
+	JoinPath (m_FileDir, m_FileName, &Path);
+	if (bMove)
+	{
+		const char *pError = FileCheckSource (Path);
+		if (pError != 0)
+		{
+			FileBack (m_FileName, pError, m_FileName);
+			return;
+		}
+	}
+	strncpy (m_ClipPath, Path, sizeof m_ClipPath - 1);
+	m_ClipPath[sizeof m_ClipPath - 1] = '\0';
+	m_bClipMove = bMove;
+	FileUpdateClip ();
+	FileBack (m_FileName, T ("Ve a la carpeta de destino y pulsa F2"), "");
+}
+
+// Pegar aquí: lo marcado en la carpeta del navegador (pName: con qué nombre;
+// bReplace: sustituir el que hay)
+void CKernel::FilePasteAs (const char *pName, boolean bReplace)
+{
+	CString To;
+	JoinPath (m_FileDir, pName, &To);
+
+	if (bReplace)
+	{
+		const char *pError = FileCheckSource (To);	// el que se sustituye
+		if (pError != 0)
+		{
+			FileBack (pName, pError, pName);
+			return;
+		}
+	}
+
+	if (m_bClipMove)
+	{
+		if (bReplace && f_unlink (To) != FR_OK)
+		{
+			FileBack (pName, T ("No se pudo mover %s"), pName);
+			return;
+		}
+		if (f_rename (m_ClipPath, To) != FR_OK)
+		{
+			FileBack (0, T ("No se pudo mover %s"), pName);
+			return;
+		}
+		FileForgetClip ();
+		FileBack (pName, T ("Movido: %s"), pName);
+		return;
+	}
+
+	// copiar: a trozos, con la barra
+	const char *pError = s_Copy.Start (m_ClipPath, To, COPY_TEMP_NAME, bReplace);
+	if (pError != 0)
+	{
+		FileBack (0, T (pError), FileBaseName (m_ClipPath));
+		return;
+	}
+	strncpy (m_PasteName, pName, sizeof m_PasteName - 1);
+	m_PasteName[sizeof m_PasteName - 1] = '\0';
+
+	char Name[MENU_NAME_LEN * 2], From[MENU_PATH_LEN * 2], Dest[MENU_PATH_LEN * 2];
+	CP850ToUTF8 (pName, Name, sizeof Name);
+	char Dir[MENU_PATH_LEN];
+	strncpy (Dir, m_ClipPath, sizeof Dir - 1);
+	Dir[sizeof Dir - 1] = '\0';
+	char *pSlash = (char *) FileBaseName (Dir);
+	if (pSlash > Dir)
+	{
+		pSlash[-1] = '\0';
+	}
+	CP850ToUTF8 (Dir, From, sizeof From);
+	CP850ToUTF8 (m_FileDir, Dest, sizeof Dest);
+	CString Title, Line1, Line2;
+	Title.Format (T ("Copiando %s"), Name);
+	Line1.Format (T ("De: %s"), From);
+	Line2.Format (T ("A:  %s"), Dest);
+	m_nFileStage = FileStageCopying;
+	m_Menu.OpenProgress (Title, Line1, Line2);
+	m_Menu.SetProgress (0, s_Copy.GetTotal ());
+}
+
+void CKernel::FilePaste (void)
+{
+	FILINFO Info;
+	if (f_stat (m_ClipPath, &Info) != FR_OK)
+	{
+		char Name[MENU_NAME_LEN];
+		strncpy (Name, FileBaseName (m_ClipPath), sizeof Name - 1);
+		Name[sizeof Name - 1] = '\0';
+		FileForgetClip ();
+		FileBack (0, T ("Ya no existe: %s"), Name);
+		return;
+	}
+	boolean bSourceDir = (Info.fattrib & AM_DIR) != 0;
+	const char *pName = FileBaseName (m_ClipPath);
+
+	// ¿se puede quitar de su sitio? (mover)
+	if (m_bClipMove)
+	{
+		const char *pError = FileCheckSource (m_ClipPath);
+		if (pError != 0)
+		{
+			FileBack (0, pError, pName);
+			return;
+		}
+		if (bSourceDir && WebPathIsUnder (m_FileDir, m_ClipPath))
+		{
+			FileBack (0, T ("No se puede mover una carpeta dentro de sí misma"), "");
+			return;
+		}
+	}
+
+	// ¿se puede poner aquí?
+	int nProtect = m_Settings.Find ("webprotect");
+	if (   (nProtect < 0 || strcmp (m_Settings.GetValue (nProtect), "0") != 0)
+	    && OnSD (m_FileDir) && WebIsSystemFolder (m_FileDir))
+	{
+		FileBack (0, T ("Protegido: aquí no se puede crear %s"), pName);
+		return;
+	}
+	CString To;
+	JoinPath (m_FileDir, pName, &To);
+	if (FileProtected (To))
+	{
+		FileBack (0, T ("Protegido: %s"), pName);
+		return;
+	}
+
+	if (f_stat (To, &Info) != FR_OK)
+	{
+		FilePasteAs (pName, FALSE);		// lo normal: no hay otro
+		return;
+	}
+
+	// en su misma carpeta: mover no hace nada y copiar hace "nombre (2)"
+	char Free[MENU_NAME_LEN];
+	if (strcasecmp (To, m_ClipPath) == 0)
+	{
+		if (m_bClipMove)
+		{
+			FileBack (pName, T ("Ya está aquí: %s"), pName);
+		}
+		else if (CFileCopy::FreeName (m_FileDir, pName, Free, sizeof Free))
+		{
+			FilePasteAs (Free, FALSE);
+		}
+		else
+		{
+			FileBack (0, T ("No se pudo copiar %s"), pName);
+		}
+		return;
+	}
+
+	// ya hay otro: se pregunta
+	if (!CFileCopy::FreeName (m_FileDir, pName, m_PasteFree, sizeof m_PasteFree))
+	{
+		m_PasteFree[0] = '\0';
+	}
+	m_bPasteCanReplace =    !(Info.fattrib & AM_DIR) && !bSourceDir
+			     && FileCheckSource (To) == 0;
+	char UTF8[MENU_NAME_LEN * 2];
+	CP850ToUTF8 (pName, UTF8, sizeof UTF8);
+	CString Title, Item;
+	Title.Format (T ("Ya hay un %s aquí"), UTF8);
+	m_nFileStage = FileStageExists;
+	m_Menu.OpenChoice (Title);
+	unsigned n = 0;
+	m_FileOption[n] = ExistsNo;
+	m_Menu.SetChoiceItem (n++, m_bClipMove ? T ("No moverlo") : T ("No copiarlo"));
+	if (m_PasteFree[0] != '\0')
+	{
+		CP850ToUTF8 (m_PasteFree, UTF8, sizeof UTF8);
+		Item.Format (m_bClipMove ? T ("Moverlo como %s") : T ("Copiarlo como %s"), UTF8);
+		m_FileOption[n] = ExistsOtherName;
+		m_Menu.SetChoiceItem (n++, Item);
+	}
+	if (m_bPasteCanReplace)
+	{
+		m_FileOption[n] = ExistsReplace;
+		m_Menu.SetChoiceItem (n++, T ("Sustituir el que hay"));
+	}
+	m_nFileOptions = n;
+	m_Menu.SetChoiceSelected (0);
+}
+
+// Cada cuadro con el menú abierto: un trozo de la copia
+void CKernel::FileCopyPoll (void)
+{
+	if (m_nFileStage != FileStageCopying || !s_Copy.IsActive ())
+	{
+		return;
+	}
+	int nResult = s_Copy.Step (COPY_STEP_BYTES);
+	m_Menu.SetProgress (s_Copy.GetDone (), s_Copy.GetTotal ());
+	if (nResult > 0)
+	{
+		FileForgetClip ();
+		FileBack (m_PasteName, T ("Copiado: %s"), m_PasteName);
+	}
+	else if (nResult < 0)
+	{
+		FileBack (0, T (s_Copy.GetError ()), m_PasteName);
+	}
+}
+
 // Las respuestas del menú de F2; TRUE si eran suyas
 boolean CKernel::FileMenuResult (TMenuResult Result)
 {
@@ -324,6 +618,23 @@ boolean CKernel::FileMenuResult (TMenuResult Result)
 				}
 				break;
 
+			case FileOptionCopy:
+				FileMark (FALSE);
+				break;
+
+			case FileOptionMove:
+				FileMark (TRUE);
+				break;
+
+			case FileOptionPaste:
+				FilePaste ();
+				break;
+
+			case FileOptionForget:
+				FileForgetClip ();
+				FileBack (m_bFileHasEntry ? m_FileName : 0, 0, 0);
+				break;
+
 			default:
 				FileAskNewFolder (0, 0);
 				break;
@@ -365,6 +676,45 @@ boolean CKernel::FileMenuResult (TMenuResult Result)
 		if (Result == MenuResultInputCancel)
 		{
 			FileBack (m_bFileHasEntry ? m_FileName : 0, 0, 0);
+			return TRUE;
+		}
+		return FALSE;
+
+	case FileStageExists:
+		if (Result == MenuResultChoice && m_Menu.GetChoice () < m_nFileOptions)
+		{
+			switch (m_FileOption[m_Menu.GetChoice ()])
+			{
+			case ExistsOtherName:
+				{
+					char Name[MENU_NAME_LEN];
+					strcpy (Name, m_PasteFree);
+					FilePasteAs (Name, FALSE);
+				}
+				break;
+
+			case ExistsReplace:
+				FilePasteAs (FileBaseName (m_ClipPath), TRUE);
+				break;
+
+			default:
+				FileBack (0, 0, 0);		// no
+				break;
+			}
+			return TRUE;
+		}
+		if (Result == MenuResultChoiceCancel)
+		{
+			FileBack (0, 0, 0);
+			return TRUE;
+		}
+		return FALSE;
+
+	case FileStageCopying:
+		if (Result == MenuResultProgressCancel)
+		{
+			s_Copy.Cancel ();
+			FileBack (0, T ("Copia cancelada: %s"), m_PasteName);
 			return TRUE;
 		}
 		return FALSE;

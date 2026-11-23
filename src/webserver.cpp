@@ -16,6 +16,7 @@
 #include "version.h"
 #include "download/zxinfo.h"
 #include "download/circleglue.h"
+#include "filecopy.h"
 #include <circle/sched/scheduler.h>
 #include <circle/sched/task.h>
 #include <circle/logger.h>
@@ -177,8 +178,10 @@ static char s_CSRF[20] = "";
 // Lo que se está moviendo: "mover" lo marca, se navega a la carpeta de destino
 // y "Pegar aquí" lo mueve. Una sola cosa a la vez (la web es para una persona)
 static char s_Cut[HTTP_MAX_PATH + 1] = "";
+static bool s_bCutCopy = false;		// "copiar" en vez de "mover": se pega una copia
 
 static bool IsHardDisk (const char *pName);
+static void BusyFile (const char *pFormat, const char *pPath, unsigned nSize);
 static const char *BaseOf (const char *pPath);
 
 static bool ValidCSRF (const char *pParams, const char *pFormData);
@@ -590,7 +593,8 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 
 	boolean bChanges =    strcmp (pPath, "/up") == 0 || strcmp (pPath, "/del") == 0
 			   || strcmp (pPath, "/mkdir") == 0 || strcmp (pPath, "/bajar") == 0
-			   || strcmp (pPath, "/ren") == 0 || strcmp (pPath, "/mv") == 0;
+			   || strcmp (pPath, "/ren") == 0 || strcmp (pPath, "/mv") == 0
+			   || strcmp (pPath, "/cp") == 0;
 	if ((bChanges || strcmp (pPath, "/load") == 0) && !ValidCSRF (pParams, pFormData))
 	{
 		Message = T ("Petición caducada: vuelve a cargar la página");
@@ -606,6 +610,10 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 	else if (strcmp (pPath, "/mv") == 0)
 	{
 		Message = Move (pParams);
+	}
+	else if (strcmp (pPath, "/cp") == 0)
+	{
+		Message = Copy (pParams);
 	}
 	else if (strcmp (pPath, "/zip") == 0)
 	{
@@ -623,6 +631,8 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 		    && CleanFile[0] != '\0')
 		{
 			strcpy (s_Cut, CleanFile);
+			char Copy[4];
+			s_bCutCopy = GetParam (pParams, "c", Copy, sizeof Copy) && Copy[0] == '1';
 		}
 	}
 	else if (strcmp (pPath, "/nocut") == 0)
@@ -903,6 +913,100 @@ CString CZXWebServer::Move (const char *pParams)
 	{
 		Message.Format (T ("No se pudo mover %s"), pName);
 	}
+	return Message;
+}
+
+// /cp?f=<fichero>&to=<carpeta>: una copia en otra carpeta (o en la misma, como
+// "nombre (2).ext"); si ya hay uno con ese nombre, también con "(2)". Se copia
+// a trozos con un nombre temporal (CFileCopy): la emulación sigue y nunca
+// queda un fichero a medias
+CString CZXWebServer::Copy (const char *pParams)
+{
+	CString Message;
+	char Arg[HTTP_MAX_PATH + 1], Path[HTTP_MAX_PATH + 1], Dest[HTTP_MAX_PATH + 1];
+	if (!GetParam (pParams, "f", Arg, sizeof Arg) || !CleanPath (Arg, Path, sizeof Path) || Path[0] == '\0')
+	{
+		return CString (T ("Petición no válida"));
+	}
+	if (!GetParam (pParams, "to", Arg, sizeof Arg) || !CleanPath (Arg, Dest, sizeof Dest))
+	{
+		Dest[0] = '\0';		// la raíz
+	}
+	FILINFO Info;
+	CString From, DestSD;
+	From.Format ("SD:/%s", Path);
+	if (f_stat (From, &Info) != FR_OK)
+	{
+		Message.Format (T ("No existe: %s"), Path);
+		return Message;
+	}
+	if (Info.fattrib & AM_DIR)
+	{
+		return CString (T ("Las carpetas no se copian (sí se pueden mover)"));
+	}
+	DestSD.Format ("SD:/%s", Dest);
+	if (Dest[0] != '\0' && (f_stat (DestSD, &Info) != FR_OK || !(Info.fattrib & AM_DIR)))
+	{
+		Message.Format (T ("No existe: %s"), Dest);
+		return Message;
+	}
+	if (ProtectedFolder (Dest))
+	{
+		return CString (T ("Protegido: aquí no se puede crear nada"));
+	}
+
+	// el nombre: el mismo o, si ya hay uno, "nombre (2).ext"
+	char Name[HTTP_MAX_PATH + 1];
+	strncpy (Name, BaseOf (Path), sizeof Name - 1);
+	Name[sizeof Name - 1] = '\0';
+	CString To;
+	SDPathOf (Dest, Name, &To);
+	if (f_stat (To, &Info) == FR_OK)
+	{
+		char Free[HTTP_MAX_PATH + 1];
+		if (!CFileCopy::FreeName (DestSD, Name, Free, sizeof Free))
+		{
+			Message.Format (T ("Ya existe %s"), Name);
+			return Message;
+		}
+		strcpy (Name, Free);
+		SDPathOf (Dest, Name, &To);
+	}
+	CString NewRel;
+	NewRel.Format (Dest[0] != '\0' ? "%s/%s" : "%s%s", Dest, Name);
+	if (Protected (NewRel))
+	{
+		Message.Format (T ("Protegido: %s"), Name);
+		return Message;
+	}
+
+	static CFileCopy Copy;		// una copia a la vez desde la web
+	if (Copy.IsActive ())
+	{
+		return CString (T ("Ya hay una copia en marcha"));
+	}
+	const char *pError = Copy.Start (From, To, "~zxweb.tmp", FALSE);
+	if (pError != 0)
+	{
+		Message.Format (T (pError), Name);
+		return Message;
+	}
+	BusyFile (T ("Red: copiando %s (%u KB)"), Path, (unsigned) Copy.GetTotal ());
+	int nResult;
+	while ((nResult = Copy.Step (256 * 1024)) == 0)
+	{
+		CScheduler::Get ()->Yield ();	// el emulador sigue mientras tanto
+	}
+	if (nResult < 0)
+	{
+		Message.Format (T (Copy.GetError ()), Name);
+		return Message;
+	}
+	if (strcmp (s_Cut, Path) == 0)
+	{
+		s_Cut[0] = '\0';
+	}
+	Message.Format (T ("Copiado: %s"), Name);
 	return Message;
 }
 
@@ -1344,11 +1448,12 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 		CString CutEsc;
 		HTMLEscape (s_Cut, &CutEsc);
 		Line.Format ("<div class=\"cut\">%s <b>%s</b> "
-			     "<form class=\"i\" action=\"/mv\"%s><input type=\"hidden\" name=\"d\" value=\"%s\">"
+			     "<form class=\"i\" action=\"%s\"%s><input type=\"hidden\" name=\"d\" value=\"%s\">"
 			     "<input type=\"hidden\" name=\"f\" value=\"%s\">"
 			     "<input type=\"hidden\" name=\"to\" value=\"%s\"><button>%s</button></form> "
 			     "<a href=\"/nocut?d=%s\">%s</a></div>",
-			     T ("Moviendo:"), (const char *) CutEsc, (const char *) PutWarn, (const char *) DirEsc, (const char *) CutEsc,
+			     s_bCutCopy ? T ("Copiando:") : T ("Moviendo:"), (const char *) CutEsc,
+			     s_bCutCopy ? "/cp" : "/mv", (const char *) PutWarn, (const char *) DirEsc, (const char *) CutEsc,
 			     (const char *) DirEsc, T ("Pegar aquí"), (const char *) DirEnc, T ("Cancelar"));
 		Html.Append (Line);
 	}
@@ -1474,6 +1579,14 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 				     (const char *) WarnPrefix, (const char *) TextAttr, (const char *) DirEsc,
 				     (const char *) RelEsc, (const char *) Esc, T ("renombrar"));
 			Actions.Append (Line);
+
+			// copiar (los ficheros): se marca y se pega una copia en la de destino
+			if (!bDir)
+			{
+				Line.Format ("<a href=\"/cut?d=%s&f=%s&c=1\">%s</a>", (const char *) DirEnc, (const char *) Enc,
+					     T ("copiar"));
+				Actions.Append (Line);
+			}
 
 			// mover: se marca y se pega en la carpeta de destino
 			Line.Format ("<a href=\"/cut?d=%s&f=%s\"%s%s%s>%s</a>", (const char *) DirEnc, (const char *) Enc,

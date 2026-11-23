@@ -211,6 +211,13 @@ private:
 	void FileRename (const char *pNewName);
 	void FileNewFolder (const char *pName);
 	void FileDelete (void);
+	static const char *FileBaseName (const char *pPath);
+	void FileUpdateClip (void);
+	void FileForgetClip (void);
+	void FileMark (boolean bMove);
+	void FilePaste (void);
+	void FilePasteAs (const char *pName, boolean bReplace);
+	void FileCopyPoll (void);			// cada cuadro con el menú abierto
 	void PokeSetZXDBID (const char *pID);		// el juego vino del buscador de ZXDB
 	boolean PokeFetchOnline (void);			// su .pok, de ZXDB
 	void PokeAskSearch (void);
@@ -466,7 +473,12 @@ private:
 	char			m_FileName[MENU_NAME_LEN];	// lo elegido (CP850, como en la SD)
 	boolean			m_bFileHasEntry;	// hay algo elegido (no "..")
 	boolean			m_bFileIsDir;
-	unsigned		m_FileOption[4];	// línea de la lista -> opción
+	unsigned		m_FileOption[8];	// línea de la lista -> opción
+	char			m_ClipPath[MENU_PATH_LEN];	// marcado para copiar o mover ("" = nada)
+	boolean			m_bClipMove;
+	char			m_PasteName[MENU_NAME_LEN];	// con qué nombre se copia
+	char			m_PasteFree[MENU_NAME_LEN];	// "nombre (2).ext"
+	boolean			m_bPasteCanReplace;
 	unsigned		m_nFileOptions;
 
 	// Pokes (kernelpokes.cpp)

@@ -334,6 +334,8 @@ CKernel::CKernel (void)
 	m_FileDir[0] = m_FileName[0] = '\0';
 	m_bFileHasEntry = m_bFileIsDir = FALSE;
 	m_nFileOptions = 0;
+	m_ClipPath[0] = m_PasteName[0] = m_PasteFree[0] = '\0';
+	m_bClipMove = m_bPasteCanReplace = FALSE;
 	m_PokeGame[0] = '\0';
 	m_PokeTitle[0] = '\0';
 	m_PokeGamePath[0] = '\0';
@@ -6494,6 +6496,7 @@ TShutdownMode CKernel::Run (void)
 			{
 				PadEditPoll ();		// "Botones del mando": el botón pulsado (aquí,
 							// porque con el menú abierto el bucle no sigue)
+				FileCopyPoll ();	// copiar un fichero (F2), a trozos
 				UpdateStatusLines ();
 				memcpy (Overlay, m_pFrozen, nOverlayBytes);
 				m_Menu.Draw (Overlay);

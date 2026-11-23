@@ -49,6 +49,7 @@ private:
 	CString Upload (const char *pDir, const char *pParams);
 	CString Rename (const char *pParams);
 	CString Move (const char *pParams);
+	CString Copy (const char *pParams);
 	THTTPStatus SendSearch (const char *pQuery, u8 *pBuffer, unsigned *pLength);
 	THTTPStatus SendZip (const char *pDir, const char *pZip, u8 *pBuffer, unsigned *pLength);
 	CString Download (const char *pPath);

@@ -198,7 +198,7 @@ If pressing a key lights up another one, most likely a ribbon is reversed or has
 
   | With the real keyboard | Acts as |
   | --- | --- |
-  | **Extended mode:** 1 … 0 | F1 … F10 (in the file browser, extended mode + 2 = F2: rename, delete, new folder) |
+  | **Extended mode:** 1 … 0 | F1 … F10 (in the file browser, extended mode + 2 = F2: copy, move, rename, delete, new folder) |
   | **Extended mode:** Q, W | F11, F12 (as in ESPectrum) |
   | **Extended mode:** SYMBOL SHIFT + key | Alt + key (SS+1 = Alt+F1, SS+K keyboard help, SS+R reset, SS+P pause, SS+C pokes, SS+O manual POKE) |
   | CAPS SHIFT + 1, 2 | Home, End |

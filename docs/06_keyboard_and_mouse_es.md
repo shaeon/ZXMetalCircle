@@ -16,7 +16,7 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 | F3 | Cinta: navegador de bloques (lista de lo que hay en la cinta; ENTER la deja en el bloque elegido, Inicio = rebobinar) |
 | F4 | Cambiar joystick |
 | F5 | NMI: Multiface, navegador de esxDOS o menú de la Spectranet |
-| Alt+F5 | Navegador de ficheros (como F1 y ENTER). Con `f5=files` se intercambian: F5 abre los ficheros y Alt+F5 hace la NMI. Dentro, F2 renombra, borra o crea carpetas (ver abajo) |
+| Alt+F5 | Navegador de ficheros (como F1 y ENTER). Con `f5=files` se intercambian: F5 abre los ficheros y Alt+F5 hace la NMI. Dentro, F2 copia, mueve, renombra, borra o crea carpetas (ver abajo) |
 | F6 | Velocidad de carga: instantánea / rápida / real |
 | F7 | Lista de modelos para elegir (con el actual marcado; los que no tienen ROM lo indican) |
 | Alt+F7 | Pasar al siguiente modelo (16K, 48K, 128K, +2, +2A, +3, +3e) |
@@ -51,11 +51,13 @@ Para cargar una cinta: pulsa F1 y luego ENTER, elige el `.TAP`, `.TZX`, `.PZX` o
 
 ## Ficheros de la SD desde el navegador (F2)
 
-En el navegador de ficheros (Alt+F5, o F1 y ENTER), **F2** abre una lista con lo que se puede hacer con lo elegido: **Renombrar...**, **Borrar...** y **Nueva carpeta...** (en `[..]`, solo la carpeta nueva). Con el teclado GPIO, F2 es modo extendido + 2.
+En el navegador de ficheros (Alt+F5, o F1 y ENTER), **F2** abre una lista con lo que se puede hacer con lo elegido: **Copiar**, **Mover**, **Renombrar...**, **Borrar...** y **Nueva carpeta...** (en `[..]`, solo la carpeta nueva; las carpetas no se copian, pero sí se mueven). Con el teclado GPIO, F2 es modo extendido + 2.
 
 - **Renombrar** abre una línea con el nombre de ahora y el cursor delante de la extensión. Se escribe en minúsculas; las mayúsculas, con Mayúsculas o CAPS SHIFT + letra; los símbolos, con Ctrl o SYMBOL SHIFT + la tecla, como en el Spectrum: SS+8 `(`, SS+9 `)`, SS+0 `_`, SS+J `-`, SS+M `.`, SS+N `,`, SS+K `+`, SS+L `=`, SS+1 `!`, SS+2 `@`, SS+3 `#`, SS+4 `$`, SS+5 `%`, SS+6 `&`, SS+7 `'`, SS+Y `[`, SS+U `]`. El punto y el guion de un teclado USB también valen. Los cursores mueven el cursor, Inicio y Fin (CAPS SHIFT + 1 y 2) van a los extremos, BORRAR (CAPS SHIFT + 0) borra el de la izquierda y SUPR (CAPS SHIFT + 9) el del cursor.
 - **Borrar** siempre pregunta, con «No, dejarlo» elegido al entrar. Las carpetas, solo si están vacías.
 - **Nueva carpeta** crea una en la carpeta en la que estás.
+- **Copiar** y **Mover** marcan lo elegido (abajo se ve «Para copiar: juegos/Barbarian.tzx»). Se va a la carpeta de destino con el navegador y allí F2 da **Pegar aquí** (o **Mover aquí**) y **Olvidar**. Si ya hay uno con ese nombre, pregunta: no copiarlo (elegido al entrar), copiarlo como «nombre (2)» o sustituir el que hay. Pegar una copia en su misma carpeta la hace como «nombre (2)» directamente. Mover es inmediato; copiar enseña una barra de progreso con los MB copiados y se cancela con ESC (BREAK). La copia se escribe con un nombre temporal y solo al terminar se le pone el suyo, así que si se cancela o falla no queda ningún fichero a medias; antes de empezar se mira que quepa en la tarjeta.
+- En la **página web** también hay «copiar» junto a «mover», y se pega igual («Pegar aquí»). Si ya hay uno con ese nombre, la copia se hace como «nombre (2)».
 
 Se comprueba lo mismo que en la página web: lo del sistema (kernels, `cmdline.txt`, `config.txt`, las carpetas del emulador...) no se toca mientras «Ficheros del sistema» esté en «protegidos» (`webprotect=1`, página 9), y lo que se está usando (un disco del +3, un microdrive, el disco duro, la cinta si SAVE graba en ella) no se renombra ni se borra: sale «En uso». F2 no funciona en las carpetas de TNFS ni cuando el navegador se ha abierto para elegir lo de una unidad (Alt+U). «Cambios en el navegador» (página 8, `filechanges=0`) lo quita del todo.
 

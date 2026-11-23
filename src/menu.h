@@ -56,7 +56,8 @@ enum TMenuResult
 	MenuResultListKey,		// lista de dos columnas: una tecla (GetListKey (), GetListSelected ())
 	MenuResultZXDBSearch,		// navegador: buscar en ZXDB (la línea de la raíz o F3)
 	MenuResultOpenPokes,		// P en la ayuda: los pokes del juego (Alt+C)
-	MenuResultFileOptions		// F2 en el navegador: renombrar, borrar... (GetBrowserSelection)
+	MenuResultFileOptions,		// F2 en el navegador: renombrar, borrar... (GetBrowserSelection)
+	MenuResultProgressCancel	// ESC en la barra de progreso (OpenProgress)
 };
 
 class CMenu : public CTNFSListener
@@ -75,6 +76,13 @@ public:
 	void ReturnToBrowser (const char *pSelect, const char *pMessage);
 	// F2 en el navegador (los cambios en la SD: "Cambios en el navegador")
 	void SetFileChanges (boolean bAllowed)	{ m_bFileChanges = bAllowed; }
+	// Lo marcado para copiar o mover: una línea encima de las de abajo ("" = nada)
+	void SetBrowserClip (const char *pText);
+
+	// Barra de progreso (copiar un fichero): título, dos líneas y "ESC cancelar";
+	// ESC da MenuResultProgressCancel (la cierra quien la abrió)
+	void OpenProgress (const char *pTitle, const char *pLine1, const char *pLine2);
+	void SetProgress (u64 nDone, u64 nTotal);
 	void OpenHelp (void);			// ayuda general (F1); ENTER abre el selector
 	void OpenKeyHelp (boolean bZX81 = FALSE);	// ayuda del teclado (Alt+K); del ZX81 si está puesto
 	void SetSettings (CSettings *pSettings)	{ m_pSettings = pSettings; }
@@ -176,7 +184,7 @@ private:
 	CVideo *m_pVideo;
 
 	enum TMode { ModeClosed, ModeBrowser, ModeHelp, ModeKeyHelp, ModeSettings, ModeChoice, ModeUnits,
-		     ModeAbout, ModeTape, ModeInput, ModeList, ModeKeyList };
+		     ModeAbout, ModeTape, ModeInput, ModeList, ModeKeyList, ModeProgress };
 	unsigned SettingsOnPage (unsigned *pIndex, unsigned nMax) const;
 	void FixSettingsRow (void);
 	TMode m_Mode;
@@ -249,6 +257,9 @@ private:
 	boolean m_bInputText;		// OpenText: texto libre con cursor
 	unsigned m_nInputCursor;
 	boolean m_bFileChanges;		// F2 en el navegador
+	char m_BrowserClip[64];		// "Para copiar: juegos/x.tzx"
+	u64 m_nProgressDone;
+	u64 m_nProgressTotal;
 	char m_PendingSelect[MENU_NAME_LEN];	// ReturnToBrowser: el que se elige al volver
 	char m_Choice[MENU_CHOICE_ITEMS][100];	// nombres de ZIP de hasta 96
 	unsigned m_nChoices;
