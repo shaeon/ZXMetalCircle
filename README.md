@@ -66,7 +66,7 @@ This project is provided **"as is", without warranty of any kind**, express or i
 
 ZX Spectrum and Sinclair are trademarks of their respective owners; Raspberry Pi is a trademark of Raspberry Pi Ltd. This project is not affiliated with or endorsed by them.
 
-## Status (version 1.11)
+## Status (version 1.12)
 
 Done:
 
@@ -74,6 +74,7 @@ Done:
 - Memory and I/O contention, floating bus and 0x7FFD reads on the 128K.
 - Full border and screen redrawn according to the t-state, so multicolour and border effects work.
 - ULAplus: 64-colour mode, including palette changes in mid-frame.
+- **Snow effect** on the 16K, 48K, 128K and grey +2, as on the real machine (Weiv's phase table): with the I register in slow memory, the Z80's refresh disturbs the ULA's screen fetch. `snow=0` turns it off.
 - Selectable border size (none, standard, full, huge) and scanlines.
 - Beeper and AY-3-8912 at 48 kHz, through HDMI or the 3.5 mm jack (PWM). The AY has selectable stereo (ABC, ACB, BAC or mono). The beeper goes through a speaker model taken from Fuse.
 - Loading sound: the tape signal is heard through the speaker, as on the real Spectrum.
@@ -99,6 +100,7 @@ Done:
 - Standalone .CSW files (versions 1 and 2, RLE and Z-RLE).
 - .PZX files (Perfect ZX Tape): pulses (PULS), data with its initial level (DATA), pauses (PAUS), texts (BRWS) and stops (STOP). They keep the real polarity of the signal, which TZX does not: some loaders need it (Forbidden Planet). Data blocks with ROM timings also load instantly.
 - **Polarity**: in the block browser (F3), the **P** key inverts the tape signal. It is for TZX files that have it the wrong way round (with Forbidden Planet's, the loader slips half a bit and never finishes). It goes back to normal when another tape is inserted.
+- **Tape block editing**: in the block browser (F3), F2 copies, moves, deletes and renames blocks (a header goes with its data), also into another tape (TAP and TZX are converted only when nothing is lost). Changes stay in memory until saved; saving over the same file keeps the original as `.bak`. Not for TZX files with jumps or loops, CSW or PZX.
 - Interface 2 cartridges (.ROM).
 - ZX81, with Paul Farrow's ZX81+ emulator (on the 128K): F7, or loading a .P program from the browser or the web page.
 - Interface 1 with up to 8 microdrives (.MDR and .MDV cartridges, read and write), RS232 and ZX Net network.
@@ -115,7 +117,9 @@ Done:
 - Settings screens in the emulator (F1, C), with saving to `cmdline.txt` and Pi restart.
 - Menus and web page in Spanish and English (more languages can be added without recompiling).
 - On the 4-core Pis, the image scaling runs on core 1.
-- SD card file browser with folders and jump by letter; when reopened, the cursor stays on the last file chosen.
+- SD card file browser with folders and jump by letter; when reopened, the cursor stays on the last file chosen. With F2: rename, delete, create folders, copy and move (with a progress bar), protected like the web page (`filechanges=0` turns it off).
+- **Pokes and cheats**: Alt+C lists the game's pokes from a .POK file (in `pokes/`, or downloaded from ZXDB when there is network), and Alt+O enters a POKE by hand.
+- **Booting from a USB stick without a microSD card**: the first USB disk becomes `SD:`.
 - Hot-plug USB keyboard.
 - Tape input from a real cassette player, through a GPIO (with a comparator) or a USB sound card (Pi 4/400), with recording to .TZX (Alt+G).
 - Real Spectrum keyboard and two Atari joysticks through GPIO, with pastbytes' wiring for ZXBaremulator: 48K, Spectrum+, 128 and grey +2 keyboards (8 × 5) or the +2A/+2B/+3 one (13 × 11), chosen with `gpiokbd=` (see below).

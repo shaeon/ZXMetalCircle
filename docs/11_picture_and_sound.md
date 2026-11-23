@@ -38,6 +38,10 @@ On the 4-core models, **scaling the image to the screen** (the magnification, th
 
 The help (F1) also shows the real speed measured by the emulator, in frames per second: it should read 50.08 on the 48K and 50.02 on the 128K.
 
+## Snow effect
+
+On the 16K, 48K, 128K and grey +2, if a program leaves the I register pointing at slow memory (between 0x40 and 0x7F; on the 128K and +2 also between 0xC0 and 0xFF with an odd page at the top), the Z80's memory refresh clashes with the ULA's screen fetch and "snow" appears on the picture, as on the real machine. It is emulated with Weiv's phase table (the same as ESPectrum). The +2A/+3 and the clones have no snow. `snow=0` (or "Snow effect" in the settings, page 1) turns it off. The crash that snow causes on some real 128Ks is not emulated.
+
 ## Image: border and scanlines
 
 **Border sizes** (the same as JSpeccy):
