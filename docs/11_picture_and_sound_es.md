@@ -38,6 +38,10 @@ En `utils/speedtest.tap` de la SD hay un programa para comprobar que el emulador
 
 La ayuda (F1) muestra también la velocidad real que mide el emulador, en cuadros por segundo: debe marcar 50,08 en el 48K y 50,02 en el 128K.
 
+## Efecto nieve
+
+En el 16K, 48K, 128K y +2 gris, si un programa deja el registro I apuntando a memoria lenta (entre 0x40 y 0x7F; en el 128K y el +2 también entre 0xC0 y 0xFF con una página impar arriba), el refresco de memoria del Z80 choca con la lectura de la pantalla de la ULA y salen "copos" en la imagen, como en la máquina real. Se emula con la tabla de fases de Weiv (la misma que ESPectrum). Los +2A/+3 y los clónicos no tienen nieve. `snow=0` (o «Efecto nieve» en la configuración, página 1) lo quita. El cuelgue que la nieve provoca en algunos 128K reales no se emula.
+
 ## Imagen: borde y scanlines
 
 **Tamaños de borde** (los mismos que JSpeccy):

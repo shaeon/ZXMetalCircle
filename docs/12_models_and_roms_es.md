@@ -35,7 +35,7 @@ Solo las ROMs del **16K/48K y del 128K** van dentro del kernel, para que el emul
 | `plus3e-es.rom` / `plus3e-en.rom` | 64 KB | +3e (y disco duro); se elige con `p3elang=` |
 | `if1.rom` | 8 KB | Interface 1 (microdrives, CP/M de LEC) |
 | `mf1.rom`, `mf128.rom`, `mfplus3.rom` | 8 KB | Multiface One, 128 y 3 (F5); sin ellas, F5 hace una NMI normal |
-| `esxmmc.bin` | 8 KB | esxDOS 0.8.9 para la divMMC (`divmmc=esxdos`) |
+| `esxmmc.bin` | 8 KB | esxDOS 0.9.0 para la divMMC (`divmmc=esxdos`) |
 | `spectranet.rom` | 128 KB | Flash de la Spectranet con el firmware instalado (`spectranet=1`) |
 | `zx81.rom` | 16 KB | Emulador de ZX81 de Paul Farrow (F7 y programas .P) |
 

@@ -16,6 +16,7 @@
 #include "version.h"
 #include "download/zxinfo.h"
 #include "download/circleglue.h"
+#include "filecopy.h"
 #include <circle/sched/scheduler.h>
 #include <circle/sched/task.h>
 #include <circle/logger.h>
@@ -177,8 +178,10 @@ static char s_CSRF[20] = "";
 // Lo que se está moviendo: "mover" lo marca, se navega a la carpeta de destino
 // y "Pegar aquí" lo mueve. Una sola cosa a la vez (la web es para una persona)
 static char s_Cut[HTTP_MAX_PATH + 1] = "";
+static bool s_bCutCopy = false;		// "copiar" en vez de "mover": se pega una copia
 
 static bool IsHardDisk (const char *pName);
+static void BusyFile (const char *pFormat, const char *pPath, unsigned nSize);
 static const char *BaseOf (const char *pPath);
 
 static bool ValidCSRF (const char *pParams, const char *pFormData);
@@ -590,7 +593,8 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 
 	boolean bChanges =    strcmp (pPath, "/up") == 0 || strcmp (pPath, "/del") == 0
 			   || strcmp (pPath, "/mkdir") == 0 || strcmp (pPath, "/bajar") == 0
-			   || strcmp (pPath, "/ren") == 0 || strcmp (pPath, "/mv") == 0;
+			   || strcmp (pPath, "/ren") == 0 || strcmp (pPath, "/mv") == 0
+			   || strcmp (pPath, "/cp") == 0;
 	if ((bChanges || strcmp (pPath, "/load") == 0) && !ValidCSRF (pParams, pFormData))
 	{
 		Message = T ("Petición caducada: vuelve a cargar la página");
@@ -606,6 +610,10 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 	else if (strcmp (pPath, "/mv") == 0)
 	{
 		Message = Move (pParams);
+	}
+	else if (strcmp (pPath, "/cp") == 0)
+	{
+		Message = Copy (pParams);
 	}
 	else if (strcmp (pPath, "/zip") == 0)
 	{
@@ -623,6 +631,8 @@ THTTPStatus CZXWebServer::GetContent (const char *pPath, const char *pParams, co
 		    && CleanFile[0] != '\0')
 		{
 			strcpy (s_Cut, CleanFile);
+			char Copy[4];
+			s_bCutCopy = GetParam (pParams, "c", Copy, sizeof Copy) && Copy[0] == '1';
 		}
 	}
 	else if (strcmp (pPath, "/nocut") == 0)
@@ -903,6 +913,100 @@ CString CZXWebServer::Move (const char *pParams)
 	{
 		Message.Format (T ("No se pudo mover %s"), pName);
 	}
+	return Message;
+}
+
+// /cp?f=<fichero>&to=<carpeta>: una copia en otra carpeta (o en la misma, como
+// "nombre (2).ext"); si ya hay uno con ese nombre, también con "(2)". Se copia
+// a trozos con un nombre temporal (CFileCopy): la emulación sigue y nunca
+// queda un fichero a medias
+CString CZXWebServer::Copy (const char *pParams)
+{
+	CString Message;
+	char Arg[HTTP_MAX_PATH + 1], Path[HTTP_MAX_PATH + 1], Dest[HTTP_MAX_PATH + 1];
+	if (!GetParam (pParams, "f", Arg, sizeof Arg) || !CleanPath (Arg, Path, sizeof Path) || Path[0] == '\0')
+	{
+		return CString (T ("Petición no válida"));
+	}
+	if (!GetParam (pParams, "to", Arg, sizeof Arg) || !CleanPath (Arg, Dest, sizeof Dest))
+	{
+		Dest[0] = '\0';		// la raíz
+	}
+	FILINFO Info;
+	CString From, DestSD;
+	From.Format ("SD:/%s", Path);
+	if (f_stat (From, &Info) != FR_OK)
+	{
+		Message.Format (T ("No existe: %s"), Path);
+		return Message;
+	}
+	if (Info.fattrib & AM_DIR)
+	{
+		return CString (T ("Las carpetas no se copian (sí se pueden mover)"));
+	}
+	DestSD.Format ("SD:/%s", Dest);
+	if (Dest[0] != '\0' && (f_stat (DestSD, &Info) != FR_OK || !(Info.fattrib & AM_DIR)))
+	{
+		Message.Format (T ("No existe: %s"), Dest);
+		return Message;
+	}
+	if (ProtectedFolder (Dest))
+	{
+		return CString (T ("Protegido: aquí no se puede crear nada"));
+	}
+
+	// el nombre: el mismo o, si ya hay uno, "nombre (2).ext"
+	char Name[HTTP_MAX_PATH + 1];
+	strncpy (Name, BaseOf (Path), sizeof Name - 1);
+	Name[sizeof Name - 1] = '\0';
+	CString To;
+	SDPathOf (Dest, Name, &To);
+	if (f_stat (To, &Info) == FR_OK)
+	{
+		char Free[HTTP_MAX_PATH + 1];
+		if (!CFileCopy::FreeName (DestSD, Name, Free, sizeof Free))
+		{
+			Message.Format (T ("Ya existe %s"), Name);
+			return Message;
+		}
+		strcpy (Name, Free);
+		SDPathOf (Dest, Name, &To);
+	}
+	CString NewRel;
+	NewRel.Format (Dest[0] != '\0' ? "%s/%s" : "%s%s", Dest, Name);
+	if (Protected (NewRel))
+	{
+		Message.Format (T ("Protegido: %s"), Name);
+		return Message;
+	}
+
+	static CFileCopy Copy;		// una copia a la vez desde la web
+	if (Copy.IsActive ())
+	{
+		return CString (T ("Ya hay una copia en marcha"));
+	}
+	const char *pError = Copy.Start (From, To, "~zxweb.tmp", FALSE);
+	if (pError != 0)
+	{
+		Message.Format (T (pError), Name);
+		return Message;
+	}
+	BusyFile (T ("Red: copiando %s (%u KB)"), Path, (unsigned) Copy.GetTotal ());
+	int nResult;
+	while ((nResult = Copy.Step (256 * 1024)) == 0)
+	{
+		CScheduler::Get ()->Yield ();	// el emulador sigue mientras tanto
+	}
+	if (nResult < 0)
+	{
+		Message.Format (T (Copy.GetError ()), Name);
+		return Message;
+	}
+	if (strcmp (s_Cut, Path) == 0)
+	{
+		s_Cut[0] = '\0';
+	}
+	Message.Format (T ("Copiado: %s"), Name);
 	return Message;
 }
 
@@ -1344,11 +1448,12 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 		CString CutEsc;
 		HTMLEscape (s_Cut, &CutEsc);
 		Line.Format ("<div class=\"cut\">%s <b>%s</b> "
-			     "<form class=\"i\" action=\"/mv\"%s><input type=\"hidden\" name=\"d\" value=\"%s\">"
+			     "<form class=\"i\" action=\"%s\"%s><input type=\"hidden\" name=\"d\" value=\"%s\">"
 			     "<input type=\"hidden\" name=\"f\" value=\"%s\">"
 			     "<input type=\"hidden\" name=\"to\" value=\"%s\"><button>%s</button></form> "
 			     "<a href=\"/nocut?d=%s\">%s</a></div>",
-			     T ("Moviendo:"), (const char *) CutEsc, (const char *) PutWarn, (const char *) DirEsc, (const char *) CutEsc,
+			     s_bCutCopy ? T ("Copiando:") : T ("Moviendo:"), (const char *) CutEsc,
+			     s_bCutCopy ? "/cp" : "/mv", (const char *) PutWarn, (const char *) DirEsc, (const char *) CutEsc,
 			     (const char *) DirEsc, T ("Pegar aquí"), (const char *) DirEnc, T ("Cancelar"));
 		Html.Append (Line);
 	}
@@ -1474,6 +1579,14 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 				     (const char *) WarnPrefix, (const char *) TextAttr, (const char *) DirEsc,
 				     (const char *) RelEsc, (const char *) Esc, T ("renombrar"));
 			Actions.Append (Line);
+
+			// copiar (los ficheros): se marca y se pega una copia en la de destino
+			if (!bDir)
+			{
+				Line.Format ("<a href=\"/cut?d=%s&f=%s&c=1\">%s</a>", (const char *) DirEnc, (const char *) Enc,
+					     T ("copiar"));
+				Actions.Append (Line);
+			}
 
 			// mover: se marca y se pega en la carpeta de destino
 			Line.Format ("<a href=\"/cut?d=%s&f=%s\"%s%s%s>%s</a>", (const char *) DirEnc, (const char *) Enc,
@@ -1621,6 +1734,7 @@ static void EnsureCertificates (void)
 // servidor web espera (cediendo el control) a que termine.
 struct TNetJob
 {
+	boolean bPokes;			// el .pok de un juego (ZXDBFetchPok)
 	boolean bSearch;
 	boolean bRequestLoad;		// descarga: pedir la carga (la web) o solo devolver SDPath (el menú)
 	char Arg[256];
@@ -1629,11 +1743,15 @@ struct TNetJob
 	int nCount;
 	char Error[96];
 	char Message[160];
+	char Hash[132];			// pokes: la huella del juego ("" = se sabe su ficha)
+	char EntryID[12];		// pokes: su ficha de ZXDB ("" = buscarla por la huella)
+	int nPokResult;			// pokes: 1 guardado, 0 no lo hay, -1 error
 	volatile boolean bDone;
 };
 
 static void DoSearch (TNetJob *pJob);
 static void DoDownload (TNetJob *pJob);
+static void DoPokes (TNetJob *pJob);
 
 class CNetJobTask : public CTask
 {
@@ -1642,7 +1760,11 @@ public:
 	void Run (void)
 	{
 		EnsureCertificates ();
-		if (m_pJob->bSearch)
+		if (m_pJob->bPokes)
+		{
+			DoPokes (m_pJob);
+		}
+		else if (m_pJob->bSearch)
 		{
 			DoSearch (m_pJob);
 		}
@@ -1706,6 +1828,7 @@ THTTPStatus CZXWebServer::SendSearch (const char *pQuery, u8 *pBuffer, unsigned 
 	TNetJob *pJob = pQuery[0] != '\0' ? new TNetJob : 0;
 	if (pJob != 0)
 	{
+		pJob->bPokes = FALSE;
 		pJob->bSearch = TRUE;
 		strncpy (pJob->Arg, pQuery, sizeof pJob->Arg - 1);
 		pJob->Arg[sizeof pJob->Arg - 1] = '\0';
@@ -1778,6 +1901,7 @@ CString CZXWebServer::Download (const char *pPath)
 		Message = T ("No hay memoria para la descarga");
 		return Message;
 	}
+	pJob->bPokes = FALSE;
 	pJob->bSearch = FALSE;
 	pJob->bRequestLoad = TRUE;
 	strncpy (pJob->Arg, pPath, sizeof pJob->Arg - 1);
@@ -1799,6 +1923,7 @@ int ZXDBSearch (const char *pQuery, TZXInfoResult *pResults, unsigned nMaxResult
 		*pError = T ("No hay memoria");
 		return -1;
 	}
+	pJob->bPokes = FALSE;
 	pJob->bSearch = TRUE;
 	strncpy (pJob->Arg, pQuery, sizeof pJob->Arg - 1);
 	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
@@ -1825,6 +1950,7 @@ boolean ZXDBDownload (const char *pPath, CString *pSDPath, CString *pMessage)
 		*pMessage = T ("No hay memoria para la descarga");
 		return FALSE;
 	}
+	pJob->bPokes = FALSE;
 	pJob->bSearch = FALSE;
 	pJob->bRequestLoad = FALSE;
 	pJob->SDPath[0] = '\0';
@@ -1911,4 +2037,159 @@ static void DoDownload (TNetJob *pJob)
 	Message.Format (T ("Descargado y cargando en el Spectrum: %s (%u KB)"), Name, (unsigned) (nSize + 1023) / 1024);
 	strncpy (pJob->Message, Message, sizeof pJob->Message - 1);
 	pJob->Message[sizeof pJob->Message - 1] = '\0';
+}
+
+// Pokes: busca en ZXDB el .pok del juego (por su huella o por su ficha) y lo
+// guarda en SD:/pokes/<pSaveName>.pok. Devuelve 1 si lo ha guardado (en
+// *pSDPath), 0 si ZXDB no lo tiene y -1 si ha fallado (*pMessage dice por qué)
+int ZXDBFetchPok (const char *pHash, const char *pEntryID, const char *pSaveName,
+		  CString *pSDPath, CString *pMessage)
+{
+	TNetJob *pJob = new TNetJob;
+	if (pJob == 0)
+	{
+		*pMessage = T ("No hay memoria");
+		return -1;
+	}
+	pJob->bPokes = TRUE;
+	pJob->bSearch = FALSE;
+	pJob->bRequestLoad = FALSE;
+	pJob->SDPath[0] = '\0';
+	pJob->Message[0] = '\0';
+	strncpy (pJob->Hash, pHash != 0 ? pHash : "", sizeof pJob->Hash - 1);
+	pJob->Hash[sizeof pJob->Hash - 1] = '\0';
+	strncpy (pJob->EntryID, pEntryID != 0 ? pEntryID : "", sizeof pJob->EntryID - 1);
+	pJob->EntryID[sizeof pJob->EntryID - 1] = '\0';
+	strncpy (pJob->Arg, pSaveName != 0 ? pSaveName : "", sizeof pJob->Arg - 1);
+	pJob->Arg[sizeof pJob->Arg - 1] = '\0';
+	RunJob (pJob);
+	*pMessage = pJob->Message;
+	*pSDPath = pJob->SDPath;
+	int nResult = pJob->nPokResult;
+	delete pJob;
+	return nResult;
+}
+
+static void PokMessage (TNetJob *pJob, const char *pText, int nResult)
+{
+	strncpy (pJob->Message, pText, sizeof pJob->Message - 1);
+	pJob->Message[sizeof pJob->Message - 1] = '\0';
+	pJob->nPokResult = nResult;
+}
+
+static void DoPokes (TNetJob *pJob)
+{
+	WebBusy (T ("Red: buscando pokes en ZXDB..."));
+	pJob->nPokResult = -1;
+
+	#define POK_WORK_SIZE	(1024 * 1024)		// las fichas tienen muchos datos
+	u8 *pWork = new u8[POK_WORK_SIZE];
+	if (pWork == 0)
+	{
+		PokMessage (pJob, T ("No hay memoria"), -1);
+		return;
+	}
+
+	CCircleTransport Transport;
+	CHTTPSClient Client (&Transport);
+	const char *pError = "";
+	char Title[64] = "";
+	CString Message;
+
+	// 1. la ficha, si no se sabe: por la huella del fichero
+	char ID[12];
+	strncpy (ID, pJob->EntryID, sizeof ID - 1);
+	ID[sizeof ID - 1] = '\0';
+	if (ID[0] == '\0')
+	{
+		int n = ZXInfoFileCheck (&Client, pJob->Hash, ID, sizeof ID, Title, sizeof Title,
+					 pWork, POK_WORK_SIZE, &pError);
+		if (n <= 0)
+		{
+			delete [] pWork;
+			PokMessage (pJob, n == 0 ? T ("ZXDB no conoce este fichero: busca el juego por su nombre")
+						 : T (pError), n);
+			return;
+		}
+	}
+
+	// 2. el .pok de la ficha
+	char Path[192];
+	char EntryTitle[64];
+	int n = ZXInfoPokPath (&Client, ID, Path, sizeof Path, EntryTitle, sizeof EntryTitle,
+			       pWork, POK_WORK_SIZE, &pError);
+	if (EntryTitle[0] != '\0')
+	{
+		strcpy (Title, EntryTitle);
+	}
+	if (n <= 0)
+	{
+		delete [] pWork;
+		if (n == 0)
+		{
+			Message.Format (T ("ZXDB no tiene pokes de %s"), Title[0] != '\0' ? Title : ID);
+			PokMessage (pJob, Message, 0);
+		}
+		else
+		{
+			PokMessage (pJob, T (pError), -1);
+		}
+		return;
+	}
+
+	// 3. descargarlo (los .pok de Spectrum Computing van sin comprimir)
+	WebBusy (T ("Red: descargando pokes de ZXDB..."));
+	#define POK_MAX_SIZE	(64 * 1024)
+	u8 *pFile = new u8[POK_MAX_SIZE];
+	char Name[128];
+	size_t nSize = pFile != 0 ? ZXInfoDownload (&Client, Path, pFile, POK_MAX_SIZE, Name, sizeof Name,
+						    pWork, POK_WORK_SIZE, &pError)
+				  : 0;
+	delete [] pWork;
+	if (nSize == 0)
+	{
+		delete [] pFile;
+		Message.Format (T ("No se pudo descargar: %s"), T (pError));
+		PokMessage (pJob, Message, -1);
+		return;
+	}
+
+	// 4. a SD:/pokes, con el nombre del juego (así la próxima vez está)
+	char Save[128];
+	strncpy (Save, pJob->Arg[0] != '\0' ? pJob->Arg : Name, sizeof Save - 1);
+	Save[sizeof Save - 1] = '\0';
+	for (char *p = Save; *p != '\0'; p++)
+	{
+		if (*p == '/' || *p == '\\' || *p == ':' || *p == '*' || *p == '?' || *p == '"'
+		    || *p == '<' || *p == '>' || *p == '|')
+		{
+			*p = '_';
+		}
+	}
+	size_t nSaveLen = strlen (Save);
+	if (nSaveLen > 4 && strcasecmp (Save + nSaveLen - 4, ".pok") == 0)
+	{
+		Save[nSaveLen - 4] = '\0';
+	}
+
+	f_mkdir ("SD:/pokes");
+	CString SDPath;
+	SDPath.Format ("SD:/pokes/%s.pok", Save);
+	FIL File;
+	unsigned nWritten = 0;
+	boolean bOK =    f_open (&File, SDPath, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK
+		      && f_write (&File, pFile, nSize, &nWritten) == FR_OK && nWritten == nSize;
+	f_close (&File);
+	delete [] pFile;
+	if (!bOK)
+	{
+		Message.Format (T ("No se pudo guardar %s"), (const char *) SDPath);
+		PokMessage (pJob, Message, -1);
+		return;
+	}
+
+	strncpy (pJob->SDPath, SDPath, sizeof pJob->SDPath - 1);
+	pJob->SDPath[sizeof pJob->SDPath - 1] = '\0';
+	Message.Format (T ("Pokes de ZXDB: %s"), Title[0] != '\0' ? Title : Save);
+	PokMessage (pJob, Message, 1);
 }

@@ -1,0 +1,321 @@
+===============================================================================
+
+                        E S X D O S   S U P E R V I E W   1 . 0
+
+                    A memory and sprite viewer for esxDOS
+                            (c) 2026 namco/nexgen
+              after SuperView, MicroHobby 153 (November 1987)
+
+                            USER MANUAL - Version 1.0
+
+===============================================================================
+
+CONTENTS
+
+  1.  Introduction
+  2.  Requirements and installation
+  3.  Starting sview
+  4.  The screen
+  5.  Layouts: W and H
+  6.  Keys
+  7.  Formats
+  8.  Go to, hex and saving the screen
+  9.  Viewing a file
+  10. Messages
+  11. Technical notes
+
+
+-------------------------------------------------------------------------------
+1. INTRODUCTION
+-------------------------------------------------------------------------------
+
+sview is an esxDOS dot command that shows memory as graphics, to find the
+sprites, tiles and fonts inside a program. It is a new version of
+SuperView, a type-in published by the Spanish magazine MicroHobby in 1987,
+which drew memory as pixels while you changed the width until the
+graphics lined up.
+
+sview keeps that idea and adds:
+
+  - tiles and characters (8 lines per byte column), and sprites stored
+    column by column, of any height
+  - sprites with masks, in line pairs or byte pairs, with a composite
+    view that draws the sprite over its mask as a game would
+  - invert, mirror, upside down, zig-zag and x2 zoom
+  - all eight 128K banks
+  - files of any size straight from the card, with no need to load them
+  - saving what is on the screen as a .scr file
+
+sview runs entirely in the dot command's own memory: apart from the
+screen it leaves RAM untouched, so you can look at a program that is
+still in memory.
+
+
+-------------------------------------------------------------------------------
+2. REQUIREMENTS AND INSTALLATION
+-------------------------------------------------------------------------------
+
+You need a ZX Spectrum (48K or 128K) with an esxDOS interface (DivIDE,
+DivMMC and compatibles) running esxDOS 0.9.0.
+
+Copy the file "sview" into the /BIN folder of your SD card.
+
+sview needs no free BASIC memory.
+
+
+-------------------------------------------------------------------------------
+3. STARTING SVIEW
+-------------------------------------------------------------------------------
+
+  .sview [-b<bank>] [address]       memory
+  .sview <file> [offset]            a file
+
+Examples:
+
+  .sview                     memory from 23296, bank 0 at #C000
+  .sview 32768               memory from 32768
+  .sview #8000               the same, in hex ($8000 works too)
+  .sview -b3 49152           bank 3, from the start of the bank
+  .sview game.bin            a file, from its first byte
+  .sview /games/game.tap 1000
+                             a file, from offset 1000
+
+  - Numbers are decimal, or hex after # or $.
+  - An address goes from 0 to 65535. A file offset can be past 65535;
+    it is kept inside the file.
+  - -b picks the bank (0-7) paged in at #C000 on a 128K. On a 48K, or a
+    128K with its paging locked (48 BASIC), there is no bank to pick.
+  - Any word that is not a number is the file name. A name that is all
+    digits would read as an address: write it as ./1942. Names with
+    spaces are not supported.
+
+.sview -help shows a short help text with the syntax. So does any word
+sview does not understand: an unknown switch, a second file name, or an
+address past 65535.
+
+
+-------------------------------------------------------------------------------
+4. THE SCREEN
+-------------------------------------------------------------------------------
+
+Rows 0 to 21 (176 pixel lines) show the memory. Row 22 is the status bar,
+white on blue. Row 23 shows the 32 bytes from the address as text, with a
+dot for any byte outside 32-126.
+
+The status bar:
+
+  0:23296 000 W 1 H  1  L0CVIXYZ2       memory on a 128K (bank:address)
+    23296 000 W 1 H  1                  memory on a 48K
+  00065540 040 W 4 H  8 B1              a file (the offset in the file)
+
+  - the address (or offset) of the top-left byte of the view
+  - the byte there
+  - W and H, the layout (see section 5)
+  - from column 22, the formats that are on, each shown by its key
+    letter (see section 7). For masks, L or B is followed by the half
+    shown: 0 or 1.
+
+When the view is split into strips, they alternate black on white and
+black on cyan, so you can tell where one ends and the next begins.
+
+
+-------------------------------------------------------------------------------
+5. LAYOUTS: W AND H
+-------------------------------------------------------------------------------
+
+Two numbers describe how the bytes are laid out:
+
+  W   bytes across, 1 to 32
+  H   lines per cell, 1 to 176
+
+The bytes fill cells of 1 byte by H lines, from top to bottom. W cells
+make a row, and the rows go down a strip of 176 lines. With V off, the
+strips go from left to right until the screen is full; with V on (the
+start-up setting) there is a single strip.
+
+  Layout                      Setting   How the bytes are stored
+  --------------------------  --------  ---------------------------------
+  Scanline (the original)     H = 1     each pixel line is W bytes in a
+                                        row
+  Tiles and characters        H = 8     8 bytes per character,
+                                        characters left to right
+  Sprites stored by columns   H = 16    a 16x16 sprite as its left column
+                              (or the   (16 bytes) then its right column:
+                              height)   W = 2 shows each sprite whole
+
+To find graphics, start with H = 1 and change W until the shapes line up,
+the way the original SuperView worked. Most sprites are 1 to 4 bytes
+wide. If the shapes look like stacked characters, press T for H = 8.
+
+If 176 is not a multiple of H, the lines left over at the bottom stay
+blank, so cells are never cut in half.
+
+
+-------------------------------------------------------------------------------
+6. KEYS
+-------------------------------------------------------------------------------
+
+  Key            Action                           With SYMBOL SHIFT
+  -------------  -------------------------------  -------------------
+  7 / 6          address + / - one line           + / - one screen
+                 (a row of cells, with its mask)
+  9 / 4          address + / - 1 byte             + / - one strip
+  8 / 5          W + / - 1                        W + / - 8
+  P / O          H + / - 1                        H + / - 8
+  T              H = 1 <-> H = 8
+                 (scanline <-> tiles)
+  V              strips <-> a single strip
+  M              masks: off -> line pairs ->
+                 byte pairs
+  N              even <-> odd half of each pair
+  C              composite on / off
+  I              invert
+  X              mirror
+  Y              upside down
+  Z              zig-zag
+  2              x2 zoom
+  B              next bank (memory on 128K)       previous bank
+  D              decimal <-> hex
+  G              go to an address
+  S              save the screen as a .scr
+  SPACE / BREAK  back to BASIC
+
+Each key acts at once. The step keys (7 6 9 4 8 5 P O) repeat after a
+short delay while held. CAPS SHIFT is ignored, so the cursor keys work
+too: UP and DOWN move a line, LEFT and RIGHT change W.
+
+In memory the address wraps from 65535 to 0 and back. In a file it stops
+at the first and the last byte.
+
+On the way out sview clears the screen and returns to BASIC with "0 OK".
+On a 128K the memory paging is put back as it was.
+
+
+-------------------------------------------------------------------------------
+7. FORMATS
+-------------------------------------------------------------------------------
+
+Each format has its own key, and any of them can be combined.
+
+  M  Masks (L or B on the status bar)
+     Many games keep a mask next to each sprite. M switches between:
+       off          plain bytes
+       line pairs   each row of cells (W x H bytes; one line of W bytes
+                    when H = 1) is followed by its mask row
+       byte pairs   every byte is followed by its mask byte
+     Only one half of each pair is shown. A line step (7 / 6) moves a
+     whole pair.
+
+  N  Even / odd half (0 or 1 after L or B)
+     Which half of each pair is shown. Some games keep the sprite first,
+     others the mask: if what you see is the mask, press N.
+
+  C  Composite (needs masks)
+     Draws the sprite over a dotted background through its mask, as the
+     game would: (background AND mask) OR sprite. The half shown is
+     taken as the sprite and the other half as the mask, so if the
+     result looks wrong, press N.
+
+  I  Invert
+     Ink and paper swapped: set bits show white on black.
+
+  X  Mirror
+     Each strip flipped left to right, for graphics stored facing the
+     other way.
+
+  Y  Upside down
+     Each strip drawn from the bottom up.
+
+  Z  Zig-zag
+     For graphics drawn back and forth to save time on the Spectrum:
+       H = 1   every odd line is stored right to left
+       H > 1   every odd column of cells is stored bottom to top
+
+  2  x2 zoom
+     Every pixel doubled: 16 bytes across and 88 lines. H is limited to
+     88 while zoomed, and with W over 16 only the first 16 columns show.
+
+
+-------------------------------------------------------------------------------
+8. GO TO, HEX AND SAVING THE SCREEN
+-------------------------------------------------------------------------------
+
+D switches every number on the status bar between decimal and hex. Hex
+numbers are shown with a # in front: #5B00 #00. W and H always stay in
+decimal.
+
+G asks for an address on the status bar:
+
+  Go to: _
+
+Type it in the current base: memory takes up to 5 decimal or 4 hex
+digits, a file up to 8 decimal or 6 hex digits. DELETE (CAPS SHIFT + 0)
+rubs out the last digit, ENTER goes there, and SPACE cancels.
+
+S asks for a file name:
+
+  Save as: _
+
+The screen is saved in the current directory as a 6912-byte .scr file,
+with ".scr" added if the name has no dot. A file with the same name is
+replaced. Rows 22 and 23 are left blank in the saved picture. Then row 23
+shows "Saved <name>", or "Save failed, error n" if esxDOS could not write
+it.
+
+While typing a name, CAPS SHIFT + a letter gives a capital, and SYMBOL
+SHIFT + M / 0 / J / V / Z give . _ - / : so a path can be typed too.
+ENTER saves, and SPACE cancels.
+
+
+-------------------------------------------------------------------------------
+9. VIEWING A FILE
+-------------------------------------------------------------------------------
+
+  .sview <file> [offset]
+
+The file is read from the card as the view needs it, a part at a time,
+so it is never loaded into memory and can be of any size (up to 16M).
+The status bar shows the offset in the file instead of an address. Bytes
+past the end of the file show blank.
+
+Anything can be looked at: a .tap or .tzx, a .sna snapshot, a ROM image
+or a binary saved from a game. (Most .z80 snapshots are compressed, so
+their graphics will not show whole.)
+
+Moving a line, a strip or a screen forwards reads only the new part and
+moves what stays on the screen, so stepping through a big file is fast.
+Going backwards in the file is slower on some cards, as esxDOS may have
+to follow the file from its start to find the place.
+
+
+-------------------------------------------------------------------------------
+10. MESSAGES
+-------------------------------------------------------------------------------
+
+  No such FILE or DIR      the file does not exist (other esxDOS errors,
+                           such as "Is a DIRECTORY", show the same way)
+  Save failed, error n     on row 23: the .scr could not be written (for
+                           example a full card, or a folder that does
+                           not exist)
+
+If the card gives an error while a file is being viewed, sview closes
+the file, clears the screen and returns to BASIC with that error.
+
+
+-------------------------------------------------------------------------------
+11. TECHNICAL NOTES
+-------------------------------------------------------------------------------
+
+  - Memory from 0 to 16383 (the ROM) shows blank: the ROM is not
+    viewed.
+  - On a 128K the chosen bank is paged in at #C000 while the view is
+    drawn, so addresses #C000-#FFFF show that bank.
+  - The program is exactly 6144 bytes (12 sectors, so it loads quickly).
+    It and all its work areas live in the dot command's own memory
+    (#2000-#3FFF). Outside it, only the screen is
+    written, plus about 40 bytes of the caller's stack. The characters
+    are drawn straight from the ROM font, without copying it.
+  - Speed: a full redraw takes about 1/15 s, about 1/7 s with mirror or
+    composite. From a file, a step forward takes about 1/10 s.
+
+===============================================================================

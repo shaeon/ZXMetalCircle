@@ -1,18 +1,22 @@
-esxDOS v0.8.9
-(c) 2005-2021 Papaya Dezign
+esxDOS v0.9.0
+(c) 2005-2026 Papaya Dezign
 ---------------------------
 
-This version has the following (notable) new features (for detailed info check the changelog):
+This version has the following (notable) new features (for more details check the changelog):
 
-* Support for SCL (TR-DOS) disk images
-* TR-DOS MOVE and FORMAT commands are now implemented
-* Z80DMA timings are configurable
-* New/Updated Commands: .tar, .launcher, .te, .gsc, .drives and .rm
+* A proper manual for the first time, courtesy of SCjoe!
+* LFN support, limited to 65 chars
+* Full support for Timex TS/TC2068, courtesy of Hugo Pinto of the LOAD ZX Museum team!
+* New BASIC commands: NEW, COPY, MOVE, FORMAT, and streams with OPEN #, CLOSE #, POINT # and CLEAR #
+* LOAD/SAVE/VERIFY now support DATA, and CAT, ERASE, MOVE and COPY support wildcards
+* System commands now live in /SYS/BIN
+* New Commands: .df, .mount, .umount, .trkplay, .fm, .vi, .editor, .sview, .dbasic, .fontedit and .touch
+* Updated Commands: .ls, .cp, .mv, .rm, .cd, .mkdir, .chmod, .file, .snapload, .divideo and .sercp
 
 How to (safely) install/upgrade:
 --------------------------------
 
-1. Copy esxide.tap/esxmmc.tap/mb03plus.tap (depending on if you have a DivIDE, DivMMC or MB03+, obviously) to your CF/SD/HDD, load it and follow the instructions. Power Off and remove media.
+1. Copy the tape from FLASHERS for your interface to your CF/SD/HDD, load it and follow the instructions. Power Off and remove media. The ROM images are in ROMS.
 2. Copy the SYS, BIN (and /TMP if using DivIDE) directories to your CF/SD/HDD.
 3. Insert media. Power On. Reset while keeping space pressed to reinit if needed.
 
@@ -20,52 +24,55 @@ Notes:
 ------
 
 a) If you replace the SYS directory *before* flashing the new ROM, your previous ROM of esxDOS will not boot correctly.
-b) Questions? Bugreports? Complaints about lack of LFN/instructions? Ask on the usual places or send an e-mail to: bugs at esxdos dot org
+b) The system commands are now in /SYS/BIN, and are found before the ones in /BIN. Old copies of them left in /BIN are not used and can be deleted.
+c) NMI.SYS is now loaded at $2000 and RTC.SYS at $2F00: third-party NMI.SYS or RTC.SYS files made for older versions must be reassembled for these addresses.
+d) Drive names in .command arguments must now be quoted: .ls "hd1:/games"
+e) Questions? Bugreports? Ask on the usual places or send an e-mail to: bugs at esxdos dot org
 
 Changelog
 ---------
 
-[11/11/2020] SD/MMC Driver: Fixed critical bug when extending directories (lordcoxis + reported by SCjoe)
-[09/01/2021] auto-LOAD: Copying arguments was using wrong syscall (lordcoxis + reported by UB880D)
-[09/01/2021] FAT Driver: Fixed a *critical* bug which corrupted the root directory when the disk was full (lordcoxis + reported by UB880D)
-[07/03/2021] Z80DMA: Fixed a bug in the sector write sequence (lordcoxis + reported by LMN128)
-[18/03/2021] vDisk: Added support for SCL (TR-DOS) disk images (lordcoxis)
-[18/03/2021] TR-DOS: Updated TR-DOS Navigator to V0.75.9b (lordcoxis)
-[18/03/2021] TR-DOS: Fixed a bug affecting (at least) "Star Heritage" game (lordcoxis + reported by Alcoholics Anonymous)
-[18/03/2021] TR-DOS: Fixed a bug affecting (at least) "Tiratok" demo (lordcoxis + reported by Nihirash)
-[19/03/2021] TR-DOS: Fixed a bug affecting (at least) "TASM 4.12" assembler (lordcoxis + reported by Nihirash)
-[19/03/2021] TR-DOS: Fixed a bug affecting (at least) "Spectrofon" diskmag (lordcoxis + reported by Nihirash)
-[19/03/2021] TR-DOS: Added missing MOVE and FORMAT commands (lordcoxis)
-[19/03/2021] NMI: Added support for loading SCL files from the browser (UB880D)
-[20/03/2021] NMI: Added HiResColour modes reset on NMI entry and restore on exit (lordcoxis)
-[20/03/2021] Z80DMA: Added "DMA_IO" and "DMA_RAM" config parameters to ESXDOS.CFG to set DMA timings (lordcoxis + requested by LMN128)
-[25/03/2021] TR-DOS: Fixed a bug that afected SCL images with more than 16 files (lordcoxis)
-[25/03/2021] auto-LOAD: Set default colours to black paper + white ink, configurable in ESXDOS.CFG (lordcoxis)
-[25/03/2021] BASIC: Fixed 2 bugs related to (patched) 128K ROM support, it should now be (almost) fully usable (lordcoxis)
-[25/03/2021] NMI: Visual improvements (UB880D)
-[25/03/2021] Commands: Added .tar and updated .launcher (UB880D)
-[30/03/2021] Commands: Added .te command (nagydani)
-[30/03/2021] Commands: Updated .drives and .rm (Dr. Slump)
-[04/04/2021] Tape Emulator: Fixed a critical bug when attaching .tap files that would cause all sorts of instability (lordcoxis+UB880D)
-[04/04/2021] Kernel: Saved HL, IX and IY registers before RTC.SYS call (UB880D)
-[04/04/2021] TR-DOS: Fixed a bug affecting (at least) "ZX-Format" diskmag (lordcoxis + reported by Nihirash)
-[11/04/2021] BASIC: Fixed X_PTR overwrite on outside syscall entry (lordcoxis + reported by UB880D and SCjoe)
-[17/04/2021] Commands: Added .gsc command (Nihirash)
+[02/01/2022] auto-LOAD: "AutoLoadColour" parameter in ESXDOS.CFG was not being applied (ub880d)
+[02/01/2022] TR-DOS: Fixed a bug with the RETURN command (lordcoxis + reported by zxcygnus)
+[22/03/2023] TR-DOS: Fixed games with the stack just above the screen getting their attributes overwritten (lordcoxis + reported by Shadow Maker)
+[22/09/2023] FAT Driver: Rewrote path handling: ".." at the root stays at the root, a directory can no longer be moved into itself, and paths over 127 characters no longer overflow (lordcoxis)
+[22/09/2023] FAT Driver: Volume label was treated as a file (lordcoxis)
+[29/05/2024] FAT Driver: Backported fat_seek() from esxDOS v1.x (lordcoxis)
+[29/05/2024] FAT Driver: Fixed a *critical* bug which corrupted the FAT when copying files between two drives (lordcoxis)
+[01/06/2024] Tape Emulator: Backported the version from esxDOS v1.x (lordcoxis)
+[01/06/2024] FAT Driver: Backported FAT_FSINFO from esxDOS v1.x (lordcoxis)
+[01/06/2024] FAT Driver: Made sure the +3DOS header gets written whenever there's a filesize change (lordcoxis)
+[27/09/2026] Kernel: Merged Hugo Pinto's amazing TC2068 patches (Hugo Pinto)
+[28/09/2026] FAT Driver: Fixed a long-standing bug that would corrupt the root dir on FAT32 when dealing with empty files (ub880d+lordcoxis)
+[30/09/2026] FAT Driver: Fixed a write bug with disk full, and a truncate() bug (lordcoxis)
+[02/10/2026] FAT Driver: Backported the F_FCNTL(getpath) syscall from esxDOS v1.x (lordcoxis)
+[02/10/2026] FAT Driver: Backported the smaller FSYS_TAB table code from esxDOS v1.x (lordcoxis)
+[03/10/2026] FAT Driver: Backported the LFN driver from esxDOS v1.x (lordcoxis)
+[03/10/2026] BASIC: Updated CAT to adapt better to long filenames (lordcoxis)
+[04/10/2026] Kernel: Added rst $30 DRV_PREFIX syscall as a kludge for esxDOS v1.x style drives (lordcoxis)
+[04/10/2026] BASIC: Added DATA to LOAD, VERIFY and SAVE (lordcoxis)
+[04/10/2026] Commands: .cd, .cp, .mv, .mkdir and .file accept drive names, and .cp and .mv accept wildcards (lordcoxis)
+[05/10/2026] BASIC: Added MOVE "old" TO "new" command (lordcoxis)
+[05/10/2026] BASIC: Added wildcards to CAT, ERASE and MOVE (lordcoxis)
+[06/10/2026] BASIC: LOAD can no longer overwrite esxDOS at $0000-$3FFF (lordcoxis)
+[06/10/2026] BIOS: ESXDOS.SYS and BETADISK.SYS are now checked against the ROM version (lordcoxis)
+[07/10/2026] BASIC: Added FORMAT command, for FAT16 and FAT32 (lordcoxis)
+[08/10/2026] BASIC: Added NEW "dir" and COPY "file" TO "file/dir" commands (lordcoxis)
+[08/10/2026] BASIC: Added Uni-Dos style streams: OPEN #, CLOSE #, POINT #, CLEAR #, (POINT #s) and (LEN #s) (lordcoxis)
+[15/10/2026] Kernel: NMI.SYS is now loaded at $2000 and can be up to 3840 bytes, RTC.SYS moved to $2F00 (lordcoxis)
+[17/10/2026] Commands: Added .df, and rewrote .ls with a long listing (-l) and wildcards (lordcoxis)
+[20/10/2026] Kernel: System commands moved to /SYS/BIN, searched before /BIN (lordcoxis)
+[27/10/2026] Commands: Drive names in arguments must now be quoted, as in esxDOS v1.x (lordcoxis)
+[28/10/2026] BASIC: Drive names can be given inside the file name ("hd1:/games"), and COPY can copy to another drive (lordcoxis)
+[01/11/2026] Docs: Added the esxDOS User Manual in english language (SCjoe + lordcoxis)
+[03/11/2026] NMI: Added the latest version of NMI.SYS by ub880d, with LFN support and 52 columns display (ub880d)
+[08/11/2026] Commands: Added .trkplay (PT3, STC and SQT), which replaces .playpt3, .playstc and .playsqt (lordcoxis)
+[09/11/2026] BIOS: ESXDOS.SYS is loaded from the first drive that has this ROM's version (lordcoxis + ub880d)
 
 Thanks/Greets
 -------------
 
 Greets to all the usual peeps (y'all know who you are - just check v0.8.5's README if in doubt!).
-Special thanks to all the great "hardware benefactors": Ben Versteeg, LMN128, Pavel Urbancik, Pavel Vymetalek, SpecNext Team, TFW8b, Tygrys, UB880D, Zaxon!
+Special thanks to all the great "hardware benefactors": LaesQ, LMN128, Pavel Urbancik, Pavel Vymetalek, SpecNext Team, TFW8b, Tygrys, UB880D, Zaxon!
 
-Known Bugs
-----------
-
-BASIC/Tape Emulator: You can overwrite ESXDOS system using LOAD CODE that crosses $2000
-Commands: Proper argument/syntax checking is not done yet on most commands
-Commands/BASIC: No wildcards yet
-FAT Driver: rename() isn't even remotely posix compliant
-FAT Driver: Directories read-only attribute isn't always respected
-BIOS: Version of system file isn't checked against the ROM version (bad things will happen if there's a mismatch)
-
-17.04.2021 / Papaya Dezign - All rights perversed
+18.11.2026 / Papaya Dezign - All rights perversed

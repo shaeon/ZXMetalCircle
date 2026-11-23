@@ -84,6 +84,8 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                     1, 2, 4 or 10 (x1 = real speed; faster ones are silent)
 
  ulaplus=1        ULAplus (64 colours):  1 = available,  0 = disabled
+ snow=1           16K, 48K, 128K and +2 snow effect (with the I register in
+                  slow memory, like the real machine):  1 = yes,  0 = no
 
  rs232=1          Interface 1 RS232 on the Pi's TCP port 2323 (or to
                   saves/rs232.txt if nobody is connected). 0 = off.
@@ -262,7 +264,7 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
 
  divmmc=0         divMMC with esxDOS:
                     0       no divMMC (default)
-                    esxdos  divMMC with esxDOS 0.8.9; its card is the
+                    esxdos  divMMC with esxDOS 0.9.0; its card is the
                             hdd/esxdos.img image (see esxdir=).
                             It cannot be used with the Interface 1, the
                             LEC memory or the Multiface
@@ -329,7 +331,13 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                   be renamed, moved, replaced or deleted: kernels,
                   config.txt, cmdline.txt, locales...), 0 = unprotected
                   (asks for confirmation). What is in use, always
-                  protected. It cannot be changed from the web page
+                  protected. It cannot be changed from the web page. It
+                  also applies to F2 in the Pi's file browser
+
+ filechanges=1    F2 in the Pi's file browser (Alt+F5): copy, move, rename,
+                  delete and create folders on the SD card; and in the
+                  tape browser (F3): copy, move, delete and rename blocks.
+                  0 = no F2 (load only)
 
  ip=              Fixed IP. Without it, DHCP is used (the normal case).
  mask=            Network mask          (default 255.255.255.0)

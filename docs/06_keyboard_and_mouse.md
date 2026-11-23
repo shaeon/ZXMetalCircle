@@ -8,15 +8,15 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 
 | Key | Function |
 | --- | --- |
-| F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives, T the list of all keys and A the credits |
+| F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives, P the pokes, T the list of all keys and A the credits |
 | Alt+F1 | The settings directly (ESC goes back to the Spectrum) |
 | Alt+U | Drives: see, mount and empty each drive |
 | Alt+K | Keyboard help |
 | F2 | Tape: play / stop |
-| F3 | Tape: block browser (list of what is on the tape; ENTER leaves it at the chosen block, Home = rewind) |
+| F3 | Tape: block browser (list of what is on the tape; ENTER leaves it at the chosen block, Home = rewind; F2 copies, moves, deletes or renames blocks, see below) |
 | F4 | Change joystick |
 | F5 | NMI: Multiface, esxDOS browser or Spectranet menu |
-| Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI |
+| Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI. Inside, F2 copies, moves, renames, deletes or creates folders (see below) |
 | F6 | Loading speed: instant / fast / real |
 | F7 | List of models to choose from (the current one highlighted; those without a ROM say so) |
 | Alt+F7 | Switch to the next model (16K, 48K, 128K, +2, +2A, +3, +3e) |
@@ -35,6 +35,8 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 | Alt+F / Alt+E | +3 disk: new / eject |
 | Alt+D | Keyboard diagnostics: what arrives over USB, the keys the Spectrum sees, frames per second and frame times |
 | Alt+V | Press keys simultaneously (cheats like VICTOR in Profanation) |
+| Alt+C | Pokes and cheats for the loaded game (see below) |
+| Alt+O | Manual POKE |
 | F12 or Alt+R | Reset |
 | Pause or Alt+P | Pause |
 
@@ -47,6 +49,31 @@ PC keyboard to Spectrum keyboard mapping:
 
 To load a tape: press F1 and then ENTER, choose the `.TAP`, `.TZX`, `.PZX` or `.CSW` and type `LOAD ""` (on the 128K/+2A, choose "Tape Loader" or "Loader" in the menu). The tape starts by itself when the ROM or a custom loader starts reading it, and stops by itself when the program stops reading it like a loader for 2 seconds. What counts is reading like a loader (the same IN over and over, with a counter that advances, as Fuse does), not reading a lot: menus that poll the keyboard non-stop neither start the tape nor keep it running, so multiloads find the next block where they left it. In fast mode, the emulator runs at full speed while loading.
 
+## SD card files from the file browser (F2)
+
+In the file browser (Alt+F5, or F1 and ENTER), **F2** opens a list of what can be done with the selected entry: **Copy**, **Move**, **Rename...**, **Delete...** and **New folder...** (on `[..]`, only the new folder; folders are not copied, but they can be moved). With the GPIO keyboard, F2 is extended mode + 2.
+
+- **Rename** opens a line with the current name and the cursor before the extension. It types lowercase; capitals with Shift or CAPS SHIFT + letter; symbols with Ctrl or SYMBOL SHIFT + the key, as on the Spectrum: SS+8 `(`, SS+9 `)`, SS+0 `_`, SS+J `-`, SS+M `.`, SS+N `,`, SS+K `+`, SS+L `=`, SS+1 `!`, SS+2 `@`, SS+3 `#`, SS+4 `$`, SS+5 `%`, SS+6 `&`, SS+7 `'`, SS+Y `[`, SS+U `]`. The dot and hyphen of a USB keyboard work too. The cursor keys move the cursor, Home and End (CAPS SHIFT + 1 and 2) go to the ends, DELETE (CAPS SHIFT + 0) deletes the character on the left and Del (CAPS SHIFT + 9) the one under the cursor.
+- **Delete** always asks, with "No, keep it" selected on entry. Folders only if they are empty.
+- **New folder** creates one in the current folder.
+- **Copy** and **Move** mark the selected entry (at the bottom it shows "To copy: games/Barbarian.tzx"). Go to the destination folder with the browser and there F2 offers **Paste here** (or **Move here**) and **Forget**. If there is already one with that name, it asks: don't copy it (selected on entry), copy it as "name (2)" or replace the existing one. Pasting a copy in its own folder makes it "name (2)" directly. Moving is immediate; copying shows a progress bar with the MB copied and is cancelled with ESC (BREAK). The copy is written with a temporary name and only gets its own at the end, so if it is cancelled or fails no half-copied file is left; before starting it checks that it fits on the card.
+- The **web page** also has "copy" next to "move", and it is pasted the same way ("Paste here"). If there is already one with that name, the copy is made as "name (2)".
+
+The same checks as on the web page apply: system files (kernels, `cmdline.txt`, `config.txt`, the emulator's folders...) are not touched while "System files" is set to "protected" (`webprotect=1`, page 9), and what is in use (a +3 disk, a microdrive, the hard disk, the tape if SAVE writes to it) cannot be renamed or deleted: it says "In use". F2 does not work in TNFS folders or when the browser has been opened to choose a drive's file (Alt+U). "Changes in the browser" (page 8, `filechanges=0`) removes it altogether.
+
+## Editing the blocks of a tape (F3 and F2)
+
+In the tape browser (F3), **F2** (extended mode + 2 on the GPIO keyboard) opens a list of what can be done with the selected block. A header and its data go together: **Copy header and data**, **Move header and data**, **Rename the header...** and **Delete header and data...**; **Only the header, not its data...** does the same with that block alone. On a single block: **Copy this block**, **Move this block** and **Delete this block...**.
+
+- **Copy** and **Move** mark the blocks (at the bottom it shows "To copy: blocks 1-2"). Select the destination block and F2 offers **Paste before this one**, **Paste after this one** (or **Move...**) and **Forget the marked blocks**. Nothing is ever pasted between a header and its data: after a header goes after its data, and before some data, before their header.
+- **Into another tape**: the marked blocks are kept, so you can insert another tape, open its browser (F3) and paste them there with F2 ("To copy: 2 blocks from GAME.TAP"). Between tapes a copy is always pasted: moving only works within the same tape. From a TAP to a TZX, each block becomes a standard block (0x10, with a 1 s pause), losing nothing. From a TZX to a TAP only standard blocks go; if the marked blocks include one that does not fit in a TAP (turbo loading, tones, pulses, CSW, texts...), nothing is pasted and it warns: "They don't fit in a TAP".
+- **Rename the header** changes the name shown when loading (up to 10 letters) and recalculates its checksum.
+- **Delete** asks, with "No" selected on entry. The tape cannot be left empty.
+
+The changes are made to the inserted tape, in memory (the title shows a `*`), and the file is not touched until it is saved. When leaving the browser (ESC, F3 or ENTER) with changes, it asks: **Keep editing** (selected on entry), **Save to** the same file, **Save as...** another one (in the same folder; if the tape does not come from a .TAP or .TZX on the SD card, for example from a ZIP, in `saves`) or **Discard the changes**. When saving to the same file, the original is kept as `name.tap.bak` (the first time; if there is already a .bak, that is the original and it is left alone), and it is written with a temporary name that only becomes its own at the end, so if it fails (card full) the file stays as it was.
+
+TAP and TZX tapes only. TZX files with jumps, loops or calls (blocks 0x23 to 0x28: they count blocks and moving them would break them) cannot be edited, nor can CSW or PZX files. "Changes in the browser" (`filechanges=0`) also removes it.
+
 ## Simultaneous keys (Alt+V)
 
 Some cheats need many keys pressed together, like **VICTOR** in Profanation for infinite lives. A USB keyboard reports at most six keys at a time, and many cannot detect some combinations of four, five or six keys.
@@ -54,6 +81,22 @@ Some cheats need many keys pressed together, like **VICTOR** in Profanation for 
 **Alt+V** opens a line where you type the keys (letters, digits and space) and, with ENTER, the emulator holds them all down together for 1.5 seconds. It works with any keyboard. With a real Spectrum keyboard over GPIO or a Recreated ZX it is not needed: all of them can be pressed at once, as on the Spectrum.
 
 If the USB keyboard cannot handle a combination and reports too many keys at once, the emulator keeps the keys it already had pressed until the next valid report, as the USB standard says, instead of releasing them all.
+
+## Pokes and cheats (Alt+C and Alt+O)
+
+**Alt+C** (or P in the F1 help) opens the list of cheats for the loaded game: infinite lives, energy, level skip… They come from a **.POK** file, the format of the ZXDB and The Tipshop pokes, which the emulator looks for in the `pokes` folder of the SD card by the game's name: for `games/Barbarian.tzx`, `pokes/Barbarian.pok` or, as in the ZXDB collection (folders by initial), `pokes/b/Barbarian.pok` (`pokes/123/` if it starts with a digit). If it is not found and there is a network, **it looks for it in ZXDB**: it asks ZXInfo which game the loaded file is by its hash (SHA-512) or, if it was downloaded with the file browser's ZXDB search, by its entry; if ZXDB has pokes for it, the .pok is downloaded from Spectrum Computing to `pokes/<game>.pok` (next time it is already there, even without a network). It is tried once per game. If that fails too, the list says "no .pok" and has two lines at the end to find one: **Open a .pok...** opens the file browser in `pokes`, and **Search ZXDB for pokes...** searches for the game by its title (for files ZXDB does not recognise: modified, from another release, saved by yourself…) and downloads the .pok of the one chosen. A .pok chosen in the file browser also opens the list.
+
+- Each cheat is chosen with its key (1-9, 0, A-Z) or with ENTER, and **it is applied at once**: it is marked `[x]`. Choosing it again removes it and memory goes back to how it was (with the original value in the .POK or, if there is none, the one there was when it was applied).
+- Cheats that let you choose a number (lives, level…; value 256 in the .POK) ask for it: 0 to 255, or hexadecimal with H at the end (`C9H`).
+- **Apply them with the game already loaded** and running: if applied before, the loading overwrites them. Some games need them in a given part (`[Pt1]`, `[Pt2]`, `[L3]` in the cheat's name).
+- The pokes in a .POK are for a particular release of the game: on another one (a re-release, a compilation…) they may do nothing or crash it.
+- Pokes with a bank (128K) go to that memory page, whether it is paged in or not. On 48K models the bank is ignored.
+
+**Alt+O** (or the **Manual POKE...** line in the list) opens a line to type a POKE as in the magazines: the address and the value separated by a space (`35136 0` is `POKE 35136,0`), or in hexadecimal with H at the end (`8940H C9H`). Several fit in a row (`35136 0 35137 201`). They are applied at once to memory as it is paged and stay in the Alt+C list, so they can be removed. The address goes from 16384 to 65535: the ROM is not written.
+
+Loading another game empties the list. A reset clears memory: if the game was a snapshot, or its tape, disk or cartridge has been removed, there is no game any more (Alt+C shows as when the emulator starts); if its tape, disk or cartridge is still in, its cheats stay in the list, not applied, for when it is loaded again. There are no pokes on the ZX81.
+
+With the **GPIO keyboard**: extended mode + SYMBOL SHIFT + C opens the pokes and extended mode + SYMBOL SHIFT + O the manual POKE (like every Alt combination). In the list and the input line everything is done with the Spectrum keys: digits and letters, ENTER, BREAK to go back, CAPS SHIFT + 0 to delete and CAPS SHIFT + 5-8 to move.
 
 ## Keyboard diagnostics (Alt+D)
 

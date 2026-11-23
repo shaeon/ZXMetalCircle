@@ -39,6 +39,17 @@ size_t ZXInfoDownload (CHTTPSClient *pClient, const char *pPath, unsigned char *
 		       char *pName, size_t nNameSize, unsigned char *pWork, size_t nWorkSize,
 		       const char **pError);
 
+// Pokes. ZXInfoFileCheck: el programa de ZXDB de un fichero por su huella
+// (MD5 o SHA-512 en hexadecimal; /v5/filecheck). ZXInfoPokPath: la ruta de su
+// .pok en Spectrum Computing (de los «additionalDownloads» de su ficha).
+// Devuelven 1 si lo encuentran, 0 si no lo hay y < 0 si falla (ver pError).
+int ZXInfoFileCheck (CHTTPSClient *pClient, const char *pHash, char *pID, size_t nIDSize,
+		     char *pTitle, size_t nTitleSize, unsigned char *pWork, size_t nWorkSize,
+		     const char **pError);
+int ZXInfoPokPath (CHTTPSClient *pClient, const char *pID, char *pPath, size_t nPathSize,
+		   char *pTitle, size_t nTitleSize, unsigned char *pWork, size_t nWorkSize,
+		   const char **pError);
+
 // Extrae de un .zip el primer fichero con extensión conocida
 size_t ZipExtract (const unsigned char *pZip, size_t nZipSize, unsigned char *pOut, size_t nOutSize,
 		   char *pName, size_t nNameSize);

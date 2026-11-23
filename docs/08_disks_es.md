@@ -57,7 +57,7 @@ El fichero puede tener hasta 4 GB, que es el límite de FAT32.
 
 ## divMMC con esxDOS
 
-La **divMMC** es la interfaz de tarjeta SD más usada hoy en el Spectrum, y **esxDOS** su sistema: carga de cintas, snapshots y discos TR-DOS desde la tarjeta, comandos `.ls`, `.cd`, `.tapein`…, y un navegador de ficheros con la NMI. ZXMetalCircle incluye **esxDOS 0.8.9** (© Papaya Dezign, https://esxdos.org, uso no comercial) y una tarjeta lista para usar.
+La **divMMC** es la interfaz de tarjeta SD más usada hoy en el Spectrum, y **esxDOS** su sistema: carga de cintas, snapshots y discos TR-DOS desde la tarjeta, comandos `.ls`, `.cd`, `.tapein`…, y un navegador de ficheros con la NMI. ZXMetalCircle incluye **esxDOS 0.9.0** (© Papaya Dezign, https://esxdos.org, uso no comercial) y una tarjeta lista para usar.
 
 **Activarla**: añade `divmmc=esxdos` a `cmdline.txt`, o conéctala en cualquier momento con **Alt+X** o en la configuración (F1, C, página 6).
 
@@ -67,14 +67,15 @@ La **divMMC** es la interfaz de tarjeta SD más usada hoy en el Spectrum, y **es
 - Cada copia se lee otra vez y se compara con el original antes de borrarlo. Lo que no se puede importar (no cabe, el nombre no vale…) se queda en la carpeta y un aviso dice cuántos y por qué, por ejemplo "esxDOS: 40 importados, 2 no (raíz de la tarjeta llena: usa subcarpetas)".
 - Si en la tarjeta ya hay un fichero con el mismo nombre, el nuevo lo sustituye ("esxDOS: 3 importados (1 sustituidos)").
 - Si no cabe todo, se crea una tarjeta mayor y se pasa a ella lo que ya había.
-- Mientras se importa se ve el progreso ("esxDOS: importando 12 de 40 (9 de 20 MB)..."); la emulación está parada.
+- Mientras se importa se ve el progreso ("esxDOS: importando 12 de 40..."); la emulación está parada.
 - Con la carpeta vacía no se hace nada, y sin la divMMC conectada, tampoco.
 - La carpeta viene con el sistema de esxDOS (SYS, BIN, TMP) y una carpeta JUEGOS vacía: entran en la tarjeta la primera vez.
+- **Al actualizar el emulador**, la tarjeta se pone al día sola: si su `SYS/ESXDOS.SYS` no es el de esta versión (la copia de referencia está en `roms/esxdos` de la SD), el sistema (SYS y BIN, pero no tu configuración de `SYS/CONFIG`) se copia a `esxdos_i` y entra en la tarjeta antes de arrancar esxDOS. Hace falta, porque la ROM de esxDOS 0.9.0 no arranca con el sistema de la 0.8.9 (se queda la pantalla en negro). No se hace si en la configuración has elegido otra ROM de esxDOS. Los comandos viejos de `BIN` que ahora están en `SYS/BIN` se quedan, pero esxDOS ya no los usa: se pueden borrar.
 - Lo que graba el Spectrum (`.cp`, snapshots, `.tapeout`…) se queda en la tarjeta. La imagen no va en las SD de las versiones nuevas, así que al actualizar copiando la SD nueva encima no se pierde.
 - **Desde la 0.94 y antes** la carpeta era `esxdos` y se sincronizaba con la imagen en los dos sentidos. Al arrancar, si existe `esxdos` y no `esxdos_i`, se renombra, y lo que había se importa como cualquier otra cosa (lo que ya estaba en la tarjeta se sustituye por lo mismo y deja de estar repetido en la SD).
 - `esxdir=otra` usa otra carpeta para importar; `esxdir=0` desactiva la importación (la imagen de `hdd=`, o `hdd/esxdos.img`, se usa tal cual).
 - Al conectar se ve la pantalla de esxDOS ("sda: ZX Metal", "hd0: …FAT16") y luego el BASIC.
-- **Nombres**: esxDOS 0.8.9 muestra los nombres cortos (8.3) y pinta los bytes de 0x80 en adelante como gráficos o palabras del BASIC. Por eso, dentro de la imagen, las letras acentuadas, la ñ y la ç se guardan sin acento y lo demás como `_`; en la carpeta siguen con su nombre, y lo que graba el Spectrum vuelve a su fichero original.
+- **Nombres**: esxDOS 0.9.0 muestra los nombres largos (hasta 65 caracteres; la 0.8.9, solo los cortos 8.3) y pinta los bytes de 0x80 en adelante como gráficos o palabras del BASIC. Por eso, dentro de la imagen, las letras acentuadas, la ñ y la ç se guardan sin acento y lo demás como `_`; en la carpeta siguen con su nombre, y lo que graba el Spectrum vuelve a su fichero original.
 - **Reloj**: la carpeta trae un `SYS/RTC.SYS` propio que da a esxDOS la hora de la Pi (puesta en hora por NTP con `pool.ntp.org`, con la zona de `tz=` y `dst=`). Así los ficheros que graba el Spectrum tienen fecha y `.date` la muestra. Sin hora todavía, esxDOS sigue como sin reloj. Por dentro, el RTC.SYS lee la fecha y la hora del puerto 0x7C3B (fuente en `tools/esxrtc/rtc.asm`). Si tu tarjeta es de una versión anterior, copia `SYS/RTC.SYS` de la carpeta `esxdos_i` de la SD nueva a la tuya, dentro de `esxdos_i/SYS/`, y se importará.
 
 **Lo que no puede convivir con ella** (en la máquina real pasa lo mismo):
@@ -96,7 +97,7 @@ Al conectar una se desconectan las demás.
 
 **Probado** en el PC y en QEMU:
 - la importación: crear la imagen desde `esxdos_i/`, `.ls` y `.cd`, sustituir un fichero, y pasar a una tarjeta mayor sin perder lo que había;
-- arranque de esxDOS 0.8.9 en 48K y 128K;
+- arranque de esxDOS 0.9.0 en 48K y 128K, y el paso de una tarjeta de la 0.8.9 a la 0.9.0;
 - `.ls` y `.cd`;
 - `.tapein` seguido de `LOAD ""`, que carga un programa de la tarjeta;
 - el navegador NMI con F5;

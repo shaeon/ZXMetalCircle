@@ -1,6 +1,19 @@
-esxDOS 0.8.9 (c) 2005-2021 Papaya Dezign - https://esxdos.org
-Copia sin modificar de esxdos089.zip. Uso no comercial.
+esxDOS 0.9.0 (c) 2005-2026 Papaya Dezign - https://esxdos.org
+Copia sin modificar de esxdos090.zip (sin la carpeta flashers, que solo sirve
+para grabar la ROM en una divMMC de verdad), con los nombres en mayúsculas.
+Uso no comercial.
 
-ESXMMC.BIN va a la SD como roms/esxmmc.bin (la ROM de 8 KB de la divMMC).
-SYS y BIN se copian dentro de hdd/esxdos.img, la tarjeta FAT16 de 64 MB
-que crea build.sh, para que esxDOS arranque sin preparar nada.
+ESXMMC.BIN    esxdos-0.9.0-divmmc.bin: va a la SD como roms/esxmmc.bin (la ROM
+              de 8 KB de la divMMC).
+SYS y BIN     se copian a la tarjeta de esxDOS (hdd/esxdos.img). build.sh los
+              pone en la carpeta esxdos_i, que el emulador copia a la imagen,
+              y en roms/esxdos, la copia de referencia con la que el emulador
+              pone al día una tarjeta que tenga otra versión del sistema.
+SYS/RTC.SYS   no es de esxDOS: es el reloj de ZXMetalCircle (tools/esxrtc).
+ROMS          las demás ROM de esxDOS 0.9.0, que el emulador aún no usa:
+              esxdos-0.9.0-divide.bin          divIDE (Spectrum)
+              esxdos-0.9.0-tc2068-divmmc.bin   divMMC en un Timex TC/TS2068
+              esxdos-0.9.0-tc2068-divide.bin   divIDE en un Timex TC/TS2068
+DOCS          el manual en inglés (esxDOS_User_Manual_EN_0.9.0.pdf) y la ayuda
+              de algunos comandos.
+README.TXT    el readme de esxDOS 0.9.0, con la lista de cambios.

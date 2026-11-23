@@ -49,6 +49,7 @@
 #include "i18n.h"
 #include "videocore.h"
 #include "zx81.h"
+#include "pokfile.h"
 #include <circle/gpiomanager.h>
 #include <circle/sched/scheduler.h>
 
@@ -89,6 +90,7 @@ private:
 	void ParseOptions (void);
 	boolean InitSound (const char *pDevice);
 	void UpdateUSB (void);
+	boolean MountUSBAsSD (void);		// sin microSD: un pincho USB como SD:
 	void HandleKeyEvent (const TKeyEvent &rEvent);
 	void UpdateKeyRepeat (void);		// repetición de los cursores en los menús
 	boolean LoadTape (const char *pPath);
@@ -186,6 +188,61 @@ private:
 	void PadEditKey (u8 nKey, unsigned nRow);
 	void PadEditBackToList (unsigned nRow);
 	boolean PadEditMenuResult (TMenuResult Result);
+	// Pokes (kernelpokes.cpp): Alt+C los trucos del juego, Alt+O un POKE a mano
+	// Se ha cargado otro juego (nKind: PokeGame..., de kernelpokes.cpp)
+	void PokeSetGame (const char *pPath, unsigned nKind);
+	boolean PokeGameStillThere (void);		// tras un reset
+	void PokeOpen (void);				// Alt+C
+	void PokeOpenManual (boolean bFromList);	// Alt+O, o la línea de la lista
+	boolean PokeLoadFile (const char *pPath, boolean bQuiet);	// un .POK
+	void PokeShowList (unsigned nSelected);
+	void PokeEnterMenu (void);
+	void PokeToggle (unsigned nTrainer);
+	boolean PokeMenuResult (TMenuResult Result);
+	boolean PokeAvailable (void);			// no con el ZX81 (avisa)
+	// F2 en el navegador (kernelfiles.cpp): renombrar, borrar, carpeta nueva
+	boolean FileMenuResult (TMenuResult Result);
+	boolean FileProtected (const char *pPath);
+	const char *FileCheckSource (const char *pPath);
+	void FileBack (const char *pSelect, const char *pFormat, const char *pName);
+	void FileShowOptions (void);
+	void FileAskRename (const char *pHelp, const char *pText);	// pText: lo escrito (0 = el nombre)
+	void FileAskNewFolder (const char *pHelp, const char *pText);
+	void FileAskDelete (void);
+	void FileRename (const char *pNewName);
+	void FileNewFolder (const char *pName);
+	void FileDelete (void);
+	static const char *FileBaseName (const char *pPath);
+	void FileUpdateClip (void);
+	void FileForgetClip (void);
+	void FileMark (boolean bMove);
+	void FilePaste (void);
+	void FilePasteAs (const char *pName, boolean bReplace);
+	void FileCopyPoll (void);			// cada cuadro con el menú abierto
+
+	// F2 en el navegador de la cinta (kerneltape.cpp)
+	boolean TapeMenuResult (TMenuResult Result);
+	boolean TapeCanSaveInPlace (void);
+	void TapeBack (unsigned nBlock, const char *pMessage);
+	void TapeUpdateClip (void);
+	void TapeForgetClip (void);
+	boolean TapeClipSame (void);
+	void TapeMark (boolean bMove);
+	unsigned TapeEditCount (void);
+	void TapeShowOptions (boolean bSingle);
+	void TapeAskDelete (void);
+	void TapeAskRename (void);
+	void TapePaste (boolean bAfter);
+	void TapeAskLeave (void);
+	void TapeSaveDir (char *pDir, unsigned nSize);
+	void TapeAskSaveAs (const char *pHelp, const char *pText);
+	boolean TapeWrite (const char *pPath, boolean bBackup);
+	void TapeLeave (const char *pMessage, boolean bSeek);
+	void TapeSaveAs (const char *pName);
+	void PokeSetZXDBID (const char *pID);		// el juego vino del buscador de ZXDB
+	boolean PokeFetchOnline (void);			// su .pok, de ZXDB
+	void PokeAskSearch (void);
+	void PokeShowResults (unsigned nSelected);
 	void PadEditPoll (void);
 	void UpdatePadPlayers (void);
 	void LoadPadProfile (unsigned nPad, TJoystickMode Mode);	// joysticks/VVVV-PPPP/<tipo>.txt		// a qué jugador va cada mando (pad1, pad2, padextra)
@@ -211,6 +268,7 @@ private:
 	static void UpdateDownloadProgress (void *pParam, size_t nReceived, size_t nTotal);
 	static void UpdateInstallProgress (void *pParam, unsigned nDone, unsigned nTotal);
 	boolean IsEsxImageMounted (void) const;
+	void EsxCheckSystem (void);
 	void EsxFolderToImage (boolean bRemount);
 	static void EsxProgressHandler (unsigned nDone, unsigned nTotal, unsigned nMBDone, unsigned nMBTotal,
 					void *pParam);
@@ -269,6 +327,7 @@ private:
 	CEMMCDevice		m_EMMC;
 	FATFS			m_FileSystem;
 	boolean			m_bSDMounted;
+	boolean			m_bUSBRescan;		// mirar los aparatos USB aunque no haya cambios
 
 	CVideo			m_Video;
 	CZXKeyboard		m_Keyboard;
@@ -430,6 +489,54 @@ private:
 	TUpdateBootResult	m_UpdateBootResult;
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZXDBInput;		// la línea de texto es el título para ZXDB
+	// F2 en el navegador (kernelfiles.cpp)
+	unsigned		m_nFileStage;
+	char			m_FileDir[MENU_PATH_LEN];	// la carpeta del navegador
+	char			m_FileName[MENU_NAME_LEN];	// lo elegido (CP850, como en la SD)
+	boolean			m_bFileHasEntry;	// hay algo elegido (no "..")
+	boolean			m_bFileIsDir;
+	unsigned		m_FileOption[8];	// línea de la lista -> opción
+	char			m_ClipPath[MENU_PATH_LEN];	// marcado para copiar o mover ("" = nada)
+	boolean			m_bClipMove;
+	char			m_PasteName[MENU_NAME_LEN];	// con qué nombre se copia
+	char			m_PasteFree[MENU_NAME_LEN];	// "nombre (2).ext"
+	boolean			m_bPasteCanReplace;
+	unsigned		m_nFileOptions;
+	unsigned		m_nTapeStage;		// F2 en la cinta
+	unsigned		m_nTapeEditBlock;	// el bloque elegido
+	boolean			m_bTapeSingle;		// solo ese bloque (no con sus datos)
+	unsigned		m_TapeOption[8];
+	unsigned		m_nTapeOptions;
+	unsigned		m_nTapeClipFirst;	// marcado para copiar o mover
+	unsigned		m_nTapeClipCount;	// (0 = nada)
+	boolean			m_bTapeClipMove;
+	u8			*m_pTapeClipData;	// una copia (CTape::ExtractBlocks)
+	unsigned		m_nTapeClipSize;
+	boolean			m_bTapeClipTZX;		// de un TZX (si no, de un TAP)
+	unsigned		m_nTapeClipSerial;	// de qué cinta (CTape::GetSerial)
+	char			m_TapeClipName[64];
+
+	// Pokes (kernelpokes.cpp)
+	CPokFile		m_Pokes;
+	char			m_PokeGame[MENU_NAME_LEN];	// el juego cargado, sin carpeta ni extensión
+	char			m_PokeTitle[MENU_NAME_LEN];	// el .POK que se ve
+	char			m_PokeGamePath[MENU_PATH_LEN];	// el fichero del juego (para su huella)
+	unsigned		m_nPokeGameKind;	// snapshot, cinta, disco o cartucho
+	char			m_PokeZXDBID[12];	// su ficha de ZXDB, si vino del buscador
+	boolean			m_bPokeOnline;		// ya se ha buscado su .pok en ZXDB
+	boolean			m_bPokeTried;		// ya se ha buscado su .POK en pokes/
+	unsigned		m_nPokeResets;		// los reset al aplicar (si cambian, se perdieron)
+	enum				// lo que se cargó (PokeSetGame)
+	{
+		PokeGameNone,
+		PokeGameSnapshot,	// con un reset se va
+		PokeGameTape,		// se queda mientras la cinta siga puesta
+		PokeGameDisk,		// mientras el disco siga en la unidad
+		PokeGameCartridge	// mientras el cartucho siga puesto
+	};
+	unsigned		m_nPokeStage;		// qué espera el menú (PokeStage...)
+	unsigned		m_nPokePending;		// el truco que pide un valor
+	boolean			m_bPokeManualFromList;	// el POKE a mano vuelve a la lista
 	boolean			m_bZXDBChoice;		// la lista es la de los resultados de ZXDB
 	TZXInfoResult		m_ZXDBResults[ZXINFO_MAX_RESULTS];
 	unsigned		m_nZXDBResults;

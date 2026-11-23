@@ -611,6 +611,146 @@ boolean CEsxFolder::ExportTree (const char *pSrc, const char *pDst, unsigned nDe
 	return bOK;
 }
 
+// ¿Los dos ficheros son iguales? (pequeños: el ESXDOS.SYS)
+boolean CEsxFolder::SameFile (const char *pA, const char *pB)
+{
+	FIL A, B;
+	if (f_open (&A, pA, FA_READ) != FR_OK)
+	{
+		return FALSE;
+	}
+	if (f_open (&B, pB, FA_READ) != FR_OK)
+	{
+		f_close (&A);
+		return FALSE;
+	}
+	boolean bSame = f_size (&A) == f_size (&B);
+	u8 BufA[512], BufB[512];
+	while (bSame)
+	{
+		UINT nA = 0, nB = 0;
+		if (   f_read (&A, BufA, sizeof BufA, &nA) != FR_OK
+		    || f_read (&B, BufB, sizeof BufB, &nB) != FR_OK
+		    || nA != nB || memcmp (BufA, BufB, nA) != 0)
+		{
+			bSame = FALSE;
+		}
+		if (nA < sizeof BufA)
+		{
+			break;
+		}
+	}
+	f_close (&A);
+	f_close (&B);
+	return bSame;
+}
+
+boolean CEsxFolder::SystemUpToDate (const char *pRefDir)
+{
+	CString Ref;
+	Ref.Format ("%s/SYS/ESXDOS.SYS", pRefDir);
+	FILINFO Info;
+	if (f_stat (Ref, &Info) != FR_OK)
+	{
+		return TRUE;			// sin copia de referencia, nada que comparar
+	}
+
+	CHardDiskImage Image;
+	if (Image.Open (m_Image) != 0)
+	{
+		return FALSE;			// no hay tarjeta: se creará con el sistema
+	}
+	boolean bSame = FALSE;
+	FATFS *pFS = new FATFS;
+	if (MountImage (&Image, pFS))
+	{
+		bSame = SameFile (Ref, ESX_IMAGE_VOLUME "/SYS/ESXDOS.SYS");
+	}
+	UnmountImage (pFS);
+	delete pFS;
+	Image.Close ();
+	return bSame;
+}
+
+// Copia un árbol de la SD a otro sitio de la SD (sin SYS/CONFIG si no se pide)
+boolean CEsxFolder::CopyTree (const char *pSrc, const char *pDst, unsigned nDepth, boolean bWithConfig)
+{
+	if (nDepth > MAX_DEPTH)
+	{
+		return FALSE;
+	}
+	f_mkdir (pDst);
+	DIR Dir;
+	FILINFO Info;
+	if (f_opendir (&Dir, pSrc) != FR_OK)
+	{
+		return FALSE;
+	}
+	boolean bOK = TRUE;
+	u8 *pBuffer = new u8[COPY_BUFFER_SIZE];
+	while (f_readdir (&Dir, &Info) == FR_OK && Info.fname[0] != '\0')
+	{
+		CString Src, Dst;
+		Src.Format ("%s/%s", pSrc, Info.fname);
+		Dst.Format ("%s/%s", pDst, Info.fname);
+		if (Info.fattrib & AM_DIR)
+		{
+			if (bWithConfig || nDepth != 0 || strcasecmp (Info.fname, "CONFIG") != 0)
+			{
+				bOK &= CopyTree (Src, Dst, nDepth + 1, bWithConfig);
+			}
+			continue;
+		}
+		FIL In, Out;
+		if (f_open (&In, Src, FA_READ) != FR_OK)
+		{
+			bOK = FALSE;
+			continue;
+		}
+		if (f_open (&Out, Dst, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK)
+		{
+			f_close (&In);
+			bOK = FALSE;
+			continue;
+		}
+		UINT nRead = 0, nWritten = 0;
+		while (f_read (&In, pBuffer, COPY_BUFFER_SIZE, &nRead) == FR_OK && nRead > 0)
+		{
+			if (f_write (&Out, pBuffer, nRead, &nWritten) != FR_OK || nWritten != nRead)
+			{
+				bOK = FALSE;
+				break;
+			}
+		}
+		f_close (&Out);
+		f_close (&In);
+	}
+	delete [] pBuffer;
+	f_closedir (&Dir);
+	return bOK;
+}
+
+boolean CEsxFolder::StageSystem (const char *pRefDir, boolean bWithConfig)
+{
+	if (!IsEnabled ())
+	{
+		return FALSE;
+	}
+	f_mkdir (m_Folder);
+	boolean bOK = TRUE;
+	static const char *Dirs[] = {"SYS", "BIN"};
+	for (unsigned i = 0; i < sizeof Dirs / sizeof Dirs[0]; i++)
+	{
+		CString Src, Dst;
+		Src.Format ("%s/%s", pRefDir, Dirs[i]);
+		Dst.Format ("%s/%s", m_Folder, Dirs[i]);
+		bOK &= CopyTree (Src, Dst, 0, bWithConfig);
+	}
+	CLogger::Get ()->Write (From, LogNotice, "sistema de esxDOS de %s a %s%s", pRefDir, m_Folder,
+				bOK ? "" : " (con errores)");
+	return bOK;
+}
+
 boolean CEsxFolder::Import (TProgressHandler *pProgress, void *pParam)
 {
 	m_pError = 0;

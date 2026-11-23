@@ -51,10 +51,15 @@ enum TMenuResult
 	MenuResultUnitEject,		// SUPR en la pantalla de unidades (GetSelectedUnit ())
 	MenuResultTapeSeek,		// ENTER en el navegador de la cinta (GetSelectedTapeBlock ())
 	MenuResultTapeInvert,		// P en el navegador de la cinta: invertir la polaridad
+	MenuResultTapeOptions,		// F2 en el navegador de la cinta: copiar, mover, borrar...
+	MenuResultTapeLeave,		// ESC, F3 o ENTER con la cinta cambiada (IsTapeLeaveSeek)
 	MenuResultInput,		// línea de texto: ENTER (GetInput ())
 	MenuResultInputCancel,		// línea de texto: ESC
 	MenuResultListKey,		// lista de dos columnas: una tecla (GetListKey (), GetListSelected ())
-	MenuResultZXDBSearch		// navegador: buscar en ZXDB (la línea de la raíz o F3)
+	MenuResultZXDBSearch,		// navegador: buscar en ZXDB (la línea de la raíz o F3)
+	MenuResultOpenPokes,		// P en la ayuda: los pokes del juego (Alt+C)
+	MenuResultFileOptions,		// F2 en el navegador: renombrar, borrar... (GetBrowserSelection)
+	MenuResultProgressCancel	// ESC en la barra de progreso (OpenProgress)
 };
 
 class CMenu : public CTNFSListener
@@ -64,6 +69,22 @@ public:
 	~CMenu (void);
 
 	boolean OpenBrowser (void);
+	boolean OpenBrowserIn (const char *pDir);	// en esa carpeta (si no existe, donde estaba)
+	// Lo elegido en el navegador, para F2: la carpeta (siempre) y el nombre
+	// (FALSE si es "..", la línea de ZXDB o de TNFS, o no hay nada)
+	boolean GetBrowserSelection (char *pDir, unsigned nDirSize, char *pName, unsigned nNameSize,
+				     boolean *pIsDir) const;
+	// Vuelta al navegador (tras F2) con pSelect elegido y un aviso arriba
+	void ReturnToBrowser (const char *pSelect, const char *pMessage);
+	// F2 en el navegador (los cambios en la SD: "Cambios en el navegador")
+	void SetFileChanges (boolean bAllowed)	{ m_bFileChanges = bAllowed; }
+	// Lo marcado para copiar o mover: una línea encima de las de abajo ("" = nada)
+	void SetBrowserClip (const char *pText);
+
+	// Barra de progreso (copiar un fichero): título, dos líneas y "ESC cancelar";
+	// ESC da MenuResultProgressCancel (la cierra quien la abrió)
+	void OpenProgress (const char *pTitle, const char *pLine1, const char *pLine2);
+	void SetProgress (u64 nDone, u64 nTotal);
 	void OpenHelp (void);			// ayuda general (F1); ENTER abre el selector
 	void OpenKeyHelp (boolean bZX81 = FALSE);	// ayuda del teclado (Alt+K); del ZX81 si está puesto
 	void SetSettings (CSettings *pSettings)	{ m_pSettings = pSettings; }
@@ -75,8 +96,13 @@ public:
 	// selector solo con los ficheros de esa unidad (lo elegido se devuelve con
 	// MenuResultFileSelected y TakeUnitTarget () dice la unidad); SUPR la vacía.
 	void OpenUnits (void);
-	void OpenTape (const CTape *pTape);	// navegador de bloques de la cinta (F3)
+	// Navegador de bloques de la cinta (F3), con nSelect elegido (-1: donde
+	// está la cinta) y un aviso arriba
+	void OpenTape (const CTape *pTape, int nSelect = -1, const char *pMessage = 0);
 	unsigned GetSelectedTapeBlock (void) const	{ return m_nTapeSelected; }
+	boolean IsTapeLeaveSeek (void) const	{ return m_bTapeLeaveSeek; }	// salir con ENTER
+	// Lo marcado para copiar o mover: una línea encima de las de abajo ("" = nada)
+	void SetTapeClip (const char *pText);
 	// bFromShortcut: abierta con Alt+U (ESC cierra el menú en lugar de volver a la ayuda)
 	void SetUnitsFromShortcut (boolean bFromShortcut)	{ m_bUnitsFromShortcut = bFromShortcut; }
 	// Alt+F1: ESC en la configuración cierra el menú en lugar de volver a la ayuda
@@ -101,6 +127,15 @@ public:
 	// pFooter: la línea de abajo (0 = la de Alt+V: "ENTER pulsar...")
 	void OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter = 0);
 	const char *GetInput (void) const	{ return m_InputBuf; }
+	// Línea de texto libre (nombres de fichero): minúsculas, mayúsculas con
+	// Mayúsculas o CAPS SHIFT, símbolos con Ctrl o SYMBOL SHIFT (como en el
+	// Spectrum: SS+8 '(', SS+0 '_', SS+J '-', SS+M '.'...), cursores, Inicio,
+	// Fin, retroceso y SUPR. Empieza con pInitial (bytes de la SD, CP850) y el
+	// cursor en nCursor. Mismos resultados que OpenInput.
+	// nMax: lo más largo (0 = lo que quepa)
+	void OpenText (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter,
+		       const char *pInitial, unsigned nCursor, unsigned nMax = 0);
+	boolean IsTyping (void) const		{ return m_Mode == ModeInput && m_bInputText; }
 
 	// Lista de dos columnas (nombre y valor), como la configuración: la lleva
 	// quien la abre. El menú mueve la selección (cursores, RePág, AvPág,
@@ -157,7 +192,7 @@ private:
 	CVideo *m_pVideo;
 
 	enum TMode { ModeClosed, ModeBrowser, ModeHelp, ModeKeyHelp, ModeSettings, ModeChoice, ModeUnits,
-		     ModeAbout, ModeTape, ModeInput, ModeList, ModeKeyList };
+		     ModeAbout, ModeTape, ModeInput, ModeList, ModeKeyList, ModeProgress };
 	unsigned SettingsOnPage (unsigned *pIndex, unsigned nMax) const;
 	void FixSettingsRow (void);
 	TMode m_Mode;
@@ -225,7 +260,15 @@ private:
 	boolean m_bSettingsFromShortcut;	// configuración abierta con Alt+F1
 	char m_InputHelp[2][48];
 	char m_InputFooter[48];
-	char m_InputBuf[20];		// lo escrito en la línea de texto
+	char m_InputBuf[MENU_NAME_LEN];	// lo escrito en la línea de texto
+	unsigned m_nInputMax;		// lo más que cabe (19 en OpenInput)
+	boolean m_bInputText;		// OpenText: texto libre con cursor
+	unsigned m_nInputCursor;
+	boolean m_bFileChanges;		// F2 en el navegador
+	char m_BrowserClip[64];		// "Para copiar: juegos/x.tzx"
+	u64 m_nProgressDone;
+	u64 m_nProgressTotal;
+	char m_PendingSelect[MENU_NAME_LEN];	// ReturnToBrowser: el que se elige al volver
 	char m_Choice[MENU_CHOICE_ITEMS][100];	// nombres de ZIP de hasta 96
 	unsigned m_nChoices;
 	unsigned m_nChoiceSelected;
@@ -238,6 +281,9 @@ private:
 	const CTape *m_pTape;		// navegador de la cinta
 	unsigned m_nTapeSelected;
 	unsigned m_nTapeTop;
+	boolean m_bTapeLeaveSeek;
+	char m_TapeClip[64];		// "Marcados: bloques 3-4"
+	char m_TapeMessage[64];		// aviso arriba (tras una edición)
 	boolean m_bEditing;		// escribiendo una opción (IP) de la configuración
 	boolean m_bEditBad;		// lo escrito no es una IP válida
 	char m_EditBuf[16];

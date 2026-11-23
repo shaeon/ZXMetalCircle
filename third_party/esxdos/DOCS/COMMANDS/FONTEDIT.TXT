@@ -1,0 +1,311 @@
+===============================================================================
+
+                             F O N T E D I T
+
+                 A font editor for the ZX Spectrum with esxDOS
+
+                              USER MANUAL - Version 1.1
+
+===============================================================================
+
+CONTENTS
+
+  1.  Introduction
+  2.  Installing and starting
+  3.  Controls
+  4.  The screen and the menu bar
+  5.  File
+  6.  Font and Char
+  7.  Tools
+  8.  Exit
+  9.  Messages
+  10. Tips
+  11. Credits
+
+
+-------------------------------------------------------------------------------
+1. INTRODUCTION
+-------------------------------------------------------------------------------
+
+fontedit is the font editor from ZX ArtWorks 128 (Text > Edit font) taken
+out of the paint program and turned into an esxDOS dot command. It edits a
+Spectrum font file straight from the SD card: type its name, draw, save,
+and you are back in BASIC.
+
+A font has 96 characters (codes 32 to 127), 8 x 8 pixels each, 768 bytes
+in all - the same layout as the Spectrum's own character set, so a font
+made here can be used by any program that sets CHARS (23606).
+
+What it needs:
+
+  - Any ZX Spectrum (48K, 128K, +2, +2A, +2B, +3) or an emulator set to
+    one of them.
+  - An esxDOS interface (DivIDE, DivMMC and similar).
+  - Optional: a Kempston mouse.
+  - Optional: 128K memory, for the three RAM slots (chapter 5). On a 48K
+    machine those items are greyed out; everything else works.
+
+
+-------------------------------------------------------------------------------
+2. INSTALLING AND STARTING
+-------------------------------------------------------------------------------
+
+Copy the file "fontedit" to the /BIN folder of your SD card.
+
+Then, from BASIC:
+
+    .fontedit MYFONT
+
+  edits MYFONT.FNT in the current folder. If the name has no extension,
+  .FNT is added; with an extension it is used as typed, so
+
+    .fontedit GAME.CHR
+    .fontedit /FONTS/ROUND.FNT
+
+  work too. Quotes around the name are allowed and ignored.
+
+  Typing .fontedit on its own shows a short help text.
+
+An existing file must be exactly 768 bytes long (files with a +3DOS
+header, as saved by BASIC, are fine: the header is skipped). If the file
+does not exist it is created straight away as a copy of the Spectrum ROM
+font, so
+
+    .fontedit NEWFONT
+
+starts a brand new font from the ROM characters.
+
+The editor needs about 7K of free BASIC memory for its work space. With
+a very large BASIC program in memory it may stop with "Not enough free
+memory"; clear the program (NEW) and try again.
+
+
+-------------------------------------------------------------------------------
+3. CONTROLS
+-------------------------------------------------------------------------------
+
+Keyboard:
+
+    Q .......... pointer up
+    A .......... pointer down
+    O .......... pointer left
+    P .......... pointer right
+    M .......... click (hold it down to draw)
+    SPACE ...... cancel / close
+    K .......... Kempston mouse on / off
+
+  The pointer speeds up the longer you hold a direction key, so small
+  taps move it one pixel at a time and a long press crosses the screen
+  quickly.
+
+Kempston mouse:
+
+  Press K to turn mouse support on (it is off when the program starts).
+  After that the mouse and the keys both move the pointer. The LEFT button
+  works like M and the RIGHT button works like SPACE. Press K again to turn
+  it off.
+
+  Only turn it on when a Kempston mouse is really connected. With no mouse
+  the pointer just doesn't move with it. With a Kempston joystick
+  interface, or on a machine with nothing connected, the pointer may
+  wander by itself. If that happens, press K to turn the mouse off again.
+
+SPACE:
+
+  SPACE closes any open menu, message box or the Test text window, and
+  backs out of the "Save changes?" question when you exit.
+
+
+-------------------------------------------------------------------------------
+4. THE SCREEN AND THE MENU BAR
+-------------------------------------------------------------------------------
+
+The top line shows "Font editor - " and the name of the file being edited.
+
+The screen:
+
+  - The edit grid: the current character, 8 x 8. Click a square to turn
+    that pixel on or off. Keep M (or the left button) held down and move:
+    every square the pointer passes over is flipped too, so lines can be
+    drawn in one stroke (one Undo step for the whole stroke). The value
+    of each row (0-255) is shown on the left.
+  - Next to it: the character at normal size, normal and inverted, and a
+    panel with its code and x2 / x4 previews.
+  - At the bottom: the whole font, 6 rows of 16. Click a character to
+    edit it; a red arrow marks the current one.
+
+The menu bar:
+
+    <  File  Font  Char  Tools  Exit  >
+
+  Click a menu title to open its drop-down, then click an item. Clicking
+  outside the menu, or pressing SPACE, closes it without choosing. Greyed
+  out items can't be used (the RAM items on a 48K machine).
+
+  Items with a tick or a cross next to them are toggles: clicking one turns
+  it on (tick) or off (cross), and the menu stays open so you can change
+  several at once. The three RAM slots work as a group where only one can
+  be on.
+
+  The arrows at the ends of the bar step to the previous / next character
+  (wrapping round from 127 to 32 and back).
+
+
+-------------------------------------------------------------------------------
+5. FILE
+-------------------------------------------------------------------------------
+
+    Save ........................... write the font to its file
+    Reload ......................... read the file again
+    Save to RAM / Load from RAM .... keep up to 3 fonts in memory (128K)
+    RAM slot 1 / 2 / 3 ............. (only one on) which slot to use
+    Merge .......................... (toggle) loads combine with the font
+                                     by XOR
+
+Save:
+
+  Writes the font over the file named on the command line, without asking
+  (that is the file you came to edit). Files are saved bare, without a
+  header: exactly 768 bytes, the same as ZX ArtWorks. "Font saved"
+  confirms it.
+
+Reload:
+
+  Reads the file from the card again, throwing away the changes made since
+  the last save. It is one Undo step, so an unwanted reload can be taken
+  back.
+
+RAM slots (128K only):
+
+  Three spare fonts kept in the 128K's extra memory, to try out ideas or
+  copy characters between versions. Pick a slot (1, 2 or 3), then Save to
+  RAM copies the current font into it and Load from RAM brings it back.
+  All three slots start as the ROM font. They are only kept while fontedit
+  is running: they are gone once you exit, so save to the card what you
+  want to keep.
+
+Merge:
+
+  When Merge is on, Reload and Load from RAM combine what they load with
+  the current font by XOR: pixels set in both are cleared, pixels set in
+  one are set. When it is off, a load replaces the font completely. Loading
+  the same font twice with Merge on clears it to blank.
+
+
+-------------------------------------------------------------------------------
+6. FONT AND CHAR
+-------------------------------------------------------------------------------
+
+The two menus have the same items. Font acts on every character at once;
+Char acts on the current one only.
+
+    Invert ......... swap on and off pixels
+    Rotate ......... turn 90 degrees clockwise
+    Scroll down .... move down one row (the bottom row wraps to the top)
+    Scroll right ... move right one pixel (wrapping)
+    Outline ........ keep only the outline of the shape
+    Bold ........... thicken
+    Italic ......... slant
+    Clear .......... blank
+    Copy ROM ....... back to the Spectrum ROM's original
+
+Each of them is one Undo step.
+
+
+-------------------------------------------------------------------------------
+7. TOOLS
+-------------------------------------------------------------------------------
+
+    Undo ........... take back the last change (again = redo)
+    Copy char ...... copy the current character
+    Paste char ..... paste it over the current character
+    Test text ...... show the whole font and a sample sentence in it
+
+Undo:
+
+  There is one Undo step. It covers drawing strokes, every Font and Char
+  operation, Paste char, Reload and Load from RAM. Choosing Undo again
+  puts the change back.
+
+Copy char / Paste char:
+
+  Copy char remembers the current character. Select another one and Paste
+  char puts the copy over it. The copy stays, so it can be pasted as many
+  times as you like.
+
+Test text:
+
+  Opens a window with all 96 characters and the sentence "Pack my box with
+  five dozen liquor jugs!" printed in the font. Click or press SPACE to
+  close it.
+
+
+-------------------------------------------------------------------------------
+8. EXIT
+-------------------------------------------------------------------------------
+
+Exit, on the menu bar, goes back to BASIC.
+
+If the font was changed since it was loaded or last saved, a box asks
+"Save changes? (y/n)":
+
+    Y .............. save, then exit (if the save fails, the error is shown
+                     and you stay in the editor)
+    N .............. exit without saving
+    SPACE .......... (or the right button) back to the editor
+
+The screen is cleared on the way out.
+
+
+-------------------------------------------------------------------------------
+9. MESSAGES
+-------------------------------------------------------------------------------
+
+When starting (shown by esxDOS, back in BASIC):
+
+    Not enough free memory ...... not enough free BASIC memory for the
+                                  work space (chapter 2)
+    Not a 768 byte font file .... the file is not exactly 768 bytes long
+    other esxDOS errors ......... for example when the file does not
+                                  exist
+
+In the editor (a message box; click or SPACE closes it):
+
+    Font saved .................. Save worked
+    Not a 768 byte font ......... Reload found a file of the wrong size
+    Disk error nn ............... any other esxDOS error, with its number
+
+
+-------------------------------------------------------------------------------
+10. TIPS
+-------------------------------------------------------------------------------
+
+  - Before a big change to the whole font, Save to RAM first (128K): the
+    slot is a second safety net besides the one Undo step.
+  - Italic or Bold on a whole font, then fix the few characters that came
+    out wrong with Char > Copy ROM and redraw them by hand.
+  - Use Test text often: a character that looks fine on its own can look
+    wrong next to its neighbours.
+  - Fonts made here load straight into ZX ArtWorks, and the other way
+    round.
+  - To use a font from BASIC, load it somewhere safe and point CHARS at it
+    minus 256. For a font loaded at 64000:
+
+        POKE 23606,0: POKE 23607,249
+
+    (64000 - 256 = 63744 = 249 * 256 + 0). POKE 23606,0: POKE 23607,60
+    brings the ROM font back.
+
+
+-------------------------------------------------------------------------------
+11. CREDITS
+-------------------------------------------------------------------------------
+
+  fontedit, version 1.1
+
+  Code by namco/nexgen. Taken from ZX ArtWorks 128.
+  This manual was revised with the help of an AI agent.
+
+  Thanks lordcoxis for your help with esxDOS.
+
+===============================================================================

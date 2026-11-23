@@ -35,7 +35,7 @@ La licencia y los créditos también se ven en el propio emulador: F1 y luego **
 
 - **Spectranet** © Dylan Smith (https://spectrum.alioth.net), firmware con licencia MIT; la emulación de la tarjeta se basa en la de Fuse (Philip Kendall y otros, GPL v2 o posterior).
 
-- **esxDOS 0.8.9** © 2005-2021 Papaya Dezign (https://esxdos.org): ROM y ficheros del sistema, sin modificar, para uso no comercial.
+- **esxDOS 0.9.0** © 2005-2026 Papaya Dezign (https://esxdos.org): ROM y ficheros del sistema, sin modificar, para uso no comercial.
 
 - **Mbed TLS** 3.6 (Apache-2.0), **jsmn** (MIT, Serge Zaitsev), **ZXInfo API** (api.zxinfo.dk) y **Spectrum Computing** (ZXDB). Lista de certificados raíz de **Mozilla** (MPL-2.0).
 
@@ -72,7 +72,7 @@ Este proyecto se ofrece **"tal cual", sin garantía de ningún tipo**, expresa o
 
 ZX Spectrum y Sinclair son marcas de sus respectivos propietarios; Raspberry Pi es una marca de Raspberry Pi Ltd. Este proyecto no está afiliado a ellos ni cuenta con su respaldo.
 
-## Estado (versión 1.11)
+## Estado (versión 1.12)
 
 Hecho:
 
@@ -80,6 +80,7 @@ Hecho:
 - Contención de memoria y de E/S, bus flotante y lectura de 0x7FFD en el 128K.
 - Borde completo y pantalla redibujados según el t-state, de modo que funcionan los efectos multicolor y del borde.
 - ULAplus: modo de 64 colores, incluidos los cambios de paleta en mitad del cuadro.
+- **Efecto nieve** en el 16K, 48K, 128K y +2 gris, como en la máquina real (tabla de fases de Weiv): con el registro I en memoria lenta, el refresco del Z80 estorba la lectura de la pantalla de la ULA. `snow=0` lo quita.
 - Tamaño de borde seleccionable (sin borde, estándar, completo, enorme) y scanlines.
 - Beeper y AY-3-8912 a 48 kHz, por HDMI o por el jack de 3,5 mm (PWM). El AY tiene reparto estéreo seleccionable (ABC, ACB, BAC o mono). El beeper pasa por un modelo del altavoz tomado de Fuse.
 - Sonido de la carga: la señal de la cinta se oye por el altavoz, como en el Spectrum real.
@@ -105,6 +106,7 @@ Hecho:
 - Ficheros .CSW sueltos (versiones 1 y 2, RLE y Z-RLE).
 - Ficheros .PZX (Perfect ZX Tape): pulsos (PULS), datos con su nivel inicial (DATA), pausas (PAUS), textos (BRWS) y paradas (STOP). Guardan la polaridad real de la señal, que el TZX no guarda: hay cargadores que la necesitan (Forbidden Planet). Los bloques de datos con los tiempos de la ROM se cargan también al instante.
 - **Polaridad**: en el navegador de bloques (F3), la tecla **P** invierte la señal de la cinta. Sirve para los TZX que la tienen al revés (con el de Forbidden Planet, el cargador desajusta medio bit y no termina nunca). Vuelve a la normal al poner otra cinta.
+- **Editar los bloques de una cinta**: en el navegador de bloques (F3), F2 copia, mueve, borra y renombra bloques (una cabecera va con sus datos), también a otra cinta (TAP y TZX se convierten solo si no se pierde nada). Los cambios quedan en memoria hasta guardar; al guardar en el mismo fichero, el original queda como `.bak`. No en TZX con saltos o bucles, CSW ni PZX.
 - Cartuchos del Interface 2 (.ROM).
 - ZX81, con el emulador ZX81+ de Paul Farrow (en el 128K): F7, o cargando un programa .P desde el navegador o la web.
 - Interface 1 con hasta 8 microdrives (cartuchos .MDR y .MDV, lectura y escritura), RS232 y red ZX Net.
@@ -114,14 +116,16 @@ Hecho:
 - Grabación de la señal de cinta (salida MIC) con Alt+W, para programas con rutinas de grabación propias.
 - Spectrum +3 con disquetera: discos .DSK (normales y extendidos, con protecciones: sectores débiles, Speedlock, pistas largas, errores de CRC) y discos de 720K (la unidad pasa sola a ser de 3,5"), con el controlador uPD765 de MAME.
 - Spectrum +3e (ROMs de Garry Lancaster) con disco duro en una tarjeta ZXMMC: imágenes .VHD, .IMG, .RAW y .HDF.
-- divMMC con esxDOS 0.8.9: su tarjeta es una imagen (`hdd/esxdos.img`) y lo que se deja en la carpeta `esxdos_i` se copia a ella; puertos divMMC en el +3e.
+- divMMC con esxDOS 0.9.0: su tarjeta es una imagen (`hdd/esxdos.img`) y lo que se deja en la carpeta `esxdos_i` se copia a ella; puertos divMMC en el +3e.
 - Tarjeta de red Spectranet, con el firmware oficial.
 - ROMs propias para cualquier máquina (carpeta `roms` de la SD).
 - Red por WiFi o cable: servidor web para gestionar la SD desde el navegador (se puede apagar, dejar en solo lectura o proteger con contraseña), hora por NTP y búsqueda y descarga de programas de ZXDB por HTTPS, desde la web o desde el navegador de ficheros del propio emulador (F3).
 - Configuración desde el emulador (F1, C), con guardado en `cmdline.txt` y reinicio de la Pi.
 - Menús y página web en español e inglés (se pueden añadir más idiomas sin recompilar).
 - En las Pi de 4 núcleos, la ampliación de la imagen va en el núcleo 1.
-- Navegador de ficheros de la SD con directorios y salto por letra; al volver a abrirlo, el cursor sigue en el último fichero elegido.
+- Navegador de ficheros de la SD con directorios y salto por letra; al volver a abrirlo, el cursor sigue en el último fichero elegido. Con F2: renombrar, borrar, crear carpetas, copiar y mover (con barra de progreso), con las mismas protecciones que la web (`filechanges=0` lo quita).
+- **Pokes y trucos**: Alt+C lista los pokes del juego desde un .POK (en `pokes/`, o descargado de ZXDB si hay red) y Alt+O mete un POKE a mano.
+- **Arrancar desde un pincho USB sin tarjeta microSD**: el primer disco USB hace de `SD:`.
 - Teclado USB con conexión en caliente.
 - Entrada de cinta desde un casete real, por un GPIO (con un comparador) o por una tarjeta de sonido USB (Pi 4/400), con grabación a .TZX (Alt+G).
 - Teclado real de Spectrum y dos joysticks Atari por GPIO, con el montaje de pastbytes para ZXBaremulator: teclados de 48K, Spectrum+, 128 y +2 gris (8 × 5) o del +2A/+2B/+3 (13 × 11), elegido con `gpiokbd=` (ver más abajo).

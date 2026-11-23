@@ -28,7 +28,8 @@
 #include <circle/time.h>
 #include <circle/startup.h>
 #if RASPPI >= 4
-#include <circle/sound/usbsoundbasedevice.h>	// sonido USB: solo Pi 4 y 400 (xHCI)
+#include <circle/sound/usbsoundbasedevice.h>
+#include <circle/devicenameservice.h>	// sonido USB: solo Pi 4 y 400 (xHCI)
 #endif
 #include <circle/machineinfo.h>
 
@@ -109,7 +110,9 @@ enum TAction
 	ActionUnits,
 	ActionVolumeUp,			// Alt + +: subir el volumen
 	ActionVolumeDown,		// Alt + -: bajarlo
-	ActionMute			// Alt+0: silencio sí/no
+	ActionMute,			// Alt+0: silencio sí/no
+	ActionPokes,			// Alt+C: pokes y trucos del juego
+	ActionPokeManual		// Alt+O: un POKE a mano
 };
 
 static const unsigned Speeds[] = {1, 2, 4, 10};
@@ -216,6 +219,8 @@ static const TKeyBinding KeyBindings[] =
 	{0x0E,           TRUE,  ActionKeyHelp,      "Alt+K",     GroupOther, N_("Teclado del Spectrum/ZX81")},
 	{0x07,           TRUE,  ActionKeyDebug,     "Alt+D",     GroupOther, N_("Diagnóstico del teclado")},
 	{0x19,           TRUE,  ActionMultiKey,     "Alt+V",     GroupOther, N_("Pulsar teclas simultáneas")},
+	{0x06,           TRUE,  ActionPokes,        "Alt+C",     GroupOther, N_("Pokes y trucos")},
+	{0x12,           TRUE,  ActionPokeManual,   "Alt+O",     GroupOther, N_("POKE a mano")},
 };
 
 // Ayuda corta (F1): las teclas de todos los días. Las demás, en la lista (T).
@@ -266,6 +271,7 @@ CKernel::CKernel (void)
 	m_USBHCI (&m_Interrupt, &m_Timer, TRUE),	// TRUE: conexión en caliente
 	m_EMMC (&m_Interrupt, &m_Timer, &m_ActLED),
 	m_bSDMounted (FALSE),
+	m_bUSBRescan (FALSE),
 	m_pSpectrum (0),
 	m_Menu (&m_Video),
 	m_pSound (0),
@@ -326,6 +332,35 @@ CKernel::CKernel (void)
 	m_nZipChoices = 0;
 	m_bZipChoice = FALSE;
 	m_bZXDBInput = FALSE;
+	m_nFileStage = 0;
+	m_FileDir[0] = m_FileName[0] = '\0';
+	m_bFileHasEntry = m_bFileIsDir = FALSE;
+	m_nFileOptions = 0;
+	m_ClipPath[0] = m_PasteName[0] = m_PasteFree[0] = '\0';
+	m_bClipMove = m_bPasteCanReplace = FALSE;
+	m_PokeGame[0] = '\0';
+	m_PokeTitle[0] = '\0';
+	m_PokeGamePath[0] = '\0';
+	m_nPokeGameKind = 0;
+	m_PokeZXDBID[0] = '\0';
+	m_bPokeOnline = FALSE;
+	m_bPokeTried = FALSE;
+	m_nPokeResets = 0;
+	m_nPokeStage = 0;
+	m_nTapeStage = 0;
+	m_nTapeEditBlock = 0;
+	m_bTapeSingle = FALSE;
+	m_nTapeOptions = 0;
+	m_nTapeClipFirst = 0;
+	m_nTapeClipCount = 0;
+	m_bTapeClipMove = FALSE;
+	m_pTapeClipData = 0;
+	m_nTapeClipSize = 0;
+	m_bTapeClipTZX = FALSE;
+	m_nTapeClipSerial = 0;
+	m_TapeClipName[0] = '\0';
+	m_nPokePending = 0;
+	m_bPokeManualFromList = FALSE;
 	m_bZXDBChoice = FALSE;
 	m_nZXDBResults = 0;
 	m_ZXDBQuery[0] = '\0';
@@ -505,6 +540,7 @@ boolean CKernel::Initialize (void)
 		else
 		{
 			m_Logger.Write (FromKernel, LogWarning, "Cannot mount SD card");
+			m_bSDMounted = MountUSBAsSD ();
 		}
 	}
 
@@ -521,6 +557,44 @@ boolean CKernel::Initialize (void)
 	}
 
 	return bOK;
+}
+
+// Sin microSD (arranque desde un pincho USB): el primer disco USB hace de
+// SD:. FatFs busca la unidad SD: con el nombre "emmc1", así que el pincho se
+// apunta también con ese nombre, y todo lo que usa SD:/... (ajustes, ROMs,
+// WiFi, juegos) va al pincho sin cambiar nada más.
+static void USBDiskRemoved (CDevice *pDevice, void *pContext)
+{
+	CDeviceNameService::Get ()->RemoveDevice ("emmc1", TRUE);	// no dejarlo apuntando a nada
+}
+
+boolean CKernel::MountUSBAsSD (void)
+{
+	CDeviceNameService *pNames = CDeviceNameService::Get ();
+	CDevice *pDisk = pNames->GetDevice ("umsd1", TRUE);
+	for (unsigned i = 0; i < 30 && pDisk == 0; i++)		// hasta 3 s (los lentos)
+	{
+		m_Timer.MsDelay (100);
+		m_USBHCI.UpdatePlugAndPlay ();
+		pDisk = pNames->GetDevice ("umsd1", TRUE);
+	}
+	m_bUSBRescan = TRUE;		// teclados y mandos ya vistos aquí: que se miren en UpdateUSB
+	if (pDisk == 0)
+	{
+		return FALSE;
+	}
+
+	pNames->AddDevice ("emmc1", pDisk, TRUE);
+	pDisk->RegisterRemovedHandler (USBDiskRemoved, 0);
+	FRESULT Result = f_mount (&m_FileSystem, "SD:", 1);
+	if (Result != FR_OK)
+	{
+		pNames->RemoveDevice ("emmc1", TRUE);
+		m_Logger.Write (FromKernel, LogWarning, "Cannot mount USB disk as SD: (%d)", Result);
+		return FALSE;
+	}
+	m_Logger.Write (FromKernel, LogNotice, "No SD card: using the USB disk as SD:");
+	return TRUE;
 }
 
 void CKernel::ParseOptions (void)
@@ -631,6 +705,7 @@ void CKernel::ParseOptions (void)
 	{
 		if (m_EsxFolder.IsEnabled ())
 		{
+			EsxCheckSystem ();		// el sistema de esxDOS de esta versión
 			EsxFolderToImage (FALSE);	// crea o pone al día la imagen
 		}
 		FILINFO Info;
@@ -714,6 +789,8 @@ void CKernel::ParseOptions (void)
 
 	// ULAplus (64 colores); ulaplus=0 lo desactiva
 	m_pSpectrum->SetULAplusEnabled (m_Options.GetAppOptionDecimal ("ulaplus", 1) != 0);
+	// efecto nieve del 16K, 48K, 128K y +2; snow=0 lo quita
+	m_pSpectrum->SetSnowEnabled (m_Options.GetAppOptionDecimal ("snow", 1) != 0);
 	m_pSpectrum->SetPureBlack (m_Options.GetAppOptionDecimal ("pureblack", 0) != 0);
 
 	// Recreated ZX: recreated=0 (por defecto: teclado normal sin ningún retardo),
@@ -756,6 +833,9 @@ void CKernel::ParseOptions (void)
 	m_bSaveTZX = strcasecmp (m_Options.GetAppOptionString ("savefmt", "tap"), "tzx") == 0;
 	const char *pSnapFormat = m_Options.GetAppOptionString ("snapformat", "z80");
 	m_nSnapFormat = strcasecmp (pSnapFormat, "sna") == 0 ? 1 : (strcasecmp (pSnapFormat, "szx") == 0 ? 2 : 0);
+
+	// F2 en el navegador: renombrar, borrar, carpeta nueva (filechanges=0 lo quita)
+	m_Menu.SetFileChanges (m_Options.GetAppOptionDecimal ("filechanges", 1) != 0);
 
 	// Grabación con SAVE en la carpeta "saves" de la SD; savetrap=0 la desactiva
 	if (m_bSDMounted && m_Options.GetAppOptionDecimal ("savetrap", 1) != 0)
@@ -956,10 +1036,11 @@ void CKernel::UpdateUSB (void)
 		UpdatePadPlayers ();
 	}
 
-	if (!m_USBHCI.UpdatePlugAndPlay ())
+	if (!m_USBHCI.UpdatePlugAndPlay () && !m_bUSBRescan)
 	{
 		return;
 	}
+	m_bUSBRescan = FALSE;
 
 	for (unsigned i = 0; i < MAX_KEYBOARDS; i++)
 	{
@@ -2054,7 +2135,15 @@ void CKernel::LoadAnyFile (const char *pPath)
 
 	size_t nLen = strlen (pPath);
 	const char *pExt = nLen > 4 ? pPath + nLen - 4 : "";
-	if (nLen > 2 && strcasecmp (pPath + nLen - 2, ".p") == 0)
+	if (strcasecmp (pExt, ".pok") == 0)
+	{
+		// pokes: los del juego que hay cargado, en su pantalla
+		if (PokeAvailable () && PokeLoadFile (pPath, FALSE))
+		{
+			PokeShowList (0);
+		}
+	}
+	else if (nLen > 2 && strcasecmp (pPath + nLen - 2, ".p") == 0)
 	{
 		StartZX81 (pPath);		// programa del ZX81
 	}
@@ -2340,6 +2429,10 @@ void CKernel::ZXDBChoose (unsigned nResult)
 	}
 	m_Menu.Close ();
 	LoadAnyFile (SDPath);			// queda en SD:/descargas para la próxima vez
+	if (strcmp (m_PokeGamePath, SDPath) == 0)
+	{
+		PokeSetZXDBID (R.ID);		// sus pokes, por su ficha (Alt+C)
+	}
 }
 
 void CKernel::LoadZipEntry (unsigned nEntry)
@@ -2574,6 +2667,7 @@ void CKernel::ToggleDivMMC (void)
 	{
 		if (m_EsxFolder.IsEnabled ())
 		{
+			EsxCheckSystem ();
 			EsxFolderToImage (FALSE);
 		}
 		FILINFO Info;
@@ -2856,6 +2950,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "issue") == 0)		m_pSpectrum->SetIssue2 (strcmp (pValue, "2") == 0);
 	else if (strcmp (pKey, "speed") == 0)		m_nSpeed = atoi (pValue);
 	else if (strcmp (pKey, "ulaplus") == 0)		m_pSpectrum->SetULAplusEnabled (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "snow") == 0)		m_pSpectrum->SetSnowEnabled (strcmp (pValue, "0") != 0);
 	else if (strcmp (pKey, "pureblack") == 0)	m_pSpectrum->SetPureBlack (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "indicators") == 0)	m_bIndicators = strcmp (pValue, "1") == 0;
 	else if (strcmp (pKey, "border") == 0 || strcmp (pKey, "scanlines") == 0)
@@ -2936,6 +3031,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 				       CNetworkManager::ParseSummerTime (m_Settings.GetValue (m_Settings.Find ("dst"))));
 	}
 	else if (strcmp (pKey, "tlsverify") == 0)	m_Network.SetTLSVerify (strcmp (pValue, "0") != 0);
+	else if (strcmp (pKey, "filechanges") == 0)	m_Menu.SetFileChanges (strcmp (pValue, "0") != 0);
 	else if (strcmp (pKey, "earinvert") == 0)
 	{
 		if (m_pEarSource != 0)
@@ -3671,6 +3767,32 @@ boolean CKernel::IsEsxImageMounted (void) const
 
 // Carpeta -> imagen. Si la imagen está montada en la tarjeta del Spectrum, se
 // saca mientras tanto (y se vuelve a poner si bRemount).
+// Antes de arrancar esxDOS: si la tarjeta no tiene el sistema (SYS y BIN) de la
+// copia de referencia de la SD (roms/esxdos, la de esta versión), se pone en la
+// carpeta de importación y entra en la tarjeta con lo demás. Así, al actualizar
+// el emulador, la tarjeta pasa a la versión nueva de esxDOS (con la ROM nueva no
+// arranca el ESXDOS.SYS de otra). Solo con la ROM de esxDOS de serie y la
+// carpeta esxdos_i; con la tarjeta montada no se mira.
+void CKernel::EsxCheckSystem (void)
+{
+	const char *pROM = CurrentOption ("romesx", "default");
+	if (   !m_EsxFolder.IsEnabled ()
+	    || strcasecmp (m_EsxFolder.GetFolder (), "SD:/" ESX_IMPORT_DIR) != 0
+	    || (strcasecmp (pROM, "default") != 0 && strcasecmp (pROM, "esxmmc.bin") != 0)
+	    || IsEsxImageMounted ()
+	    || m_EsxFolder.SystemUpToDate ("SD:/roms/esxdos"))
+	{
+		return;
+	}
+
+	FILINFO Info;
+	boolean bNoCard = f_stat ("SD:/hdd/esxdos.img", &Info) != FR_OK;
+	if (m_EsxFolder.StageSystem ("SD:/roms/esxdos", bNoCard))
+	{
+		m_Logger.Write (FromKernel, LogNotice, "esxDOS: se pone al día el sistema de la tarjeta");
+	}
+}
+
 void CKernel::EsxFolderToImage (boolean bRemount)
 {
 	if (!m_EsxFolder.IsEnabled ())
@@ -3759,7 +3881,8 @@ void CKernel::EsxProgressHandler (unsigned nDone, unsigned nTotal, unsigned nMBD
 	}
 	else
 	{
-		Text.Format (T ("esxDOS: importando %u de %u (%u de %u MB)..."), nDone, nTotal, nMBDone, nMBTotal);
+		Text.Format (T ("esxDOS: importando %u de %u..."), nDone, nTotal);	// (los MB, con ficheros
+										// pequeños, salían "0 de 0 MB")
 	}
 	NetBusyHandler (Text, pThis);
 }
@@ -4296,6 +4419,11 @@ void CKernel::InsertDisk (const char *pPath, int nForceUnit)
 		m_DSKPath[nUnit][0] = '\0';	// se le dará nombre al grabarlo
 	}
 
+	if (pPath != 0)
+	{
+		PokeSetGame (pPath, PokeGameDisk);
+	}
+
 	CString Message;
 	const char *pName = pPath != 0 ? pPath : T ("disco nuevo");
 	for (const char *p = pName; *p != '\0'; p++)
@@ -4789,6 +4917,7 @@ boolean CKernel::LoadCartridge (const char *pPath)
 	}
 	strncpy (m_CartridgeName, pName, sizeof m_CartridgeName - 1);
 	m_CartridgeName[sizeof m_CartridgeName - 1] = '\0';
+	PokeSetGame (pPath, PokeGameCartridge);
 
 	m_nNextFrameTime = 0;
 
@@ -4829,6 +4958,7 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 	}
 
 	ApplySpeaker ();		// el snapshot puede haber cambiado de máquina
+	PokeSetGame (pPath, PokeGameSnapshot);
 	m_nNextFrameTime = 0;
 	if (m_pSpectrum->IsCartridgeInserted ())
 	{
@@ -5027,6 +5157,7 @@ boolean CKernel::LoadTape (const char *pPath)
 	}
 
 	m_pSpectrum->TapeInserted ();
+	PokeSetGame (pPath, PokeGameTape);
 
 	strncpy (m_TapePath, pPath, sizeof m_TapePath - 1);
 	m_TapePath[sizeof m_TapePath - 1] = '\0';
@@ -5209,6 +5340,18 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			// página 5: la pantalla de botones del mando (antes que nada: usa
 			// listas y la línea de texto, como otras pantallas)
+		}
+		else if (PokeMenuResult (Result))
+		{
+			// pokes (Alt+C, Alt+O, P en la ayuda): su lista y sus líneas de texto
+		}
+		else if (FileMenuResult (Result))
+		{
+			// F2 en el navegador: renombrar, borrar, carpeta nueva
+		}
+		else if (TapeMenuResult (Result))
+		{
+			// F2 en el navegador de la cinta: copiar, mover, borrar bloques
 		}
 		else if (Result == MenuResultFileSelected)
 		{
@@ -5431,6 +5574,9 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 
 		if (!m_Menu.IsOpen ())
 		{
+			m_nPokeStage = 0;		// ninguna pantalla de pokes a medias
+			m_nFileStage = 0;		// ni de F2
+			m_nTapeStage = 0;		// ni de F2 en la cinta
 			MenuClosed ();
 			m_Keyboard.SetCaptured (FALSE);
 			m_Keyboard.ReleaseAll ();
@@ -5529,6 +5675,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			OpenMenu ();
 			m_Keyboard.SetCaptured (TRUE);
 		}
+		TapeUpdateClip ();		// lo marcado: de esta cinta o de otra
 		m_Menu.OpenTape (&m_Tape);
 		break;
 
@@ -5623,6 +5770,14 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		EsxFolderToImage (TRUE);	// esxDOS: lo nuevo de la carpeta, antes de arrancar
 		m_pSpectrum->Reset ();
 		ShowMessage (T ("Reset"));
+		break;
+
+	case ActionPokes:
+		PokeOpen ();
+		break;
+
+	case ActionPokeManual:
+		PokeOpenManual (FALSE);
 		break;
 
 	case ActionPause:
@@ -5969,6 +6124,24 @@ void CKernel::HandleGPIOKeyboard (void)
 			{
 				m_Keyboard.InjectKeyEvent (0x37, 0);	// '.'
 				continue;
+			}
+
+			// Escribiendo un nombre (línea de texto libre, p. ej. renombrar
+			// con F2): CAPS SHIFT + letra es la mayúscula y SYMBOL SHIFT +
+			// tecla el símbolo, como en el Spectrum (el menú los ve como
+			// Mayúsculas y Ctrl, igual que con un teclado USB)
+			if (m_Menu.IsOpen () && m_Menu.IsTyping () && !m_bExtendedMode)
+			{
+				if (bCS && nHID >= 0x04 && nHID <= 0x1D)
+				{
+					m_Keyboard.InjectKeyEvent (nHID, HID_MOD_LSHIFT);
+					continue;
+				}
+				if (bSS)
+				{
+					m_Keyboard.InjectKeyEvent (nHID, HID_MOD_LCTRL);
+					continue;
+				}
 			}
 
 			nHID = CZXKeyboard::TranslateGPIOKey (nHID, bCS, m_bExtendedMode);
@@ -6386,6 +6559,7 @@ TShutdownMode CKernel::Run (void)
 			{
 				PadEditPoll ();		// "Botones del mando": el botón pulsado (aquí,
 							// porque con el menú abierto el bucle no sigue)
+				FileCopyPoll ();	// copiar un fichero (F2), a trozos
 				UpdateStatusLines ();
 				memcpy (Overlay, m_pFrozen, nOverlayBytes);
 				m_Menu.Draw (Overlay);

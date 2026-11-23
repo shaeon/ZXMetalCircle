@@ -25,6 +25,9 @@
 // en ?query=; la respuesta tiene la misma forma que la de la v3
 #define SEARCH_URL	"https://api.zxinfo.dk/v5/search/%s?mode=compact&contenttype=SOFTWARE&size=%u"
 #define FILES_HOST	"https://spectrumcomputing.co.uk"
+#define FILECHECK_URL	"https://api.zxinfo.dk/v5/filecheck/"
+#define ENTRY_URL	"https://api.zxinfo.dk/v5/entries/"	// + id + ENTRY_MODE
+#define ENTRY_MODE	"?mode=tiny"				// con los additionalDownloads
 
 // Extensiones útiles, de más a menos preferida
 static const char *s_Extensions[] = {".tzx", ".tap", ".pzx", ".z80", ".sna", ".szx", ".dsk", ".csw", ".rom", ".mdr"};
@@ -458,4 +461,170 @@ size_t ZXInfoDownload (CHTTPSClient *pClient, const char *pPath, unsigned char *
 	}
 	memcpy (pOut, pWork, nLength);
 	return nLength;
+}
+
+//------------------------------------------------------------------------------
+// Pokes
+
+// Pide pURL y deja el JSON leído en *pJ; devuelve el estado HTTP (< 0: error)
+static int GetJSON (CHTTPSClient *pClient, const char *pURL, unsigned char *pWork, size_t nWorkSize,
+		    TJSON *pJ, const char **pError)
+{
+	size_t nJSONMax = nWorkSize / 2;
+	size_t nLength = 0;
+	int nStatus = pClient->Get (pURL, pWork, nJSONMax - 1, &nLength);
+	if (nStatus != 200)
+	{
+		if (nStatus != 404)
+		{
+			*pError =   nStatus < 0 ? pClient->GetError ()
+				  : nStatus >= 500 ? N_("ZXInfo no responde ahora: prueba más tarde")
+				  : N_("El buscador ha devuelto un error");
+		}
+		return nStatus;
+	}
+	pWork[nLength] = '\0';
+
+	jsmn_parser Parser;
+	jsmn_init (&Parser);
+	pJ->pText = (const char *) pWork;
+	pJ->pTok = (jsmntok_t *) (pWork + ((nJSONMax + 7) & ~7));
+	unsigned nMaxTokens = (unsigned) ((nWorkSize - ((nJSONMax + 7) & ~7)) / sizeof (jsmntok_t));
+	pJ->nTokens = jsmn_parse (&Parser, pJ->pText, nLength, pJ->pTok, nMaxTokens);
+	if (pJ->nTokens < 1)
+	{
+		*pError = N_("Respuesta del buscador no válida");
+		return -1;
+	}
+	return 200;
+}
+
+int ZXInfoFileCheck (CHTTPSClient *pClient, const char *pHash, char *pID, size_t nIDSize,
+		     char *pTitle, size_t nTitleSize, unsigned char *pWork, size_t nWorkSize,
+		     const char **pError)
+{
+	*pError = "";
+	pID[0] = '\0';
+	pTitle[0] = '\0';
+
+	static char URL[256];
+	Copy (URL, sizeof URL, FILECHECK_URL, strlen (FILECHECK_URL));
+	size_t n = strlen (URL);
+	Copy (URL + n, sizeof URL - n, pHash, strlen (pHash));
+
+	TJSON J;
+	int nStatus = GetJSON (pClient, URL, pWork, nWorkSize, &J, pError);
+	if (nStatus == 404)
+	{
+		return 0;			// ZXDB no conoce ese fichero
+	}
+	if (nStatus != 200)
+	{
+		return -1;
+	}
+
+	GetString (J, Find (J, 0, "entry_id"), pID, nIDSize);
+	GetString (J, Find (J, 0, "title"), pTitle, nTitleSize);
+	return pID[0] != '\0' ? 1 : 0;
+}
+
+// ¿Termina en .pok (sin mirar mayúsculas)?
+static bool IsPokPath (const char *pPath, size_t nLen)
+{
+	if (nLen < 4)
+	{
+		return false;
+	}
+	const char *p = pPath + nLen - 4;
+	return    p[0] == '.' && (p[1] | 0x20) == 'p' && (p[2] | 0x20) == 'o' && (p[3] | 0x20) == 'k';
+}
+
+// La ruta del .pok en la ficha ya leída
+static int ZXInfoParsePok (const TJSON *pJ, char *pPath, size_t nPathSize, char *pTitle, size_t nTitleSize)
+{
+	const TJSON &J = *pJ;
+	// {"_id": ..., "_source": {"title": ..., "additionalDownloads": [{"path", "type", ...}]}}
+	int nSrc = Find (J, 0, "_source");
+	if (nSrc < 0)
+	{
+		nSrc = 0;			// por si algún día llega sin envolver
+	}
+	GetString (J, Find (J, nSrc, "title"), pTitle, nTitleSize);
+
+	int nDownloads = Find (J, nSrc, "additionalDownloads");
+	if (nDownloads < 0 || J.pTok[nDownloads].type != JSMN_ARRAY)
+	{
+		return 0;
+	}
+
+	// el primer .pok; mejor uno sin "(...)" (las variantes, p. ej. "(ES)")
+	bool bFound = false, bFoundVariant = false;
+	int nItem = nDownloads + 1;
+	for (int i = 0; i < J.pTok[nDownloads].size; i++, nItem = Skip (J, nItem))
+	{
+		int nPath = Find (J, nItem, "path");
+		if (nPath < 0 || J.pTok[nPath].type != JSMN_STRING)
+		{
+			continue;
+		}
+		const char *pItemPath = J.pText + J.pTok[nPath].start;
+		size_t nLen = J.pTok[nPath].end - J.pTok[nPath].start;
+		if (!IsPokPath (pItemPath, nLen))
+		{
+			continue;
+		}
+		bool bVariant = false;
+		for (size_t k = 0; k < nLen; k++)
+		{
+			if (pItemPath[k] == '(')
+			{
+				bVariant = true;
+			}
+		}
+		if (!bFound || (bFoundVariant && !bVariant))
+		{
+			Copy (pPath, nPathSize, pItemPath, nLen);
+			bFound = true;
+			bFoundVariant = bVariant;
+		}
+	}
+	return bFound ? 1 : 0;
+}
+
+int ZXInfoPokPath (CHTTPSClient *pClient, const char *pID, char *pPath, size_t nPathSize,
+		   char *pTitle, size_t nTitleSize, unsigned char *pWork, size_t nWorkSize,
+		   const char **pError)
+{
+	*pError = "";
+	pPath[0] = '\0';
+	pTitle[0] = '\0';
+
+	// solo números (el id va en la ruta)
+	for (const char *p = pID; *p != '\0'; p++)
+	{
+		if (*p < '0' || *p > '9')
+		{
+			return 0;
+		}
+	}
+
+	static char URL[256];
+	Copy (URL, sizeof URL, ENTRY_URL, strlen (ENTRY_URL));
+	size_t n = strlen (URL);
+	Copy (URL + n, sizeof URL - n, pID, strlen (pID));
+	n = strlen (URL);
+	Copy (URL + n, sizeof URL - n, ENTRY_MODE, strlen (ENTRY_MODE));
+
+	TJSON J;
+	int nStatus = GetJSON (pClient, URL, pWork, nWorkSize, &J, pError);
+	if (nStatus == 404)
+	{
+		return 0;
+	}
+	if (nStatus != 200)
+	{
+		return -1;
+	}
+
+	return ZXInfoParsePok (&J, pPath, nPathSize, pTitle, nTitleSize);
 }

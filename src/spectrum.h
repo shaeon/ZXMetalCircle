@@ -162,6 +162,11 @@ public:
 	u8 ReadMemory (u16 nAddress) const	{ return m_pReadPage[nAddress >> 14][nAddress & 0x3FFF]; }
 	// Escritura en la memoria tal como la ve ahora la CPU (la ROM no se escribe)
 	void WriteMemory (u16 nAddress, u8 nValue)	{ m_pWritePage[nAddress >> 14][nAddress & 0x3FFF] = nValue; }
+	// Una página de RAM (0-7) directamente, esté paginada o no (pokes del 128K)
+	u8 ReadRAM (unsigned nBank, u16 nOffset) const	{ return m_RAM[nBank & 7][nOffset & 0x3FFF]; }
+	void WriteRAM (unsigned nBank, u16 nOffset, u8 nValue)	{ m_RAM[nBank & 7][nOffset & 0x3FFF] = nValue; }
+	// Los reset que lleva: con uno, los pokes aplicados se pierden
+	unsigned GetResetCount (void) const	{ return m_nResetCount; }
 
 	// Ampliación de memoria LEC: 16 páginas de 32 KB que sustituyen a los 32 KB
 	// bajos (0x0000-0x7FFF). Necesaria para el CP/M de LEC. En los 128K (128,
@@ -180,6 +185,10 @@ public:
 
 	// ULAplus (64 colores, puertos 0xBF3B/0xFF3B)
 	void SetULAplusEnabled (boolean bEnabled)	{ m_bULAplusEnabled = bEnabled; }
+	// Efecto nieve del 16K, 48K, 128K y +2 (snow=1): si I apunta a memoria
+	// lenta, el refresco de la memoria choca con la lectura de la pantalla de
+	// la ULA
+	void SetSnowEnabled (boolean bEnabled)	{ m_bSnowEnabled = bEnabled; UpdateSnow (); }
 	// negro puro (#000000) también en la paleta del 16K/48K (pureblack=1)
 	void SetPureBlack (boolean bPureBlack);
 	boolean IsPureBlack (void) const	{ return m_bPureBlack; }
@@ -227,6 +236,13 @@ private:
 	int TstatesToBorderPix (int nTstates);
 
 	void UpdateScreen (int nTstates);
+	inline void DrawCell (unsigned nAddr, u8 nByte, u8 nAttr);
+	void Snow (const u8 *pPage);	// en cada M1, si I apunta a memoria lenta
+	void UpdateSnow (void)
+	{
+		m_bSnow = m_bSnowEnabled && (m_Model == Model48K || m_Model == Model16K);
+		m_bSnow128 = m_bSnowEnabled && (m_Model == Model128K || m_Model == ModelPlus2);
+	}
 	void UpdateBorder (int nTstates);
 
 	void PreIO (uint16_t nPort);
@@ -281,6 +297,7 @@ private:
 
 	u8 m_nPortFE;
 	u8 m_nPort7FFD;
+	unsigned m_nResetCount;
 	u8 m_nPort1FFD;
 	boolean m_bEarOut;
 	boolean m_bIssue2;
@@ -301,6 +318,10 @@ private:
 	u32 m_BufAddr[6144];
 	u8 m_Ink[256], m_Paper[256];
 	boolean m_bFlash;
+	u8 m_nLastByte, m_nLastAttr;	// lo último que leyó la ULA (para el doble efecto)
+	boolean m_bSnowEnabled;		// snow=1
+	boolean m_bSnow;		// y el modelo la tiene: 16K y 48K...
+	boolean m_bSnow128;		// ... o 128K y +2 (no los +2A/+3 ni los clónicos)
 
 	// ULAplus
 	void ULAplusWrite (uint16_t nPort, u8 nValue);

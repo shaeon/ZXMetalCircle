@@ -60,7 +60,8 @@ boolean CUpdater::IsConfigFile (const char *pPath)
 	static const char *Config[] =
 	{
 		"cmdline.txt", "config.txt", "excluir.txt", "tnfs.txt",
-		"esxdos_i/SYS/CONFIG/ESXDOS.CFG", "esxdos_i/SYS/CONFIG/TRDOS.CFG"
+		"esxdos_i/SYS/CONFIG/ESXDOS.CFG", "esxdos_i/SYS/CONFIG/TRDOS.CFG",
+		"esxdos_i/SYS/CONFIG/SERCP.CFG"
 	};
 	for (unsigned i = 0; i < sizeof Config / sizeof Config[0]; i++)
 	{

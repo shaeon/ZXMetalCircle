@@ -1,0 +1,35 @@
+trkplay
+-------
+
+Plays Spectrum tracker music on the AY: ProTracker 3 (.pt3, also Vortex
+Tracker II modules), Sound Tracker (.stc) and SQ Tracker (.sqt). It replaces
+the separate playpt3, playstc and playsqt commands.
+
+Usage:
+
+	.trkplay file
+
+The name goes in quotes when it has spaces or a drive name, for example
+
+	.trkplay "My Song.pt3"
+	.trkplay "hd1:/music/tune.stc"
+
+A PT3 is recognised by its header, whatever its extension. An STC or SQT by
+its extension (.stc, .sqt). Any other file gives "Unknown module type".
+
+While it plays it shows "Playing:" and the song's title (a PT3's title, an
+STC's name), or the file's name when the song has none (always for an SQT).
+Under it come a PT3's author and tracker version, or the tracker's name, and
+a meter for each of the three channels, drawn in block graphics:
+
+	A:##########
+	B:####
+	C:#######
+
+SPACE (BREAK) stops it. The song is loaded into the Spectrum's free memory
+(between the BASIC program and the stack), so a very large file or a large
+BASIC program can give "Out of memory".
+
+The players are from Trackerplayer 0.1 by Matt Westcott (gasman), 2010:
+the Vortex Tracker II PT3 player by Sergey Bulba and disassemblies of the
+Sound Tracker and SQ Tracker players. trkplay puts them in one command.

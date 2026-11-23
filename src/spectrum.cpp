@@ -63,6 +63,7 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_nLastFEPC (0),
 	m_nLastFEPort (0)
 {
+	m_nResetCount = 0;
 	m_pSaveHandler = 0;
 	m_bRecording = FALSE;
 	m_bRecordEar = FALSE;
@@ -111,6 +112,9 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_bPureBlack = FALSE;
 	UpdatePalette ();
 	m_bULAplusEnabled = TRUE;
+	m_bSnowEnabled = TRUE;
+	m_bSnow = m_bSnow128 = FALSE;
+	m_nLastByte = m_nLastAttr = 0;
 	m_bULAplusActive = FALSE;
 	m_nULAplusRegister = 0;
 	for (unsigned i = 0; i < 64; i++)
@@ -227,6 +231,7 @@ void CSpectrum::SetModel (TModel Model)
 	}
 
 	m_Model = Model;
+	UpdateSnow ();
 	m_pTiming = &MachineTiming[Model];
 	// TK90X/TK95 con la ULA de Microdigital (50 o 60 Hz): sus propios tiempos
 	m_bTKMicro = (Model == ModelTK90X || Model == ModelTK95) && m_nTKULA != TKULAFerranti;
@@ -288,6 +293,7 @@ void CSpectrum::SetModel (TModel Model)
 void CSpectrum::Reset (void)
 {
 	memset (m_RAM, 0, sizeof m_RAM);
+	m_nResetCount++;
 
 	m_nPortFE = 0;
 	m_nPort7FFD = 0;
@@ -816,6 +822,22 @@ inline void CSpectrum::WriteByte (uint16_t nAddress, uint8_t nValue)
 uint8_t CSpectrum::fetchOpcode (uint16_t address)
 {
 	Contend (address, 4);
+	if (m_bSnow || m_bSnow128)
+	{
+		u8 nI = m_CPU.getRegI () & 0xC0;
+		if (nI == 0x40)
+		{
+			Snow (m_pScreenPage);
+		}
+		else if (nI == 0xC0 && m_bSnow128 && (m_nPort7FFD & 0x01))
+		{
+			// 128K y +2 con una página lenta (impar) arriba: la fila
+			// equivocada sale del banco 1 o 3 (si es la 1 o la 3) o del 5
+			// o 7 (si es la 5 o la 7), el de la pantalla que se ve (Weiv,
+			// como ESPectrum)
+			Snow (m_RAM[(m_nPort7FFD & 0x04) | ((m_nPort7FFD & 0x08) ? 2 : 0) | 1]);
+		}
+	}
 	if (m_bDivActive)
 	{
 		return DivFetch (address);
@@ -1833,10 +1855,69 @@ void CSpectrum::UpdateScreen (int nTstates)
 	while (m_nStep < m_nSteps && m_StepStates[m_nStep] <= nTstates)
 	{
 		unsigned nAddr = m_StepAddr[m_nStep++];
+		DrawCell (nAddr, m_pScreenPage[nAddr], m_pScreenPage[m_Scr2Attr[nAddr]]);
+	}
+}
 
-		u8 nByte = m_pScreenPage[nAddr];
-		u8 nAttr = m_pScreenPage[m_Scr2Attr[nAddr]];
+// Efecto nieve (16K, 48K, 128K y +2). En los T3 y T4 de cada M1 el Z80
+// refresca la memoria con I:R en el bus; si I apunta a memoria lenta (0x40-
+// 0x7F, o en el 128K 0xC0-0xFF con una página impar arriba), ese refresco
+// choca con la lectura de la ULA, que lee 16 píxeles cada 8 t-states: imagen
+// y atributo del primer par en las fases 2 y 3, y del segundo en las 4 y 5
+// (la fase 0 es el primer t-state de contención de la línea: 14335 en el
+// 48K y 14361 en el 128K, como en Spectramine de Weiv y en ESPectrum). Según en qué fase cae el T4 de la lectura de la instrucción:
+//   - fase 2 (nieve): la fila de la memoria (A0-A6) del primer par sale de R
+//     y no de la ULA: se leen la imagen y el atributo de (dirección & ~0x7F)
+//     | R, del mismo bloque de 128 bytes (por eso el dibujo se reconoce)
+//   - fase 4 (doble): el segundo par no se lee y se repite el primero
+// R es el de después de sumarle 1 en este M1, como dice Weiv (ESPectrum usa
+// el de antes).
+void CSpectrum::Snow (const u8 *pPage)
+{
+	const TMachineTiming *T = m_pTiming;
+	int nRel = m_nTstates - 1 - (T->nFirstScrByte - 1);	// el T4, desde 14335
+	if (nRel < 0)
+	{
+		return;
+	}
+	unsigned nLine = nRel / T->nTstatesLine;
+	unsigned nCol = nRel % T->nTstatesLine;
+	if (nLine > 191 || nCol > 127)
+	{
+		return;
+	}
+	unsigned nPhase = nCol & 7;
+	if (nPhase != 2 && nPhase != 4)
+	{
+		return;
+	}
 
+	unsigned nCell = nLine * 32 + (nCol >> 3) * 2 + (nPhase == 4);	// la celda de 8 píxeles
+	UpdateScreen (m_StepStates[nCell] - 1);		// todo lo de antes, normal
+	if (m_nStep != nCell)
+	{
+		return;
+	}
+	m_nStep++;
+
+	unsigned nAddr = m_StepAddr[nCell];
+	if (nPhase == 2)
+	{
+		unsigned nRow = (m_CPU.getRegR () + 1) & 0x7F;	// ya sumado (Weiv); z80cpp lo suma al volver
+		DrawCell (nAddr, pPage[(nAddr & ~0x7F) | nRow],
+			  pPage[(m_Scr2Attr[nAddr] & ~0x7F) | nRow]);
+	}
+	else
+	{
+		DrawCell (nAddr, m_nLastByte, m_nLastAttr);
+	}
+}
+
+inline void CSpectrum::DrawCell (unsigned nAddr, u8 nByte, u8 nAttr)
+{
+	m_nLastByte = nByte;
+	m_nLastAttr = nAttr;
+	{
 		TPixel nInk, nPaper;
 		if (m_bULAplusActive)
 		{

@@ -323,6 +323,11 @@ cp -r "$ROOT/locales" "$ROOT/sdcard/locales"
 rm -rf "$ROOT/sdcard/esxdos" "$ROOT/sdcard/esxdos_i"
 mkdir -p "$ROOT/sdcard/esxdos_i/TMP" "$ROOT/sdcard/esxdos_i/JUEGOS"
 cp -r "$ROOT/third_party/esxdos/SYS" "$ROOT/third_party/esxdos/BIN" "$ROOT/sdcard/esxdos_i/"
+# Copia de referencia del sistema de esxDOS: con ella el emulador pone al día una
+# tarjeta que tenga otra versión (ver EsxCheckSystem)
+rm -rf "$ROOT/sdcard/roms/esxdos"
+mkdir -p "$ROOT/sdcard/roms/esxdos"
+cp -r "$ROOT/third_party/esxdos/SYS" "$ROOT/third_party/esxdos/BIN" "$ROOT/sdcard/roms/esxdos/"
 rm -f "$ROOT/sdcard/hdd/esxdos.img"
 
 # Menú y controlador del CP/M para la imagen Mar Océana
@@ -334,6 +339,9 @@ cp "$ROOT/boot/certs/cacert.pem" "$ROOT/sdcard/certs/"
 mkdir -p "$ROOT/sdcard/hdd"
 printf 'Copia aqui las imagenes de tarjeta SD: discos duros del +3e (.vhd, .img, .raw, .hdf)\ny tarjetas FAT para esxDOS. esxdos.img es la tarjeta de la divMMC: la crea el\nemulador, y lo que dejes en la carpeta esxdos_i se copia a ella.\nSe montan desde el selector (F1), la web o con hdd= en cmdline.txt.\n' > "$ROOT/sdcard/hdd/LEEME.txt"
 printf 'Copy SD card images here: +3e hard disks (.vhd, .img, .raw, .hdf)\nand FAT cards for esxDOS. esxdos.img is the divMMC card: the emulator creates it,\nand whatever you leave in the esxdos_i folder is copied into it.\nThey are mounted from the file browser (F1), the web page or with hdd= in cmdline.txt.\n' > "$ROOT/sdcard/hdd/README.txt"
+mkdir -p "$ROOT/sdcard/pokes"
+printf 'Copia aqui los ficheros .pok (trucos) con el nombre del juego: para juegos/Barbarian.tzx,\nBarbarian.pok, o en una carpeta por inicial (b/Barbarian.pok), como la coleccion de ZXDB.\nAlt+C abre los trucos del juego cargado (si no estan aqui y hay red, los descarga de ZXDB)\ny Alt+O escribe un POKE a mano (guia 06).\n' > "$ROOT/sdcard/pokes/LEEME.txt"
+printf 'Copy .pok files (cheats) here, named after the game: for games/Barbarian.tzx,\nBarbarian.pok, or in a folder by initial (b/Barbarian.pok), like the ZXDB collection.\nAlt+C opens the cheats for the loaded game (if they are not here and there is a network,\nit downloads them from ZXDB) and Alt+O types a manual POKE (guide 06).\n' > "$ROOT/sdcard/pokes/README.txt"
 mkdir -p "$ROOT/sdcard/utils"
 cp "$ROOT/boot/utils/"* "$ROOT/sdcard/utils/"
 mkdir -p "$ROOT/sdcard/cpm"

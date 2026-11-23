@@ -78,6 +78,8 @@ defecto.
                     1, 2, 4 o 10 (x1 = velocidad real; a mas, sin sonido)
 
  ulaplus=1        ULAplus (64 colores):  1 = disponible,  0 = desactivado
+ snow=1           Efecto nieve del 16K, 48K, 128K y +2 (con el registro I
+                  en memoria lenta, como la máquina real):  1 = sí,  0 = no
 
  rs232=1          RS232 del Interface 1 por el puerto TCP 2323 de la Pi (o a
                   saves/rs232.txt si no hay nadie conectado). 0 = no.
@@ -253,7 +255,7 @@ defecto.
 
  divmmc=0         divMMC con esxDOS:
                     0       sin divMMC (por defecto)
-                    esxdos  divMMC con esxDOS 0.8.9; su tarjeta es la
+                    esxdos  divMMC con esxDOS 0.9.0; su tarjeta es la
                             imagen hdd/esxdos.img (ver esxdir=). No convive con el
                             Interface 1, la memoria LEC ni el Multiface
                   F5 abre el navegador de esxDOS. Tambien se conecta o
@@ -326,7 +328,13 @@ defecto.
                   pueden renombrar, mover, sustituir ni borrar: kernels,
                   config.txt, cmdline.txt, locales...), 0 = sin proteger
                   (se pide confirmacion). Lo que esta en uso, siempre
-                  protegido. Desde la web no se puede cambiar
+                  protegido. Desde la web no se puede cambiar. Vale
+                  tambien para F2 en el navegador de ficheros de la Pi
+
+ filechanges=1    F2 en el navegador de ficheros de la Pi (Alt+F5): copiar,
+                  mover, renombrar, borrar y crear carpetas en la SD; y en
+                  el de la cinta (F3): copiar, mover, borrar y renombrar
+                  bloques. 0 = sin F2 (solo cargar)
 
  ip=              IP fija. Si no se pone, se usa DHCP (lo normal).
  mask=            Mascara de red        (por defecto 255.255.255.0)

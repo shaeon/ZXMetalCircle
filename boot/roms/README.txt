@@ -57,8 +57,12 @@ included with his permission.
                                                    Alt+N), RS232, ZX Net or
                                                    LEC's CP/M.
 
- esxmmc.bin       8192 bytes  esxDOS 0.8.9 for     The divMMC cannot be
+ esxmmc.bin       8192 bytes  esxDOS 0.9.0 for     The divMMC cannot be
                               the divMMC           connected.
+
+ esxdos/          folder      esxDOS system        The esxDOS card is not
+                              (SYS and BIN) for    brought up to date by
+                              this version         itself on a new version.
 
  spectranet.rom 131072 bytes  Spectranet flash     The Spectranet cannot be
                                                    connected.

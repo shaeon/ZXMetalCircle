@@ -50,8 +50,12 @@ jobs:
           ./ulaplus_ports_test
           g++ $FLAGS -o border_test border_test.cpp $CORE roms_host.S
           ./border_test
+          g++ $FLAGS -o snow_test snow_test.cpp $CORE roms_host.S
+          ./snow_test
           g++ $FLAGS -o tape_stop_test tape_stop_test.cpp $CORE roms_host.S
           ./tape_stop_test
+          g++ $FLAGS -o tape_edit_test tape_edit_test.cpp $CORE roms_host.S
+          ./tape_edit_test
           g++ $FLAGS -o tzx_blocks_test tzx_blocks_test.cpp $CORE roms_host.S
           ./tzx_blocks_test
           g++ $FLAGS -o floatbus_test plus3/floatbus_test.cpp $CORE roms_host.S
@@ -78,6 +82,10 @@ jobs:
           ./webfiles_test
           g++ -O2 -std=c++17 -I. -I$S -o padprofile_test padprofile_test.cpp $S/padprofile.cpp
           ./padprofile_test
+          g++ -O2 -std=c++17 -I. -I$S -o pok_test pok_test.cpp $S/pokfile.cpp
+          ./pok_test
+          g++ -O2 -std=c++17 -I. -I$S -o zxinfo_pok_test zxinfo_pok_test.cpp $S/download/zxinfo.cpp $S/inflate.cpp t_stub.cpp
+          ./zxinfo_pok_test
           g++ -O2 -std=c++17 -I. -I$S -o keyboard_hold_test keyboard_hold_test.cpp $S/zxkeyboard.cpp
           ./keyboard_hold_test
           g++ -O2 -std=c++17 -I. -I$S -o gpio_keys_test gpio_keys_test.cpp $S/zxkeyboard.cpp

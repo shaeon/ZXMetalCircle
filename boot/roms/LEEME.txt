@@ -57,8 +57,12 @@ incluye con su permiso.
                                                    Alt+N), ni RS232, ni
                                                    ZX Net, ni CP/M de LEC.
 
- esxmmc.bin       8192 bytes  esxDOS 0.8.9 para    No se puede conectar la
+ esxmmc.bin       8192 bytes  esxDOS 0.9.0 para    No se puede conectar la
                               la divMMC            divMMC.
+
+ esxdos/          carpeta     Sistema de esxDOS    La tarjeta de esxDOS no
+                              (SYS y BIN) de       se pone al día sola al
+                              esta versión         cambiar de versión.
 
  spectranet.rom 131072 bytes  Flash de la          No se puede conectar la
                               Spectranet           Spectranet.

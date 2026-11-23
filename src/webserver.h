@@ -49,6 +49,7 @@ private:
 	CString Upload (const char *pDir, const char *pParams);
 	CString Rename (const char *pParams);
 	CString Move (const char *pParams);
+	CString Copy (const char *pParams);
 	THTTPStatus SendSearch (const char *pQuery, u8 *pBuffer, unsigned *pLength);
 	THTTPStatus SendZip (const char *pDir, const char *pZip, u8 *pBuffer, unsigned *pLength);
 	CString Download (const char *pPath);
@@ -61,5 +62,9 @@ private:
 #include "download/zxinfo.h"
 int ZXDBSearch (const char *pQuery, TZXInfoResult *pResults, unsigned nMaxResults, CString *pError);
 boolean ZXDBDownload (const char *pPath, CString *pSDPath, CString *pMessage);
+// El .pok de un juego, por su huella (SHA-512 en hexadecimal) o su ficha, a
+// SD:/pokes/<pSaveName>.pok: 1 guardado, 0 ZXDB no lo tiene, -1 error
+int ZXDBFetchPok (const char *pHash, const char *pEntryID, const char *pSaveName,
+		  CString *pSDPath, CString *pMessage);
 
 #endif

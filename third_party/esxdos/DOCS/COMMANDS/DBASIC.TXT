@@ -1,0 +1,453 @@
+===============================================================================
+
+                         D O C T O R   B A S I C   5 . 0
+
+                        A BASIC program toolkit for esxDOS
+                            (c) 1994-2026 namco/nexgen
+
+                            USER MANUAL - Version 5.0
+
+===============================================================================
+
+CONTENTS
+
+  1.  Introduction
+  2.  Requirements and installation
+  3.  Using it
+  4.  info
+  5.  list
+  6.  find
+  7.  vars
+  8.  delete
+  9.  rem
+  10. reset
+  11. compress
+  12. renumber
+  13. undo
+  14. Messages
+  15. Tips
+  16. Technical notes
+  17. Credits
+
+
+-------------------------------------------------------------------------------
+1. INTRODUCTION
+-------------------------------------------------------------------------------
+
+Doctor BASIC is a toolkit for the BASIC program in memory. It shows what a
+program really contains, including what LIST hides, and it can shrink,
+clean up and renumber it.
+
+Version 4.50 (1994) was a tape utility with a menu. Version 5.0 is a
+rewrite as an esxDOS dot command: you type one command, it does one job,
+prints the result and returns to BASIC with your program still in memory.
+
+What it does:
+
+  info       sizes and statistics of the program and its variables
+  list       a true listing: hidden numbers and colour tricks exposed
+  find       search the program for a piece of text or a keyword
+  vars       every variable with its contents
+  delete     delete a line or a range of lines
+  rem        delete every REM
+  reset      set every variable to 0 / "" and keep it
+  compress   make the program smaller by rewriting its numbers
+  renumber   renumber lines, GO TO / GO SUB targets follow
+  undo       put back the copy saved before a change (128K only!)
+
+Every 1994 bug is fixed. In particular, compress no longer breaks DEF FN
+lines or expressions such as "NOT PI+5".
+
+
+-------------------------------------------------------------------------------
+2. REQUIREMENTS AND INSTALLATION
+-------------------------------------------------------------------------------
+
+You need:
+
+  - A ZX Spectrum with an esxDOS interface (DivIDE, DivMMC and similar).
+  - 48 BASIC as the paged ROM. That is any 48K, or a 128K / +2 / +2A / +3
+    in 48 BASIC, the mode esxDOS boots into. From 128 BASIC or +3 BASIC,
+    Doctor BASIC stops with "48 BASIC ROM required".
+  - About 1.7K of free memory (see "Free" in .dbasic info).
+  - For undo only: a 128K machine with its paging unlocked (section 13).
+
+Installation: copy the file "dbasic" to the /BIN folder of the SD card.
+
+
+-------------------------------------------------------------------------------
+3. USING IT
+-------------------------------------------------------------------------------
+
+  .dbasic                       help: the list of actions
+  .dbasic <action> [...]        run one action
+  .dbasic <action> [...] undo   run it, but save a copy first (section 13)
+
+Actions can be abbreviated. The ones that only look at the program need one
+letter: i, l, f, v. The ones that change it need at least three letters, so
+a typing slip cannot change the program: del, rem, res, com, ren, und.
+Upper and lower case are the same.
+
+Typed on a 128K, words such as LIST or REM may turn into keywords as you
+type them. That does not matter: Doctor BASIC reads them as words.
+
+The command can be followed by more BASIC, and it can be used inside a
+program:
+
+  .dbasic delete 9000,9999: PRINT "done"
+  10 .dbasic info: STOP
+
+Some actions refuse to run from a program line (see each action).
+
+Paging: list, find and vars clear the screen and stop at every full screen
+with "scroll?". N, SPACE or BREAK stop; any other key goes on. BREAK also
+stops them between lines.
+
+Safety: every action that changes memory first checks the whole program
+and all the variables. An error found at that point (a corrupt line, not
+enough memory, a bad parameter) stops it before anything has changed. The
+line that is running the command is never touched.
+
+
+-------------------------------------------------------------------------------
+4. INFO
+-------------------------------------------------------------------------------
+
+  .dbasic info
+
+Example:
+
+  Program      679 bytes
+  Lines         21
+  Statements    42
+  Numbers       34
+  FN params      4
+  REMs           3
+  Variables    118 bytes
+    a          2   a()        1
+    a$         1   a$()       1
+    abc        2   FOR a      1
+  Free       40805 bytes
+  RAMTOP     65367
+
+  Numbers      number literals in the program (each one is its text plus a
+               hidden 5-byte value)
+  FN params    DEF FN parameters
+  a / abc ...  variables by type: single-letter numbers, longer names,
+               strings, numeric arrays, string arrays, FOR loops
+  Free         memory between the program's workspace and the stack
+
+
+-------------------------------------------------------------------------------
+5. LIST
+-------------------------------------------------------------------------------
+
+  .dbasic list              every line
+  .dbasic list 100          from line 100
+  .dbasic list ,50          up to line 50
+  .dbasic list 10,20        lines 10 to 20
+
+Lists the lines as LIST would, with nothing hidden:
+
+  - Colour codes (INK, PAPER, AT, TAB ...) and their parameters are left
+    out, inside and outside quotes and REMs. A line cannot hide itself or
+    other lines, and it cannot mess up the screen.
+  - Every number is checked against its hidden 5-byte value, which is what
+    BASIC really uses. When they differ, the value follows in braces:
+
+        30 LET a=1{1994}        shows 1, uses 1994
+        110 LET w={42}          no text at all, uses 42
+
+Checking uses the ROM's own number reader on the text, so only real
+differences show. DEF FN parameters, which also carry hidden bytes, are
+not shown.
+
+
+-------------------------------------------------------------------------------
+6. FIND
+-------------------------------------------------------------------------------
+
+  .dbasic find "text"
+
+Lists every line that contains the text, in the same form as list. Prints
+"Not found" when no line does.
+
+  - Case, spaces and colour codes are ignored: "printa" finds PRINT a.
+  - Keywords are matched by name: "goto" finds GO TO, "deffn" finds DEF FN.
+  - A quote inside the text is written "": find """" finds a quote.
+  - It searches the text of the lines, not hidden number values.
+
+
+-------------------------------------------------------------------------------
+7. VARS
+-------------------------------------------------------------------------------
+
+  .dbasic vars
+
+Every variable with its contents:
+
+  a = 1994
+  totalscore = 2036
+  n$ = "hello"
+  z(3,2) = 1 2 3 4 5 6
+  c$(2,5) = "hello" "world"
+  FOR i = 2 TO 3 STEP 1 (120:2)
+
+A FOR variable shows its limit, its step and the line:statement that NEXT
+returns to. "No variables" when there are none.
+
+
+-------------------------------------------------------------------------------
+8. DELETE
+-------------------------------------------------------------------------------
+
+  .dbasic delete 40         line 40 (it must exist)
+  .dbasic delete 100,160    lines 100 to 160
+  .dbasic delete 900,       line 900 to the end
+  .dbasic delete ,50        the start to line 50
+  .dbasic delete ,          every line
+
+  Lines          7
+  Saved        191 bytes
+
+Lines are deleted in memory order. That also works on protected programs
+whose line numbers are duplicated or out of order. The line running the
+command cannot be deleted ("Line is running"). Takes undo.
+
+
+-------------------------------------------------------------------------------
+9. REM
+-------------------------------------------------------------------------------
+
+  .dbasic rem
+
+  REMs           3
+  Whole lines    2
+  Saved         64 bytes
+
+Deletes every REM, together with the spaces, colour codes and ":" before
+it. A line with nothing but a REM is deleted. IF a THEN REM x becomes
+IF a THEN, which is still valid. Takes undo.
+
+  WARNING: REM lines that hold machine code are deleted too.
+
+
+-------------------------------------------------------------------------------
+10. RESET
+-------------------------------------------------------------------------------
+
+  .dbasic reset
+
+  Variables      8
+  Saved          5 bytes
+
+Every variable is kept, with its value cleared:
+
+  numbers         0
+  strings         "" (their text freed: "Saved")
+  numeric arrays  every element 0
+  string arrays   every element spaces
+  FOR loops       value 0; limit, step and loop line kept
+
+Unlike CLEAR, the variables still exist and the arrays keep their sizes.
+Takes undo.
+
+
+-------------------------------------------------------------------------------
+11. COMPRESS
+-------------------------------------------------------------------------------
+
+  .dbasic compress
+
+  Numbers       34
+  NOT PI         5
+  SGN PI         5
+  INT PI         3
+  CODE           3
+  VAL           17
+  Kept           1
+  Saved        137 bytes
+
+In BASIC every number costs its text plus 6 hidden bytes: "10" takes 8
+bytes. Compress replaces each one with the shortest form that gives
+exactly the same hidden value:
+
+  0            NOT PI  (or CODE "" when an operator follows:
+                        NOT PI+5 would be NOT (PI+5))
+  1            SGN PI
+  3            INT PI
+  32 to 162    CODE "c"  (the character with that code; not 34, the quote)
+  others       VAL "n"
+  none shorter kept as it is ("Kept")
+
+The hidden value decides, not the text, so number tricks used by
+protections keep working. A VAL form is only used when the ROM reads its
+text back as exactly the same value. DEF FN parameters are left alone.
+
+  - A compressed program runs slower (VAL, CODE and PI are calculated every
+    time), but it takes much less memory.
+  - Line numbers after GO TO, GO SUB and so on are compressed too. Renumber
+    first: afterwards renumber cannot follow VAL "..." targets.
+  - Running compress again gives "Saved 0".
+  - CODE "c" is never used for codes 163 and up, which are keywords. A 128K
+    editor would spell them out if the line were edited.
+
+Takes undo.
+
+
+-------------------------------------------------------------------------------
+12. RENUMBER
+-------------------------------------------------------------------------------
+
+  .dbasic renumber [start[,step[,from[,to]]]]
+
+  .dbasic renumber              every line: 10, 20, 30 ...
+  .dbasic renumber 1000,5       every line: 1000, 1005 ...
+  .dbasic renumber 100,10,500   lines 500 to the end, from 100 in tens
+  .dbasic renumber 500,1,40,80  only lines 40 to 80
+  .dbasic renumber ,5           empty fields keep their defaults
+
+Defaults: start 10, step 10, every line.
+
+  Lines         15
+  Targets       10
+  Program      408 bytes
+  Computed at  130:3
+  Computed at  140:6
+
+Lines are renumbered in memory order, so a plain renumber gives a
+protected program with duplicated or unsorted numbers clean ones.
+
+Targets: the number after GO TO, GO SUB, RUN, RESTORE, LIST, LLIST and
+SAVE ... LINE is changed to the line's new number. The target is the line
+BASIC itself would jump to: GO SUB 75 with no line 75 goes to the new
+number of line 80. A target past the last line stays past it.
+
+Computed targets such as GO TO s*10 or GO SUB VAL "70" cannot be changed.
+They are listed as "Computed at line:statement", with the line's new
+number, so you can fix them by hand.
+
+The FOR loops in the variables and CONTINUE's line follow too. GO SUB
+return lines stored by a stopped program do not: use RUN or CLEAR after a
+renumber.
+
+Refused, before any change:
+
+  Line numbers past 9999   the new numbers would not fit
+  Lines would overlap      a renumbered range would pass its neighbours
+                           (renumber never reorders lines)
+  Line not found           no line in the from..to range
+  Line is running          renumber cannot run from a program line
+
+Takes undo.
+
+
+-------------------------------------------------------------------------------
+13. UNDO
+-------------------------------------------------------------------------------
+
+  .dbasic compress undo     save a copy, then compress
+  .dbasic undo              put the copy back
+
+Add the word undo at the end of delete, rem, reset, compress or renumber.
+Once the action has checked everything, and before it changes anything,
+the program and its variables are copied to the 128K's extra memory. The
+result shows one more line:
+
+  Undo copy    798 bytes
+
+.dbasic undo on its own puts that copy back:
+
+  Restored
+  Program      679 bytes
+  Variables    118 bytes
+
+The copy is kept after an undo. undo again restores it again, until the
+next "... undo" replaces it. It is checked (signature and checksum) before
+anything changes, and it can even replace a program that is corrupt.
+
+Undo needs 128K paging:
+
+  - 48K, or a 128K whose paging is locked (48 BASIC chosen from the 128
+    menu): "128K paging required".
+  - On a 128K reset into 48 BASIC with USR 0 it works.
+
+  WARNING: the copy goes to RAM banks 1, 3, 4 and 6, which the 128K and
+  +3 RAM disks also use. A "... undo" overwrites files in the RAM disk.
+  RAM disk files saved after it overwrite the copy: undo then reports
+  "Undo data is corrupt" or "No undo data saved" and leaves the program
+  as it is.
+
+undo cannot run from a program line: it would replace the running line.
+
+
+-------------------------------------------------------------------------------
+14. MESSAGES
+-------------------------------------------------------------------------------
+
+Errors are reported like any esxDOS command. Nothing has changed when any
+of them appears.
+
+  48 BASIC ROM required    another ROM is paged (128 BASIC, +3 BASIC or an
+                           unknown one)
+  Out of memory            not enough free memory for Doctor BASIC itself
+                           or for the change asked for
+  Invalid parameter        bad or missing numbers, to lower than from,
+                           step 0, "undo" after an action that has none
+  Arguments too long       the command line is over 255 characters
+                           (keywords counted as their spelt-out words)
+  Program is corrupt       a line or a number in the program is damaged
+  Variables are corrupt    the variables area is damaged
+  BREAK                    stopped by BREAK / N at "scroll?"
+  Not found                find: no line contains the text
+  Line not found           delete: the line does not exist;
+                           renumber: no line in the range
+  Line is running          the action would change the line running it
+  128K paging required     undo on a 48K or with paging locked
+  No undo data saved       undo with no saved copy
+  Undo data is corrupt     the saved copy failed its check
+  Line numbers past 9999   renumber: see section 12
+  Lines would overlap      renumber: see section 12
+
+
+-------------------------------------------------------------------------------
+15. TIPS
+-------------------------------------------------------------------------------
+
+  - On a 128K, add undo to anything you are not sure of.
+  - Order for the smallest program: rem, renumber, then compress.
+  - To see what a protected program hides: list, then vars.
+  - reset before SAVE ... LINE gives a program without leftover data but
+    with every variable and array in place.
+  - A program that ends with "Program is corrupt" in info cannot be edited
+    by Doctor BASIC. undo still works, if a copy was saved.
+
+
+-------------------------------------------------------------------------------
+16. TECHNICAL NOTES
+-------------------------------------------------------------------------------
+
+  - The command runs in DivMMC RAM at #2000-#3CFF, the 7424 bytes esxDOS
+    gives a dot command. Its three 256-byte work buffers go in free BASIC
+    memory just under the stack while it runs (768 to 1023 bytes), and are
+    given back when it ends.
+  - The 48 BASIC ROM routines (MAKE-ROOM, RECLAIM-2, the number reader) are
+    used through esxDOS. At start Doctor BASIC checks that the paged ROM
+    really is 48 BASIC.
+  - Edits are made in a single pass over the program, however many lines
+    change, with the system variables kept right as the ROM does it. The
+    edit line and the rest of memory move once. Renumbering a 240-line,
+    6.7K program with 480 targets takes about 3 seconds.
+  - The undo copy is a 10-byte header (signature, length, variables
+    offset, checksum) followed by the program and variables, at #C000 in
+    banks 1, 3, 4 and 6 one after the other. That fits any 48K program.
+
+
+-------------------------------------------------------------------------------
+17. CREDITS
+-------------------------------------------------------------------------------
+
+  Doctor BASIC (c) 1994-2026 namco/nexgen.
+  Version 4.50 (1994) for tape; version 5.0 (2026) for esxDOS.
+
+===============================================================================
