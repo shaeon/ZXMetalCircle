@@ -28,7 +28,8 @@
 #include <circle/time.h>
 #include <circle/startup.h>
 #if RASPPI >= 4
-#include <circle/sound/usbsoundbasedevice.h>	// sonido USB: solo Pi 4 y 400 (xHCI)
+#include <circle/sound/usbsoundbasedevice.h>
+#include <circle/devicenameservice.h>	// sonido USB: solo Pi 4 y 400 (xHCI)
 #endif
 #include <circle/machineinfo.h>
 
@@ -270,6 +271,7 @@ CKernel::CKernel (void)
 	m_USBHCI (&m_Interrupt, &m_Timer, TRUE),	// TRUE: conexión en caliente
 	m_EMMC (&m_Interrupt, &m_Timer, &m_ActLED),
 	m_bSDMounted (FALSE),
+	m_bUSBRescan (FALSE),
 	m_pSpectrum (0),
 	m_Menu (&m_Video),
 	m_pSound (0),
@@ -538,6 +540,7 @@ boolean CKernel::Initialize (void)
 		else
 		{
 			m_Logger.Write (FromKernel, LogWarning, "Cannot mount SD card");
+			m_bSDMounted = MountUSBAsSD ();
 		}
 	}
 
@@ -554,6 +557,44 @@ boolean CKernel::Initialize (void)
 	}
 
 	return bOK;
+}
+
+// Sin microSD (arranque desde un pincho USB): el primer disco USB hace de
+// SD:. FatFs busca la unidad SD: con el nombre "emmc1", así que el pincho se
+// apunta también con ese nombre, y todo lo que usa SD:/... (ajustes, ROMs,
+// WiFi, juegos) va al pincho sin cambiar nada más.
+static void USBDiskRemoved (CDevice *pDevice, void *pContext)
+{
+	CDeviceNameService::Get ()->RemoveDevice ("emmc1", TRUE);	// no dejarlo apuntando a nada
+}
+
+boolean CKernel::MountUSBAsSD (void)
+{
+	CDeviceNameService *pNames = CDeviceNameService::Get ();
+	CDevice *pDisk = pNames->GetDevice ("umsd1", TRUE);
+	for (unsigned i = 0; i < 30 && pDisk == 0; i++)		// hasta 3 s (los lentos)
+	{
+		m_Timer.MsDelay (100);
+		m_USBHCI.UpdatePlugAndPlay ();
+		pDisk = pNames->GetDevice ("umsd1", TRUE);
+	}
+	m_bUSBRescan = TRUE;		// teclados y mandos ya vistos aquí: que se miren en UpdateUSB
+	if (pDisk == 0)
+	{
+		return FALSE;
+	}
+
+	pNames->AddDevice ("emmc1", pDisk, TRUE);
+	pDisk->RegisterRemovedHandler (USBDiskRemoved, 0);
+	FRESULT Result = f_mount (&m_FileSystem, "SD:", 1);
+	if (Result != FR_OK)
+	{
+		pNames->RemoveDevice ("emmc1", TRUE);
+		m_Logger.Write (FromKernel, LogWarning, "Cannot mount USB disk as SD: (%d)", Result);
+		return FALSE;
+	}
+	m_Logger.Write (FromKernel, LogNotice, "No SD card: using the USB disk as SD:");
+	return TRUE;
 }
 
 void CKernel::ParseOptions (void)
@@ -993,10 +1034,11 @@ void CKernel::UpdateUSB (void)
 		UpdatePadPlayers ();
 	}
 
-	if (!m_USBHCI.UpdatePlugAndPlay ())
+	if (!m_USBHCI.UpdatePlugAndPlay () && !m_bUSBRescan)
 	{
 		return;
 	}
+	m_bUSBRescan = FALSE;
 
 	for (unsigned i = 0; i < MAX_KEYBOARDS; i++)
 	{

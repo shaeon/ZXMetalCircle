@@ -90,6 +90,7 @@ private:
 	void ParseOptions (void);
 	boolean InitSound (const char *pDevice);
 	void UpdateUSB (void);
+	boolean MountUSBAsSD (void);		// sin microSD: un pincho USB como SD:
 	void HandleKeyEvent (const TKeyEvent &rEvent);
 	void UpdateKeyRepeat (void);		// repetición de los cursores en los menús
 	boolean LoadTape (const char *pPath);
@@ -326,6 +327,7 @@ private:
 	CEMMCDevice		m_EMMC;
 	FATFS			m_FileSystem;
 	boolean			m_bSDMounted;
+	boolean			m_bUSBRescan;		// mirar los aparatos USB aunque no haya cambios
 
 	CVideo			m_Video;
 	CZXKeyboard		m_Keyboard;
