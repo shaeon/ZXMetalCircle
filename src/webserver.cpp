@@ -762,8 +762,9 @@ static const char *LastSlash (const char *pPath)
 // La carpeta de una ruta ("juegos/a.tap" -> "juegos"; "a.tap" -> "")
 static void ParentOf (const char *pPath, char *pOut, unsigned nSize)
 {
-	strncpy (pOut, pPath, nSize - 1);
-	pOut[nSize - 1] = '\0';
+	size_t nLen = strnlen (pPath, nSize - 1);
+	memcpy (pOut, pPath, nLen);
+	pOut[nLen] = '\0';
 	const char *pSlash = LastSlash (pOut);
 	if (pSlash != 0)
 	{

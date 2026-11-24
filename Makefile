@@ -41,6 +41,9 @@ LIBS	= $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \
 
 # Mbed TLS (HTTPS): se compila toda la biblioteca; lo no configurado queda vacío
 OBJS	+= $(patsubst %.c,%.o,$(wildcard third_party/mbedtls/library/*.c))
+# gcc 14 avisa en mbedtls_xor (inline desde ctr_drbg.c) de un índice fuera de
+# un array de 48 bytes que no ocurre (falso positivo; la 15 ya no lo da)
+third_party/mbedtls/library/ctr_drbg.o: CFLAGS += -Wno-array-bounds
 
 include $(CIRCLEHOME)/Rules.mk
 

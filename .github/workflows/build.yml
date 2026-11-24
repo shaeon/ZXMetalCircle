@@ -45,6 +45,7 @@ jobs:
         working-directory: test/host
         run: |
           sed 's#"roms/#"../../roms/#' ../../src/roms.S > roms_host.S
+          echo '.section .note.GNU-stack,"",@progbits' >> roms_host.S
           S=../../src; M=../../third_party/mame
           CORE="$S/spectrum.cpp $S/ay8912.cpp $S/audiomixer.cpp $S/tape.cpp $S/zxkeyboard.cpp \
                 $S/interface1.cpp $S/plus3disk.cpp $S/sdcard.cpp $S/spectranet.cpp $S/earinput.cpp \

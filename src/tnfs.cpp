@@ -410,8 +410,10 @@ boolean CTNFSClient::ListDir (const char *pPath, CTNFSListener *pListener, boole
 		{
 			continue;
 		}
-		strncpy (Names[nNames], Name, sizeof Names[0] - 1);
-		Names[nNames][sizeof Names[0] - 1] = '\0';
+		// los nombres más largos que la tabla se cortan
+		size_t nLen = strnlen (Name, sizeof Names[0] - 1);
+		memcpy (Names[nNames], Name, nLen);
+		Names[nNames][nLen] = '\0';
 		nNames++;
 	}
 	CloseDir ();

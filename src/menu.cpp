@@ -563,8 +563,10 @@ boolean CMenu::OpenBrowser (void)
 	unsigned nLastRow = 0;
 	if (m_nEntries > 0 && m_nSelected < m_nEntries)
 	{
-		strncpy (LastName, m_pEntries[m_Order[m_nSelected]].Name, sizeof LastName - 1);
-		LastName[sizeof LastName - 1] = '\0';
+		const char *pName = m_pEntries[m_Order[m_nSelected]].Name;
+		size_t nLen = strnlen (pName, sizeof LastName - 1);
+		memcpy (LastName, pName, nLen);
+		LastName[nLen] = '\0';
 		nLastRow = m_nSelected >= m_nTop ? m_nSelected - m_nTop : 0;
 	}
 	if (m_PendingSelect[0] != '\0')	// ReturnToBrowser: otro nombre (renombrado, nuevo)

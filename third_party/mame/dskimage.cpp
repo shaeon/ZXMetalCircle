@@ -827,12 +827,7 @@ void CDskImage::DecodeTrack (int nCyl, int nSide, const u8 *pCells, unsigned nCe
 	{
 		delete [] T.Sector[i].pData;
 	}
-	memset (&T, 0, sizeof T);
-	for (int i = 0; i < DSK_MAX_SECTORS; i++)
-	{
-		T.Sector[i].nWeakFrom = 256;
-		T.Sector[i].nWeakLen = 0;
-	}
+	T = TDskTrack ();	// todo a 0 y los sectores con sus valores por defecto
 	T.nGap3 = nGap3;
 	T.nFiller = nFiller;
 
