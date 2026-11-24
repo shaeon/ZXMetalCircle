@@ -116,6 +116,7 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_bSnow = m_bSnow128 = FALSE;
 	m_nLastByte = m_nLastAttr = 0;
 	m_bULAplusActive = FALSE;
+	m_bULAplusUsed = FALSE;
 	m_nULAplusRegister = 0;
 	for (unsigned i = 0; i < 64; i++)
 	{
@@ -302,6 +303,7 @@ void CSpectrum::Reset (void)
 	m_bMFPaged = FALSE;
 	m_bMFLocked = TRUE;
 	m_bULAplusActive = FALSE;
+	m_bULAplusUsed = FALSE;
 	m_nULAplusRegister = 0;
 	m_bIF1Paged = FALSE;
 	m_IF1.Reset ();
@@ -646,6 +648,7 @@ void CSpectrum::ULAplusWrite (uint16_t nPort, u8 nValue)
 	// Antes de cambiar colores o modo se dibuja todo lo anterior con los actuales
 	UpdateScreen (m_nTstates);
 	UpdateBorder (m_nTstates);
+	m_bULAplusUsed = TRUE;
 
 	if (m_nULAplusRegister == 0x40)
 	{

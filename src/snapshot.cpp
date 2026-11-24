@@ -816,6 +816,7 @@ const char *CSnapshot::LoadSZX (CSpectrum *p, const u8 *pData, unsigned nSize)
 				p->SetULAplusColor (i, pBlock[2 + i]);
 			}
 			p->m_bULAplusActive = (pBlock[0] & 0x01) != 0;
+			p->m_bULAplusUsed = TRUE;
 			p->m_nULAplusRegister = pBlock[1] & 0x7F;
 			if (p->m_nULAplusRegister > 0x40)
 			{

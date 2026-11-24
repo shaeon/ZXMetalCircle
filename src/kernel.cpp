@@ -348,6 +348,7 @@ CKernel::CKernel (void)
 	m_nPokeResets = 0;
 	m_nPokeStage = 0;
 	m_nTapeStage = 0;
+	m_nSnapStage = 0;
 	m_nTapeEditBlock = 0;
 	m_bTapeSingle = FALSE;
 	m_nTapeOptions = 0;
@@ -4996,12 +4997,38 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 
 // F8: graba el estado en SD:/snaps/<nombre>_NNN.z80, con el nombre de la cinta
 // actual (o "snap" si no hay ninguna)
-boolean CKernel::SaveSnapshot (void)
+boolean CKernel::SaveSnapshot (int nFormat)
 {
 	if (!m_bSDMounted)
 	{
 		ShowMessage (T ("No hay tarjeta SD montada"));
 		return FALSE;
+	}
+
+	if (nFormat < 0)
+	{
+		nFormat = m_nSnapFormat;
+		// Z80 y SNA no guardan la paleta de la ULAplus: al cargarlos, el juego
+		// saldría con otros colores. Se pregunta (SZX, elegido al entrar)
+		if (nFormat != 2 && m_pSpectrum->IsULAplusInUse ())
+		{
+			if (!m_Menu.IsOpen ())
+			{
+				memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+				UpdateStatusLines ();
+				OpenMenu ();
+				m_Keyboard.SetCaptured (TRUE);
+			}
+			m_nSnapStage = 1;
+			m_Menu.OpenChoice (nFormat == 1 ? T ("SNA no guarda la paleta ULAplus")
+							: T ("Z80 no guarda la paleta ULAplus"));
+			m_Menu.SetChoiceItem (0, T ("Grabar en SZX (con la paleta)"));
+			m_Menu.SetChoiceItem (1, nFormat == 1 ? T ("Grabar en SNA igualmente")
+							      : T ("Grabar en Z80 igualmente"));
+			m_Menu.SetChoiceItem (2, T ("No grabar"));
+			m_Menu.SetChoiceSelected (0);
+			return TRUE;
+		}
 	}
 
 	u8 *Buffer = m_pWork;	// SNAPSHOT_MAX_SIZE < WORK_BUFFER_SIZE
@@ -5013,7 +5040,7 @@ boolean CKernel::SaveSnapshot (void)
 
 	static const char *SnapExt[3] = {"z80", "sna", "szx"};
 	unsigned nSize;
-	switch (m_nSnapFormat)
+	switch (nFormat)
 	{
 	case 1:  nSize = CSnapshot::SaveSNA (m_pSpectrum, Buffer, SNAPSHOT_MAX_SIZE);	break;
 	case 2:  nSize = CSnapshot::SaveSZX (m_pSpectrum, Buffer, SNAPSHOT_MAX_SIZE);	break;
@@ -5055,7 +5082,7 @@ boolean CKernel::SaveSnapshot (void)
 	unsigned nNumber = 1;
 	do
 	{
-		Path.Format ("SD:/snaps/%s_%03u.%s", Base, nNumber++, SnapExt[m_nSnapFormat]);
+		Path.Format ("SD:/snaps/%s_%03u.%s", Base, nNumber++, SnapExt[nFormat]);
 	}
 	while (f_stat (Path, &Info) == FR_OK && nNumber < 1000);
 
@@ -5076,6 +5103,34 @@ boolean CKernel::SaveSnapshot (void)
 	Message.Format (T ("Snapshot: %s"), (const char *) Path + 4);	// sin "SD:/"
 	ShowMessage (Message);
 
+	return TRUE;
+}
+
+// La pregunta de F8 con la ULAplus en uso
+boolean CKernel::SnapMenuResult (TMenuResult Result)
+{
+	if (m_nSnapStage == 0 || (Result != MenuResultChoice && Result != MenuResultChoiceCancel))
+	{
+		return FALSE;
+	}
+	m_nSnapStage = 0;
+	unsigned nChoice = Result == MenuResultChoice ? m_Menu.GetChoice () : 2;
+	if (m_Menu.IsOpen ())
+	{
+		m_Menu.Close ();
+	}
+	if (nChoice == 0)
+	{
+		SaveSnapshot (2);			// SZX
+	}
+	else if (nChoice == 1)
+	{
+		SaveSnapshot ((int) m_nSnapFormat);	// el elegido, sin la paleta
+	}
+	else
+	{
+		ShowMessage (T ("Snapshot no grabado"));
+	}
 	return TRUE;
 }
 
@@ -5353,6 +5408,10 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			// F2 en el navegador de la cinta: copiar, mover, borrar bloques
 		}
+		else if (SnapMenuResult (Result))
+		{
+			// F8 con la ULAplus en uso: ¿en SZX?
+		}
 		else if (Result == MenuResultFileSelected)
 		{
 			int nUnit = m_Menu.TakeUnitTarget ();
@@ -5577,6 +5636,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			m_nPokeStage = 0;		// ninguna pantalla de pokes a medias
 			m_nFileStage = 0;		// ni de F2
 			m_nTapeStage = 0;		// ni de F2 en la cinta
+			m_nSnapStage = 0;		// ni de F8
 			MenuClosed ();
 			m_Keyboard.SetCaptured (FALSE);
 			m_Keyboard.ReleaseAll ();

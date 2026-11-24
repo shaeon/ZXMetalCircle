@@ -46,5 +46,7 @@ Un snapshot es una "foto" del Spectrum entero: registros del Z80, memoria, pagin
   - **.SZX**: el más completo (incluye la paleta ULAplus); las páginas van sin comprimir.
 
   Tanto .Z80 como .SZX guardan la posición exacta dentro del cuadro.
+
+  .Z80 y .SNA no tienen sitio para la paleta ULAplus: si el programa la usa (desde el último reset) y el formato es .Z80 o .SNA, F8 pregunta **Grabar en SZX (con la paleta)** (elegido al entrar), **Grabar en Z80/SNA igualmente** o **No grabar**.
 - Los snapshots de Pentagon 128 se cargan como 128K, lo más parecido que hay.
 - No se guarda el estado del Multiface ni de la cinta. Graba el snapshot con el Multiface cerrado.

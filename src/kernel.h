@@ -102,7 +102,10 @@ private:
 	void ExtractZipToTmp (unsigned nEntry, boolean bOverwrite);
 	int SourceSize (const char *pPath);		// SD o "ZIP:nombre"
 	boolean ReadSource (const char *pPath, u8 *pBuffer, unsigned nSize);
-	boolean SaveSnapshot (void);
+	// F8; nFormat: 0 Z80, 1 SNA, 2 SZX (-1 = el de snapformat, preguntando si
+	// se perdería algo, como la paleta de la ULAplus)
+	boolean SaveSnapshot (int nFormat = -1);
+	boolean SnapMenuResult (TMenuResult Result);
 	boolean LoadCartridge (const char *pPath);
 	// ZX81 con el emulador de Paul Farrow (kernelzx81.cpp)
 	boolean StartZX81 (const char *pProgram);	// 0: solo arrancarlo; si no, un .P
@@ -503,6 +506,7 @@ private:
 	boolean			m_bPasteCanReplace;
 	unsigned		m_nFileOptions;
 	unsigned		m_nTapeStage;		// F2 en la cinta
+	unsigned		m_nSnapStage;		// F8: ¿grabar en SZX?
 	unsigned		m_nTapeEditBlock;	// el bloque elegido
 	boolean			m_bTapeSingle;		// solo ese bloque (no con sus datos)
 	unsigned		m_TapeOption[8];

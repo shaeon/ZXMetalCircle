@@ -194,6 +194,9 @@ public:
 	boolean IsPureBlack (void) const	{ return m_bPureBlack; }
 	TPixel GetStdColor (unsigned nIndex) const	{ return m_StdColor[nIndex & 15]; }
 	boolean IsULAplusActive (void) const		{ return m_bULAplusActive; }
+	// el programa usa la ULAplus desde el último reset: modo de 64 colores
+	// activo o una paleta cargada (aunque ahora tenga el modo apagado)
+	boolean IsULAplusInUse (void) const	{ return m_bULAplusActive || m_bULAplusUsed; }
 
 	// Grabación por pulsos de la salida MIC (cualquier rutina de grabación,
 	// incluidas las turbo). Durante la grabación no se usa el trap de SAVE.
@@ -328,6 +331,7 @@ private:
 	void SetULAplusColor (unsigned nIndex, u8 nColor);
 	boolean m_bULAplusEnabled;
 	boolean m_bULAplusActive;
+	boolean m_bULAplusUsed;		// se ha escrito en ella desde el reset
 	u8 m_nULAplusRegister;		// 0-63 = entrada de la paleta, 0x40 = modo
 	u8 m_ULAplusPalette[64];	// GGGRRRBB
 	TPixel m_ULAplusColor[64];

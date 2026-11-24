@@ -46,5 +46,7 @@ A snapshot is a "photo" of the whole Spectrum: Z80 registers, memory, paging, bo
   - **.SZX**: the most complete (it includes the ULAplus palette); pages are stored uncompressed.
 
   Both .Z80 and .SZX store the exact position within the frame.
+
+  .Z80 and .SNA have no room for the ULAplus palette: if the program uses it (since the last reset) and the format is .Z80 or .SNA, F8 asks **Save as SZX (with the palette)** (selected on entry), **Save as Z80/SNA anyway** or **Don't save**.
 - Pentagon 128 snapshots load as a 128K, the closest there is.
 - The state of the Multiface and the tape is not saved. Save the snapshot with the Multiface closed.

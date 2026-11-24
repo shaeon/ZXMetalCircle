@@ -6,6 +6,10 @@ Leyenda: **Nuevo**, **Cambiado**, **Corregido**, **Quitado**. "Probado" dice dó
 
 Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; este historial se reconstruyó después a partir de las notas de desarrollo, así que no lleva fecha por versión.
 
+## Sin publicar
+
+- **Cambiado**: **F8 con la ULAplus en uso** y el formato en .Z80 o .SNA, que no tienen sitio para su paleta (al cargar el snapshot, el juego salía con otros colores): ahora pregunta **Grabar en SZX (con la paleta)**, elegido al entrar, **Grabar en Z80/SNA igualmente** o **No grabar**. «En uso» quiere decir el modo de 64 colores activo o una paleta escrita desde el último reset. Con el formato en .SZX, o sin ULAplus, F8 graba como siempre, sin preguntar. Lo reportó un usuario; probado en QEMU: el .SZX vuelve con su paleta y el .Z80 sin ella.
+
 ## 1.12
 
 - **Nuevo**: **efecto nieve del 16K, 48K, 128K y +2**, como en la máquina real. Si el registro I está entre 0x40 y 0x7F, el refresco de la memoria del Z80 choca con la lectura de la pantalla de la ULA: según en qué momento de los 8 t-states de la ULA caiga el final de la lectura de una instrucción, el primer par de bytes (imagen y atributo) se lee de otra fila del mismo bloque de 128 bytes (los 7 bits bajos salen de R: la nieve) o el segundo par repite el primero (el «doble efecto»). Tabla de fases de Weiv (2022), la misma que usa ESPectrum; R, el ya incrementado, como dice Weiv. No cuesta nada: solo se mira en las lecturas de instrucción con I en ese rango. Activado por defecto; `snow=0` o «Efecto nieve» en la configuración lo quitan. También en el **128K y el +2**: con I entre 0x40 y 0x7F (la pantalla que se ve) y con I entre 0xC0 y 0xFF si arriba hay una página lenta (impar): la fila equivocada sale del banco 1 o 3 (con la página 1 o 3) o del 5 o 7 (con la 5 o la 7), según la pantalla que se ve, como en ESPectrum; comprobado con Snow128N de Weiv. Los +2A/+3 y los clónicos no tienen nieve; el cuelgue que la nieve provoca en algunos 128K no se emula. Prueba nueva en la Action (`snow_test`).
