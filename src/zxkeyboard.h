@@ -116,6 +116,7 @@ public:
 	boolean IsMouseActive (void) const
 		{ return m_bMousePresent && m_JoystickMode != JoystickKempston && m_JoystickMode2 != JoystickKempston; }
 	void MouseUpdate (unsigned nButtons, int nDX, int nDY, int nWheel);
+	void SetMouseSensitivity (unsigned nPercent);	// 10-200 (100: tal cual)
 	u8 ReadMouseButtons (void) const;
 	u8 ReadMouseX (void) const	{ return m_nMouseX; }
 	u8 ReadMouseY (void) const	{ return m_nMouseY; }
@@ -196,7 +197,9 @@ private:
 
 	volatile boolean m_bMousePresent;
 	volatile u8 m_nMouseX, m_nMouseY;
-	volatile u8 m_nMouseWheel;		// contador de 4 bits (Kempston Mouse Turbo)
+	volatile u8 m_nMouseWheel;
+	unsigned m_nMouseSens;			// %
+	int m_nMouseRestX, m_nMouseRestY;	// lo que sobró (en centésimas)		// contador de 4 bits (Kempston Mouse Turbo)
 	volatile unsigned m_nMouseButtons;
 	TJoystickMode m_JoystickMode;
 	TJoystickMode m_JoystickMode2;		// jugador 2 (JoystickNone: no hay)

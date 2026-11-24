@@ -767,6 +767,9 @@ void CKernel::ParseOptions (void)
 	// F5: NMI (por defecto) o navegador de ficheros; Alt+F5 hace lo otro
 	m_bF5Files = strcasecmp (m_Options.GetAppOptionString ("f5", "nmi"), "files") == 0;
 
+	// Sensibilidad del ratón (Kempston Mouse): 10-200 %
+	m_Keyboard.SetMouseSensitivity (m_Options.GetAppOptionDecimal ("mousesens", 100));
+
 	// Cursores del PC: both (por defecto), keys o joystick
 	const char *pCursors = m_Options.GetAppOptionString ("cursors", "both");
 	m_Keyboard.SetCursorMode (strcasecmp (pCursors, "keys") == 0 ? CursorKeysOnly
@@ -1125,6 +1128,7 @@ void CKernel::UpdateUSB (void)
 			pMouse->RegisterRemovedHandler (MouseRemovedHandler, 0);
 			pMouse->RegisterStatusHandler (MouseStatusHandler);
 			m_Keyboard.SetMousePresent (TRUE);
+			m_Settings.SetMousePresent (TRUE);
 
 			m_Logger.Write (FromKernel, LogNotice, "Mouse attached");
 			ShowMessage (m_Keyboard.GetJoystickMode () == JoystickKempston
@@ -1148,6 +1152,7 @@ void CKernel::MouseRemovedHandler (CDevice *pDevice, void *pContext)
 	{
 		s_pThis->m_pMouse = 0;
 		s_pThis->m_Keyboard.SetMousePresent (FALSE);
+		s_pThis->m_Settings.SetMousePresent (FALSE);
 	}
 }
 
@@ -3119,6 +3124,10 @@ void CKernel::ApplySetting (unsigned nIndex)
 		{
 			ShowMessage (T ("Teclado del ZX81: al volver a arrancarlo"));
 		}
+	}
+	else if (strcmp (pKey, "mousesens") == 0)
+	{
+		m_Keyboard.SetMouseSensitivity (atoi (pValue));
 	}
 	else if (strcmp (pKey, "cursors") == 0)
 	{

@@ -8,6 +8,7 @@ Las versiones 0.1 a 0.58 se hicieron entre el 10 y el 13 de octubre de 2026; est
 
 ## Sin publicar
 
+- **Nuevo**: **sensibilidad del ratón** (Kempston Mouse) en la configuración, página 4 (Teclado), de 10 % a 200 % en pasos de 10; `mousesens=` en `cmdline.txt`. Con los ratones de muchos DPI el puntero iba tan rápido que costaba manejar los programas; ahora el movimiento se multiplica por ese porcentaje, guardando lo que sobra para que despacio también avance. 100 % (por defecto) es como antes. Se aplica al momento; sale en gris si no hay ratón o si el Kempston es el del joystick. Prueba nueva en la Action (`mouse_sens_test`).
 - **Cambiado**: **F8 con la ULAplus en uso** y el formato en .Z80 o .SNA, que no tienen sitio para su paleta (al cargar el snapshot, el juego salía con otros colores): ahora pregunta **Grabar en SZX (con la paleta)**, elegido al entrar, **Grabar en Z80/SNA igualmente** o **No grabar**. «En uso» quiere decir el modo de 64 colores activo o una paleta escrita desde el último reset. Con el formato en .SZX, o sin ULAplus, F8 graba como siempre, sin preguntar. Lo reportó un usuario; probado en QEMU: el .SZX vuelve con su paleta y el .Z80 sin ella.
 
 ## 1.12

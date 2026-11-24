@@ -127,6 +127,8 @@ El Recreated ZX Spectrum (Elite Systems, 2013) es una réplica del 48K de gomas 
 
 Un ratón USB conectado (en caliente) funciona como ratón Kempston. Igual que en ZXBaremulator, solo está activo cuando el joystick seleccionado **no** es Kempston, porque comparten puertos. Si no hay ratón conectado, los puertos no responden, así que los programas que lo detectan no lo encuentran.
 
+Si el puntero va demasiado rápido (pasa con los ratones de muchos DPI), baja la **Sensibilidad del ratón** en la configuración (página 4, Teclado; `mousesens=` en `cmdline.txt`): de 10 % a 200 % en pasos de 10, 100 % es el movimiento tal cual. Se aplica al momento.
+
 | Puerto | Contenido |
 | --- | --- |
 | 0xFADF | Botones: bit 0 derecho, bit 1 izquierdo, bit 2 central (activos a 0); bits 4-7, rueda |

@@ -110,6 +110,8 @@ CZXKeyboard::CZXKeyboard (void)
 
 	m_bMousePresent = FALSE;
 	m_nMouseX = m_nMouseY = 0;
+	m_nMouseSens = 100;
+	m_nMouseRestX = m_nMouseRestY = 0;
 	m_nMouseWheel = 0x0F;
 	m_nMouseButtons = 0;
 }
@@ -560,6 +562,12 @@ void CZXKeyboard::SetPadKeys (unsigned nIndex, const u8 Matrix[8])
 	}
 }
 
+void CZXKeyboard::SetMouseSensitivity (unsigned nPercent)
+{
+	m_nMouseSens = nPercent < 10 ? 10 : (nPercent > 200 ? 200 : nPercent);
+	m_nMouseRestX = m_nMouseRestY = 0;
+}
+
 void CZXKeyboard::SetMousePresent (boolean bPresent)
 {
 	m_bMousePresent = bPresent;
@@ -572,6 +580,18 @@ void CZXKeyboard::MouseUpdate (unsigned nButtons, int nDX, int nDY, int nWheel)
 	{
 		m_nMouseButtons = 0;
 		return;
+	}
+
+	// Sensibilidad: el movimiento se multiplica por m_nMouseSens %; lo que
+	// sobra se guarda para el siguiente, así que despacio también avanza
+	if (m_nMouseSens != 100)
+	{
+		m_nMouseRestX += nDX * (int) m_nMouseSens;
+		m_nMouseRestY += nDY * (int) m_nMouseSens;
+		nDX = m_nMouseRestX / 100;
+		nDY = m_nMouseRestY / 100;
+		m_nMouseRestX -= nDX * 100;
+		m_nMouseRestY -= nDY * 100;
 	}
 
 	// X crece hacia la derecha; Y crece hacia arriba (en USB crece hacia abajo)

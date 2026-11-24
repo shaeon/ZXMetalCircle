@@ -81,6 +81,8 @@ static TSettingDef Settings[] =
 	{"recreated",	N_("Recreated ZX"),	3, "0|auto|1", N_("no|automático|sí"),			"auto",	TRUE},
 	{"gpiokbd",	N_("Teclado por GPIO"),	3, "48|plus3|0", N_("48K/128|+2A/+3|ninguno"),		"48",	FALSE},
 	{"zx81kbd",	N_("Teclado del ZX81"),	3, "zx81|128", N_("el del ZX81|el del 128"),		"zx81",	TRUE},
+	{"mousesens",	N_("Sensibilidad ratón"), 3, "10|20|30|40|50|60|70|80|90|100|110|120|130|140|150|160|170|180|190|200",
+			"10 %|20 %|30 %|40 %|50 %|60 %|70 %|80 %|90 %|100 %|110 %|120 %|130 %|140 %|150 %|160 %|170 %|180 %|190 %|200 %", "100", TRUE},
 
 	// 4 Periféricos
 	{"spectranet",	N_("Spectranet"),	5, "0|1", N_("no|sí"),					"0",	TRUE},
@@ -172,7 +174,8 @@ static int IndexOf (const char *pList, const char *pValue)
 }
 
 CSettings::CSettings (void)
-:	m_bDirty (FALSE)
+:	m_bMousePresent (FALSE),
+	m_bDirty (FALSE)
 {
 	m_nPads = 0;
 	for (unsigned i = 0; i < NUM_SETTINGS; i++)
@@ -658,6 +661,12 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 		return n >= 0 && strcmp (GetValue (n), pValue) == 0;
 	};
 
+	// la sensibilidad del ratón, con un ratón USB que se use como Kempston
+	// Mouse (no si el Kempston es el de un joystick)
+	if (strcmp (pKey, "mousesens") == 0)
+	{
+		return m_bMousePresent && !Is ("joystick", "kempston") && !Is ("joystick2", "kempston");
+	}
 	// el teclado Issue 2/3 solo cambia algo en el 16K y el 48K
 	if (strcmp (pKey, "issue") == 0)
 	{

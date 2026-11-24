@@ -127,6 +127,8 @@ The Recreated ZX Spectrum (Elite Systems, 2013) is a replica of the rubber-key 4
 
 A connected (hot-plugged) USB mouse works as a Kempston mouse. As in ZXBaremulator, it is only active when the selected joystick is **not** Kempston, because they share ports. If no mouse is connected, the ports do not respond, so programs that detect it do not find it.
 
+If the pointer moves too fast (it happens with high-DPI mice), lower the **Mouse sensitivity** in the settings (page 4, Keyboard; `mousesens=` in `cmdline.txt`): from 10 % to 200 % in steps of 10; 100 % is the movement as is. It applies at once.
+
 | Port | Content |
 | --- | --- |
 | 0xFADF | Buttons: bit 0 right, bit 1 left, bit 2 middle (active at 0); bits 4-7, wheel |

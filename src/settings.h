@@ -83,6 +83,7 @@ public:
 	static void SetValueList (const char *pKey, const char *pValues, const char *pNames);
 
 	boolean IsDirty (void) const			{ return m_bDirty; }
+	void SetMousePresent (boolean bPresent)		{ m_bMousePresent = bPresent; }	// para IsApplicable
 	void ClearDirty (void)				{ m_bDirty = FALSE; }
 
 	// Línea nueva de cmdline.txt a partir de la que hay (pOld): cambia o
@@ -93,6 +94,7 @@ private:
 	char m_PadId[SETTING_MAX_PADS][SETTING_PAD_ID];	// mandos conectados
 	char m_PadName[SETTING_MAX_PADS][SETTING_NAME_LEN];
 	unsigned m_nPads;
+	boolean m_bMousePresent;
 	char m_Value[SETTINGS_MAX][SETTING_VALUE_LEN];
 	boolean m_bDirty;
 };

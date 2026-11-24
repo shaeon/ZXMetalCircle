@@ -189,6 +189,9 @@ defecto.
                     zx81   el del ZX81 original (por defecto)
                     128    el de la ROM de Paul Farrow, con los signos y los
                            graficos movidos para parecerse al del 128
+ mousesens=100    Sensibilidad del raton USB (Kempston Mouse), de 10 a 200
+                  en pasos de 10 (%). 100 = el movimiento tal cual; menos,
+                  mas lento (util con ratones de muchos DPI)
                   Con el ZX81 en marcha: PRINT USR 8255 (el del ZX81) y
                   PRINT USR 8252 (el del 128)
 

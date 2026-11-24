@@ -24,6 +24,7 @@ static const TOptionDef Options[] =
 	{"tapeaccel",	"0|1"},
 	{"diskaccel",	"0|1"},
 	{"joystick",	"none|kempston|fuller|sinclair1|sinclair2|cursor|qaop"},
+	{"mousesens",	"10|20|30|40|50|60|70|80|90|100|110|120|130|140|150|160|170|180|190|200"},
 	{"joystick2",	"none|kempston|fuller|sinclair1|sinclair2|cursor|qaop"},
 	{"pad1",	0},
 	{"pad2",	0},

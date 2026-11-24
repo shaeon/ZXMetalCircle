@@ -188,6 +188,9 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                     zx81   the original ZX81 one (default)
                     128    the one in Paul Farrow's ROM, with symbols and
                            graphics moved to look like the 128's
+ mousesens=100    USB mouse sensitivity (Kempston Mouse), from 10 to 200 in
+                  steps of 10 (%). 100 = movement as is; lower, slower
+                  (useful with high-DPI mice)
                   With the ZX81 running: PRINT USR 8255 (ZX81 layout) and
                   PRINT USR 8252 (128 layout)
 
