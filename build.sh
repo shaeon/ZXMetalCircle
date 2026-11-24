@@ -18,10 +18,14 @@
 # Zero 2 W, 4, 400 y 5; los de 32 bits de la Pi 3 y 4 quedan en la SD como
 # alternativa (ver boot/config.txt).
 #
-# Requisitos: Arm GNU Toolchain (arm-none-eabi para 32 bits y aarch64-none-elf
-# para 64 bits; probado con la 14.2), git, wget, make, python3, mtools y dosfstools
+# Circle va dentro de circle-stdlib (versión fija, CSTDLIB_TAG): la biblioteca
+# de C es la newlib de circle-stdlib y la de C++, la libstdc++ del compilador.
 #
-# Uso: ./build.sh                 (todos los objetivos; descarga Circle y el firmware si no están)
+# Requisitos: Arm GNU Toolchain (arm-none-eabi para 32 bits y aarch64-none-elf
+# para 64 bits; probado con la 14.2 y la 15.2), git, wget, make, python3,
+# mtools y dosfstools
+#
+# Uso: ./build.sh                 (todos los objetivos; descarga circle-stdlib y el firmware si no están)
 #      ./build.sh 3-64            (solo uno)
 #      ./build.sh "1 3-64 5"      (varios)
 #      QEMU=1 ./build.sh "1 3-64" (kernels para probar en QEMU, en qemu/: sin
@@ -32,8 +36,9 @@ set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 WORK="${WORK:-$ROOT/build}"
-CIRCLE_REPO="https://github.com/rsta2/circle.git"
-CIRCLE_TAG="${CIRCLE_TAG:-master}"
+# circle-stdlib v21 = Circle Step51.1.1 + circle-newlib
+CSTDLIB_REPO="https://github.com/smuehlst/circle-stdlib.git"
+CSTDLIB_TAG="${CSTDLIB_TAG:-v21}"
 PREFIX32="${PREFIX32:-${PREFIX:-arm-none-eabi-}}"
 PREFIX64="${PREFIX64:-aarch64-none-elf-}"
 JOBS="${JOBS:-$(nproc)}"
@@ -42,15 +47,14 @@ LIMPIO="${LIMPIO:-0}"
 
 TARGETS="${1:-1 2 3-32 4-32 3-64 4-64 5}"
 
-# Por objetivo: modelo para ./configure -r, bits, kernel y carpeta de Circle.
-# Las carpetas de 32 bits se llaman como antes (circle-r1 ... circle-r4) para
-# aprovechar lo ya compilado.
+# Por objetivo: modelo para ./configure -r, bits, kernel y carpeta de
+# circle-stdlib (cada objetivo compila su propia newlib y su propia Circle)
 declare -A RASPPI=( [1]=1 [2]=2 [3-32]=3 [4-32]=4 [3-64]=3 [4-64]=4 [5]=5 )
 declare -A BITS=(   [1]=32 [2]=32 [3-32]=32 [4-32]=32 [3-64]=64 [4-64]=64 [5]=64 )
 declare -A KERNEL=( [1]=kernel.img [2]=kernel7.img [3-32]=kernel8-32.img [4-32]=kernel7l.img
 		    [3-64]=kernel8.img [4-64]=kernel8-rpi4.img [5]=kernel_2712.img )
-declare -A CDIR=(   [1]=circle-r1 [2]=circle-r2 [3-32]=circle-r3 [4-32]=circle-r4
-		    [3-64]=circle-r3-64 [4-64]=circle-r4-64 [5]=circle-r5 )
+declare -A SDIR=(   [1]=cstdlib-r1 [2]=cstdlib-r2 [3-32]=cstdlib-r3 [4-32]=cstdlib-r4
+		    [3-64]=cstdlib-r3-64 [4-64]=cstdlib-r4-64 [5]=cstdlib-r5 )
 
 for T in $TARGETS; do
 	if [ -z "${RASPPI[$T]}" ]; then
@@ -65,21 +69,40 @@ for T in $TARGETS; do
 done
 
 mkdir -p "$WORK" "$ROOT/sdcard"
+# ruta absoluta (configure y make se lanzan desde otras carpetas)
+WORK="$(cd "$WORK" && pwd)"
+SRC="$WORK/circle-stdlib-src"
+CSRC="$SRC/libs/circle"
 
-if [ ! -d "$WORK/circle-src" ]; then
-	git clone --depth 1 -b "$CIRCLE_TAG" "$CIRCLE_REPO" "$WORK/circle-src"
+# circle-stdlib con sus submódulos de Circle y newlib (no los de mbed TLS ni
+# los de sus pruebas: el emulador trae su propio mbed TLS)
+if [ ! -d "$SRC" ]; then
+	git clone --depth 1 -b "$CSTDLIB_TAG" "$CSTDLIB_REPO" "$SRC"
+fi
+if [ ! -f "$CSRC/Rules.mk" ] || [ ! -f "$SRC/libs/circle-newlib/configure" ]; then
+	git -C "$SRC" submodule update --init --depth 1 libs/circle libs/circle-newlib
+fi
+
+# FatFs con f_mkfs y f_expand (esxDOS sobre una carpeta crea su imagen FAT) y
+# con "fast seek" (las imágenes de disco duro del +3e). Se cambia en el
+# original, antes de copiarlo para cada objetivo: así todo lo que usa la
+# estructura FIL (también la WiFi y wpa_supplicant) se compila ya con ello.
+if ! grep -q "define FF_USE_FASTSEEK.1" "$CSRC/addon/fatfs/ffconf.h"; then
+	sed -i 's/#define FF_USE_MKFS\t\t0/#define FF_USE_MKFS\t\t1/' "$CSRC/addon/fatfs/ffconf.h"
+	sed -i 's/#define FF_USE_EXPAND\t0/#define FF_USE_EXPAND\t1/' "$CSRC/addon/fatfs/ffconf.h"
+	sed -i 's/#define FF_USE_FASTSEEK\t0/#define FF_USE_FASTSEEK\t1/' "$CSRC/addon/fatfs/ffconf.h"
 fi
 
 # WiFi: wpa_supplicant (submódulo hostap) y firmware de los chips Broadcom
-if [ ! -f "$WORK/circle-src/addon/wlan/hostap/wpa_supplicant/Makefile.circle" ]; then
-	( cd "$WORK/circle-src" && git submodule update --init --depth 1 addon/wlan/hostap )
+if [ ! -f "$CSRC/addon/wlan/hostap/wpa_supplicant/Makefile.circle" ]; then
+	git -C "$CSRC" submodule update --init --depth 1 addon/wlan/hostap
 fi
-if [ ! -f "$WORK/circle-src/addon/wlan/firmware/brcmfmac43430-sdio.bin" ]; then
-	make -C "$WORK/circle-src/addon/wlan/firmware" firmware
+if [ ! -f "$CSRC/addon/wlan/firmware/brcmfmac43430-sdio.bin" ]; then
+	make -C "$CSRC/addon/wlan/firmware" firmware
 fi
 # firmware propio de la Pi 5 (mismo chip 43455, otros nombres de fichero)
-if [ ! -f "$WORK/circle-src/addon/wlan/firmware/brcmfmac43455-sdio.raspberrypi,5-model-b.bin" ]; then
-	make -C "$WORK/circle-src/addon/wlan/firmware" firmware5
+if [ ! -f "$CSRC/addon/wlan/firmware/brcmfmac43455-sdio.raspberrypi,5-model-b.bin" ]; then
+	make -C "$CSRC/addon/wlan/firmware" firmware5
 fi
 
 # Bibliotecas de Circle que usa el emulador
@@ -100,53 +123,27 @@ for T in $TARGETS; do
 	R="${RASPPI[$T]}"
 	if [ "${BITS[$T]}" = 64 ]; then P="$PREFIX64"; else P="$PREFIX32"; fi
 	echo "=== Objetivo $T: Raspberry Pi $R, ${BITS[$T]} bits ==="
-	C="$WORK/${CDIR[$T]}"
-	if [ ! -f "$C/lib/libcircle.a" ]; then
-		rm -rf "$C"
-		cp -a "$WORK/circle-src" "$C"
-		( cd "$C" && ./configure -r "$R" -p "$P" -f > /dev/null )
+	S="$WORK/${SDIR[$T]}"
+	C="$S/libs/circle"
+	if [ "${BITS[$T]}" = 64 ]; then NL=aarch64-none-circle; else NL=arm-none-circle; fi
+	if [ ! -f "$C/lib/libcircle.a" ] || [ ! -f "$S/install/$NL/lib/libc.a" ]; then
+		rm -rf "$S"
+		cp -a "$SRC" "$S"
+		# Pi 2, 3 y 4: soporte multinúcleo de Circle (la imagen se amplía en
+		# el núcleo 1, ver src/videocore.h). La Pi 5 no lo necesita (va
+		# sobrada) y de momento se compila sin él. La zona del kernel ya es
+		# de 4 MB (KERNEL_MAX_SIZE, lo pone el configure de circle-stdlib):
+		# margen para los modelos nuevos.
+		OPT=""
+		if [ "$R" -ge 2 ] && [ "$R" -le 4 ]; then
+			OPT="-o ARM_ALLOW_MULTI_CORE"
+		fi
+		( cd "$S" && ./configure -r "$R" -p "$P" $OPT > "$S/configure.log" 2>&1 ) \
+			|| { tail -30 "$S/configure.log"; exit 1; }
+		echo "Compilando newlib (unos minutos)..."
+		# MAKEINFO=true: sin texinfo (solo hace la documentación de newlib)
+		make -C "$S" newlib MAKEINFO=true > "$S/newlib.log" 2>&1 || { tail -50 "$S/newlib.log"; exit 1; }
 		build_circle_libs "$C"
-	fi
-
-	# Pi 2, 3 y 4: soporte multinúcleo de Circle (la imagen se amplía en el
-	# núcleo 1, ver src/videocore.h). Cambia las cerraduras internas de Circle,
-	# así que hay que recompilarlo entero. La Pi 5 no lo necesita (va sobrada)
-	# y de momento se compila sin él.
-	if [ "$R" -ge 2 ] && [ "$R" -le 4 ] && ! grep -q "ARM_ALLOW_MULTI_CORE" "$C/Config.mk"; then
-		echo "DEFINE += -DARM_ALLOW_MULTI_CORE" >> "$C/Config.mk"
-		build_circle_libs "$C" clean
-	fi
-
-	# Zona del kernel de 4 MB en lugar de los 2 MB de Circle: margen para los
-	# modelos nuevos. Circle lo permite con KERNEL_MAX_SIZE (múltiplo de 16 KB);
-	# cambia el mapa de memoria (pilas, tablas de páginas y heap van detrás),
-	# así que hay que recompilarlo entero, como con el multinúcleo.
-	if ! grep -q "KERNEL_MAX_SIZE" "$C/Config.mk"; then
-		echo "DEFINE += -DKERNEL_MAX_SIZE=0x400000" >> "$C/Config.mk"
-		build_circle_libs "$C" clean
-	fi
-
-	# FatFs con f_mkfs y f_expand (esxDOS sobre una carpeta crea su imagen FAT).
-	# No cambian el tamaño de ninguna estructura: basta con recompilar FatFs.
-	if ! grep -q "define FF_USE_MKFS[[:space:]]*1" "$C/addon/fatfs/ffconf.h"; then
-		sed -i 's/#define FF_USE_MKFS\t\t0/#define FF_USE_MKFS\t\t1/' "$C/addon/fatfs/ffconf.h"
-		sed -i 's/#define FF_USE_EXPAND\t0/#define FF_USE_EXPAND\t1/' "$C/addon/fatfs/ffconf.h"
-		make -C "$C/addon/fatfs" clean > /dev/null
-		make -C "$C/addon/fatfs" -j"$JOBS" > /dev/null
-	fi
-
-	# FatFs con "fast seek" (lo usan las imágenes de disco duro del +3e)
-	if ! grep -q "define FF_USE_FASTSEEK.1" "$C/addon/fatfs/ffconf.h"; then
-		sed -i 's/#define FF_USE_FASTSEEK\t0/#define FF_USE_FASTSEEK\t1/' "$C/addon/fatfs/ffconf.h"
-		make -C "$C/addon/fatfs" clean > /dev/null
-		make -C "$C/addon/fatfs" -j"$JOBS" > /dev/null
-		# El fast seek cambia el tamaño de la estructura FIL de FatFs: todo lo que
-		# la usa debe recompilarse con la misma cabecera. La WiFi la usa para leer
-		# el firmware (p9chan) y wpa_supplicant.conf; sin esto, el chip WiFi no arranca.
-		make -C "$C/addon/wlan" clean > /dev/null
-		make -C "$C/addon/wlan" -j"$JOBS" > /dev/null
-		make -C "$C/addon/wlan/hostap/wpa_supplicant" -f Makefile.circle clean > /dev/null
-		make -C "$C/addon/wlan/hostap/wpa_supplicant" -f Makefile.circle -j"$JOBS" > /dev/null
 	fi
 
 	# Carpeta de trabajo de cada objetivo (la de QEMU, aparte: compila con otra
@@ -169,7 +166,22 @@ for T in $TARGETS; do
 		# HDMI que no existen y se cuelga) ni responde al DHCP
 		echo "DEFINE += -DZX_QEMU" >> "$B/Makefile"
 	fi
-	make -C "$B" CIRCLEHOME="$C" -j"$JOBS"
+	make -C "$B" CIRCLESTDLIB="$S" -j"$JOBS"
+
+	# De dónde sale cada función de la biblioteca de C (newlib o Circle), según
+	# el mapa del enlazador: newlib debe ganar (ver Makefile). Al resumen del
+	# run si se compila en GitHub.
+	python3 "$ROOT/tools/origen_simbolos.py" "$B/${KERNEL[$T]%.img}.map" "$B/${KERNEL[$T]%.img}.elf" "${P}nm" \
+		> "$B/origen.txt"
+	cat "$B/origen.txt"
+	if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+		{
+			echo "#### ${KERNEL[$T]}: origen de las funciones de C"
+			echo '```'
+			cat "$B/origen.txt"
+			echo '```'
+		} >> "$GITHUB_STEP_SUMMARY"
+	fi
 
 	# Zona reservada para el kernel (código + datos + BSS): 4 MB (ver
 	# KERNEL_MAX_SIZE arriba). Si se pasa, Circle se detiene al arrancar.
@@ -200,19 +212,19 @@ fi
 # Firmware y armstub (solo hace falta una vez). El firmware incluye ya los
 # ficheros de la Pi 5 y 500 (bcm2712*.dtb y overlays/bcm2712d0.dtbo).
 if [ ! -f "$ROOT/sdcard/start.elf" ] || [ ! -f "$ROOT/sdcard/overlays/bcm2712d0.dtbo" ]; then
-	make -C "$WORK/circle-src/boot" firmware
-	cp "$WORK/circle-src/boot/"{bootcode.bin,start.elf,fixup.dat,start4.elf,fixup4.dat} "$ROOT/sdcard/"
-	cp "$WORK/circle-src/boot/"*.dtb "$ROOT/sdcard/"
+	make -C "$CSRC/boot" firmware
+	cp "$CSRC/boot/"{bootcode.bin,start.elf,fixup.dat,start4.elf,fixup4.dat} "$ROOT/sdcard/"
+	cp "$CSRC/boot/"*.dtb "$ROOT/sdcard/"
 	mkdir -p "$ROOT/sdcard/overlays"
-	cp "$WORK/circle-src/boot/bcm2712d0.dtbo" "$ROOT/sdcard/overlays/"
-	cp "$WORK/circle-src/boot/LICENCE.broadcom" "$ROOT/sdcard/"
+	cp "$CSRC/boot/bcm2712d0.dtbo" "$ROOT/sdcard/overlays/"
+	cp "$CSRC/boot/LICENCE.broadcom" "$ROOT/sdcard/"
 fi
 # Todos los DTB del firmware, de la misma versión que baja Circle (Circle solo
 # trae los de los modelos que los necesitan). Con el suyo en la raíz, cada
 # modelo arranca con su descripción de hardware oficial y el firmware no avisa
 # de que le falta (sugerencia de José Luis Sánchez, probado en todas sus Pi,
 # incluida una Pi 1 B+).
-FW_COMMIT=$(sed -n 's/^FIRMWARE ?= *//p' "$WORK/circle-src/boot/Makefile")
+FW_COMMIT=$(sed -n 's/^FIRMWARE ?= *//p' "$CSRC/boot/Makefile")
 for f in bcm2708-rpi-b.dtb bcm2708-rpi-b-plus.dtb bcm2708-rpi-b-rev1.dtb bcm2708-rpi-cm.dtb \
 	 bcm2708-rpi-zero.dtb bcm2708-rpi-zero-w.dtb bcm2709-rpi-2-b.dtb bcm2709-rpi-cm2.dtb \
 	 bcm2710-rpi-2-b.dtb bcm2710-rpi-3-b.dtb bcm2710-rpi-3-b-plus.dtb bcm2710-rpi-cm3.dtb \
@@ -230,25 +242,25 @@ done
 
 # armstub de la Pi 4: uno para 32 bits y otro para 64 (la Pi 5 no lo necesita)
 if [ ! -f "$ROOT/sdcard/armstub7-rpi4.bin" ] && command -v "${PREFIX32}gcc" > /dev/null; then
-	make -C "$WORK/circle-src/boot/armstub" PREFIX="$PREFIX32" armstub7-rpi4.bin > /dev/null
-	cp "$WORK/circle-src/boot/armstub/armstub7-rpi4.bin" "$ROOT/sdcard/"
+	make -C "$CSRC/boot/armstub" PREFIX="$PREFIX32" armstub7-rpi4.bin > /dev/null
+	cp "$CSRC/boot/armstub/armstub7-rpi4.bin" "$ROOT/sdcard/"
 fi
 if [ ! -f "$ROOT/sdcard/armstub8-rpi4.bin" ] && command -v "${PREFIX64}gcc" > /dev/null; then
-	make -C "$WORK/circle-src/boot/armstub" PREFIX64="$PREFIX64" armstub8-rpi4.bin > /dev/null
-	cp "$WORK/circle-src/boot/armstub/armstub8-rpi4.bin" "$ROOT/sdcard/"
+	make -C "$CSRC/boot/armstub" PREFIX64="$PREFIX64" armstub8-rpi4.bin > /dev/null
+	cp "$CSRC/boot/armstub/armstub8-rpi4.bin" "$ROOT/sdcard/"
 fi
 
 cp "$ROOT/boot/config.txt" "$ROOT/boot/cmdline.txt" "$ROOT/sdcard/"
 mkdir -p "$ROOT/sdcard/roms"
 cp "$ROOT/boot/roms/LEEME.txt" "$ROOT/boot/roms/README.txt" "$ROOT/sdcard/roms/"
 mkdir -p "$ROOT/sdcard/firmware"
-cp "$WORK/circle-src/addon/wlan/firmware/"*.bin "$WORK/circle-src/addon/wlan/firmware/"*.txt \
-   "$WORK/circle-src/addon/wlan/firmware/"*.clm_blob "$ROOT/sdcard/firmware/"
+cp "$CSRC/addon/wlan/firmware/"*.bin "$CSRC/addon/wlan/firmware/"*.txt \
+   "$CSRC/addon/wlan/firmware/"*.clm_blob "$ROOT/sdcard/firmware/"
 
 # Licencias del firmware WiFi (Broadcom y Cypress: redistribución en binario,
 # sin modificar). Se sacan del debian/copyright del mismo commit de
 # firmware-nonfree que usa Circle; si no se puede descargar, queda la referencia.
-FWCOMMIT=$(sed -n 's/^FIRMWARE ?= *//p' "$WORK/circle-src/addon/wlan/firmware/Makefile")
+FWCOMMIT=$(sed -n 's/^FIRMWARE ?= *//p' "$CSRC/addon/wlan/firmware/Makefile")
 FWURL="https://github.com/RPi-Distro/firmware-nonfree/tree/$FWCOMMIT"
 if [ ! -f "$ROOT/sdcard/firmware/LICENCE.txt" ]; then
 	{
