@@ -1,17 +1,28 @@
-# Construye la imagen del entorno de compilación (docker/Dockerfile) y la sube
-# al registro de paquetes de GitHub (GHCR), como
-# ghcr.io/<dueño>/zxmetalcircle-build:<docker/VERSION> y :latest.
+# Construye una imagen del entorno de compilación (docker/Dockerfile) y la sube
+# al registro de paquetes de GitHub (GHCR). La Action «Build» compila dentro de
+# ella.
 #
-# Se ejecuta sola cuando cambia algo de la carpeta docker/ en main o dev, y a
-# mano (Actions > Docker > Run workflow). La Action «Build» compila dentro de
-# esa imagen.
+# Solo a mano (Actions > Docker > Run workflow), eligiendo el compilador:
+#   - 14.2.rel1 → ghcr.io/<dueño>/zxmetalcircle-build:gcc14.2
+#   - 15.2.rel1 → ghcr.io/<dueño>/zxmetalcircle-build:gcc15.2
+# Con «Etiquetar también como docker/VERSION» lleva además :<VERSION> y
+# :latest; esa es la que usan main y dev (build.yml pide :1). Antes se
+# construía sola con cada cambio de docker/, y eso volvía a subir la :1 con los
+# paquetes de Ubuntu de ese día: ahora la :1 solo cambia cuando se pide.
 name: Docker
 
 on:
-  push:
-    branches: [main, dev]
-    paths: ['docker/**', '.github/workflows/docker.yml']
   workflow_dispatch:
+    inputs:
+      toolchain:
+        description: 'Arm GNU Toolchain'
+        type: choice
+        options: ['14.2.rel1', '15.2.rel1']
+        default: '15.2.rel1'
+      version_tag:
+        description: 'Etiquetar también como docker/VERSION y latest (la de main y dev)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -27,9 +38,19 @@ jobs:
         id: version
         run: |
           v=$(tr -d '[:space:]' < docker/VERSION)
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/zxmetalcircle-build" >> "$GITHUB_OUTPUT"
-          echo "Imagen ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/zxmetalcircle-build:$v"
+          t="${{ inputs.toolchain }}"
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/zxmetalcircle-build"
+          tags="$image:gcc${t%.rel*}"
+          if [ "${{ inputs.version_tag }}" = "true" ]; then
+            tags="$tags"$'\n'"$image:$v"$'\n'"$image:latest"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "Compilador $t; etiquetas:"
+          echo "$tags"
 
       - name: Entrar en GHCR
         uses: docker/login-action@v4
@@ -43,6 +64,5 @@ jobs:
         with:
           context: docker
           push: true
-          tags: |
-            ${{ steps.version.outputs.image }}:${{ steps.version.outputs.version }}
-            ${{ steps.version.outputs.image }}:latest
+          build-args: ARM_TOOLCHAIN=${{ inputs.toolchain }}
+          tags: ${{ steps.version.outputs.tags }}

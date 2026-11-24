@@ -9,6 +9,10 @@
 #
 # Si se cambia algo que afecte a la compilación (otro compilador, otro paquete),
 # súbase el número de docker/VERSION y el de la imagen en build.yml.
+#
+# El compilador es un parámetro: la Action «Docker» (a mano) construye la de
+# 14.2 (:gcc14.2, y :1 si se pide) o la de 15.2 (:gcc15.2, para probar
+# circle-stdlib). En casa: docker build --build-arg ARM_TOOLCHAIN=15.2.rel1 .
 
 FROM ubuntu:24.04
 
