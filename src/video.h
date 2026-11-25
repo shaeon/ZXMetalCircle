@@ -24,7 +24,8 @@
 #define COLOR_UI_DIM		21
 #define COLOR_UI_DIR		22
 #define COLOR_UI_VALUE		23		// valores (configuración, unidades, estado)
-#define COLOR_COUNT		24
+#define COLOR_UI_ALERT		24		// avisos graves (bajo voltaje, temperatura...)
+#define COLOR_COUNT		25
 
 // Tamaños de borde (los de JSpeccy)
 enum TBorderSize
@@ -56,6 +57,9 @@ public:
 	boolean GetScanlines (void) const	{ return m_bScanlines; }
 	boolean ScanlinesAvailable (void) const;	// la pantalla tiene resolución suficiente
 	const TVisibleRect &GetVisibleRect (void) const	{ return m_Visible; }
+	unsigned GetDisplayWidth (void) const	{ return m_nDisplayWidth; }	// la pantalla (HDMI)
+	unsigned GetDisplayHeight (void) const	{ return m_nDisplayHeight; }
+	unsigned MeasureRefresh (void);		// su frecuencia en Hz (0 = no se sabe); tarda ~0,1 s
 	static const char *GetBorderName (TBorderSize Border);
 
 	// Muestra la parte visible de la imagen (cambio de página en el siguiente refresco)

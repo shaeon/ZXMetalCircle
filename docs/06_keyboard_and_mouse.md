@@ -8,7 +8,7 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 
 | Key | Function |
 | --- | --- |
-| F1 | Help and status; from there, ENTER opens the file browser, C the settings, U the drives, P the pokes, T the list of all keys and A the credits |
+| F1 | Help and status (with the date and time, once the Pi has them); from there, ENTER opens the file browser, C the settings, U the drives, P the pokes, T the list of all keys, S the System screen and A the credits |
 | Alt+F1 | The settings directly (ESC goes back to the Spectrum) |
 | Alt+U | Drives: see, mount and empty each drive |
 | Alt+K | Keyboard help |
@@ -16,7 +16,7 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 | F3 | Tape: block browser (list of what is on the tape; ENTER leaves it at the chosen block, Home = rewind; F2 copies, moves, deletes or renames blocks, see below) |
 | F4 | Change joystick |
 | F5 | NMI: Multiface, esxDOS browser or Spectranet menu |
-| Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI. Inside, F2 copies, moves, renames, deletes or creates folders (see below) |
+| Alt+F5 | File browser (like F1 and ENTER). With `f5=files` they swap: F5 opens the files and Alt+F5 does the NMI. Inside, F2 copies, moves, renames, deletes or creates folders (see below). At the top, to the right of the folder, the date and time; at the bottom, the size and date of the selected file |
 | F6 | Loading speed: instant / fast / real |
 | F7 | List of models to choose from (the current one highlighted; those without a ROM say so) |
 | Alt+F7 | Switch to the next model (16K, 48K, 128K, +2, +2A, +3, +3e) |
@@ -48,6 +48,17 @@ PC keyboard to Spectrum keyboard mapping:
 - **Cursor keys**: they are always the Spectrum's cursor keys (CAPS SHIFT + 5/6/7/8). With a joystick selected, they also move the joystick, and **the Windows keys** (or keypad 0) are fire; **both Ctrl keys are SYMBOL SHIFT**. This can be changed with `cursors=` and, the fire key, with `kbdfire=` or on page 5 of the settings: Windows keys, right Ctrl (as before 1.08) or none. With no joystick, or with `cursors=keys`, the fire key does not fire.
 
 To load a tape: press F1 and then ENTER, choose the `.TAP`, `.TZX`, `.PZX` or `.CSW` and type `LOAD ""` (on the 128K/+2A, choose "Tape Loader" or "Loader" in the menu). The tape starts by itself when the ROM or a custom loader starts reading it, and stops by itself when the program stops reading it like a loader for 2 seconds. What counts is reading like a loader (the same IN over and over, with a counter that advances, as Fuse does), not reading a lot: menus that poll the keyboard non-stop neither start the tape nor keep it running, so multiloads find the next block where they left it. In fast mode, the emulator runs at full speed while loading.
+
+## System screen (F1 and then S)
+
+What to look at when something goes wrong, on a single screen. With the GPIO keyboard, S with the help open.
+
+- **Raspberry Pi**: the model, the RAM (and how much is free), the CPU (MHz and temperature, in red from 80 °C), the firmware **warnings** (**under-voltage** in red: the power supply is too weak, the usual cause of hangs and of USB devices that get lost; **CPU throttled** in yellow: because of heat or voltage), the display (resolution and refresh rate; at 60 Hz the Spectrum will not run smoothly) and the sound.
+- **Emulator**: the version and when it was built, the kernel that booted (and whether it is 32 or 64 bits), the Circle and compiler versions, and the card (its size and free space; "SD (USB)" if it is a USB stick).
+- **Network and time**: cable or WiFi and the IP; with WiFi, the network name and the **signal** (good above -60 dBm, fair down to -70, poor below); the network name of the Pi (`zxmetalcircle.local`); the time and the zone (`tz=`, `dst=`); and how long it has been on.
+- **USB**: how many keyboards, mice and gamepads the emulator sees, and whether the GPIO keyboard is there.
+
+The first time the firmware detects under-voltage, a warning is also shown at the bottom ("Under-voltage: weak power supply").
 
 ## SD card files from the file browser (F2)
 

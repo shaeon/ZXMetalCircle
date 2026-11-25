@@ -19,7 +19,8 @@
 #define MENU_MAX_ENTRIES	2048
 #define MENU_NAME_LEN		128
 #define MENU_PATH_LEN		512
-#define MENU_STATUS_LINES	9
+#define MENU_STATUS_LINES	10
+#define MENU_SYSTEM_LINES	27		// pantalla Sistema (S en la ayuda)
 #define MENU_HELP_LINES		23
 #define MENU_OPTION_LINES	6
 #define MENU_CHOICE_ITEMS	512		// las de un ZIP grande
@@ -59,6 +60,8 @@ enum TMenuResult
 	MenuResultZXDBSearch,		// navegador: buscar en ZXDB (la línea de la raíz o F3)
 	MenuResultOpenPokes,		// P en la ayuda: los pokes del juego (Alt+C)
 	MenuResultFileOptions,		// F2 en el navegador: renombrar, borrar... (GetBrowserSelection)
+	MenuResultOpenSystem,		// S en la ayuda: la pantalla Sistema ya está abierta (el kernel
+					// rellena sus líneas con SetSystemLine)
 	MenuResultProgressCancel	// ESC en la barra de progreso (OpenProgress)
 };
 
@@ -164,8 +167,17 @@ public:
 
 	// Líneas de estado que se muestran en la ayuda (modelo, joystick, cinta...)
 	void SetStatusLine (unsigned nLine, const char *pText);
+	// Texto con partes marcadas: |valor| en verde, ~aviso~ en amarillo y ^alerta^ en rojo
 	void DrawMarked (TPixel *pScreen, int x, int y, const char *pText,
 			 u8 nLabel, u8 nValue, u8 nBack, unsigned nMaxCols);
+
+	// Pantalla Sistema (S en la ayuda): líneas del kernel con las mismas marcas
+	// que DrawMarked; las que empiezan por # son títulos
+	void SetSystemLine (unsigned nLine, const char *pText);
+	boolean IsSystemOpen (void) const		{ return m_Mode == ModeSystem; }
+
+	// Fecha y hora actuales ("25/11/2026 15:32"); FALSE si la Pi aún no tiene hora
+	static boolean FormatNow (char *pBuffer, unsigned nSize);
 
 	// Líneas de la ayuda general (teclas de función), generadas por el kernel
 	void SetHelpLine (unsigned nLine, const char *pText);
@@ -192,7 +204,8 @@ private:
 	CVideo *m_pVideo;
 
 	enum TMode { ModeClosed, ModeBrowser, ModeHelp, ModeKeyHelp, ModeSettings, ModeChoice, ModeUnits,
-		     ModeAbout, ModeTape, ModeInput, ModeList, ModeKeyList, ModeProgress };
+		     ModeAbout, ModeTape, ModeInput, ModeList, ModeKeyList, ModeProgress,
+		     ModeSystem };
 	unsigned SettingsOnPage (unsigned *pIndex, unsigned nMax) const;
 	void FixSettingsRow (void);
 	TMode m_Mode;
@@ -204,6 +217,8 @@ private:
 		boolean bDir;
 		boolean bRemoteRoot;	// "Internet (TNFS)" en la raíz de la SD
 		boolean bZXDB;		// "Buscar en internet (ZXDB)", también en la raíz
+		u32 nSize;		// tamaño en bytes (ficheros de la SD)
+		u16 nDate, nTime;	// fecha y hora de FatFs (0 = no se sabe)
 	};
 	CRemoteSource *m_pRemote;
 
@@ -230,6 +245,8 @@ private:
 	char m_Error[64];
 
 	char m_Status[MENU_STATUS_LINES][64];		// con los valores entre |
+	char m_System[MENU_SYSTEM_LINES][64];		// pantalla Sistema
+	static boolean FormatFileInfo (const TEntry *pEntry, char *pBuffer, unsigned nSize);
 	char m_Help[MENU_HELP_LINES][48];
 	#define MENU_KEYLIST_PAGES	4
 	#define MENU_KEYLIST_LINES	28

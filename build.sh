@@ -146,6 +146,18 @@ for T in $TARGETS; do
 		build_circle_libs "$C"
 	fi
 
+	# Pantalla Sistema: el nombre de la red WiFi y su señal. Se añaden dos
+	# funciones al controlador de la WiFi de Circle (tools/circle/ether4330_zxmc.c)
+	# y una línea que guarda su controlador al crearlo.
+	if ! grep -q "zxmc_ether4330_ctlr" "$C/addon/wlan/ether4330.c"; then
+		sed -i 's/^\tedev->ctlr = ctlr;$/\tedev->ctlr = ctlr;\n\t{ extern void *zxmc_ether4330_ctlr; zxmc_ether4330_ctlr = ctlr; }/' \
+			"$C/addon/wlan/ether4330.c"
+		cat "$ROOT/tools/circle/ether4330_zxmc.c" >> "$C/addon/wlan/ether4330.c"
+		grep -q "zxmc_ether4330_ctlr = ctlr" "$C/addon/wlan/ether4330.c" \
+			|| { echo "No se pudo añadir lo de la WiFi a ether4330.c"; exit 1; }
+		make -C "$C/addon/wlan" -j"$JOBS" > /dev/null
+	fi
+
 	# Carpeta de trabajo de cada objetivo (la de QEMU, aparte: compila con otra
 	# definición). Se conserva entre compilaciones para que make solo recompile
 	# lo que ha cambiado (los .d de Circle dicen qué cabeceras usa cada fichero).

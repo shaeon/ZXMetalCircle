@@ -8,7 +8,7 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 
 | Tecla | Función |
 | --- | --- |
-| F1 | Ayuda y estado; desde ahí, ENTER abre el selector, C la configuración, U las unidades, P los pokes, T la lista de todas las teclas y A los créditos |
+| F1 | Ayuda y estado (con la fecha y la hora, si la Pi ya la tiene); desde ahí, ENTER abre el selector, C la configuración, U las unidades, P los pokes, T la lista de todas las teclas, S la pantalla Sistema y A los créditos |
 | Alt+F1 | La configuración directamente (ESC vuelve al Spectrum) |
 | Alt+U | Unidades: ver, montar y vaciar cada unidad |
 | Alt+K | Ayuda de teclado |
@@ -16,7 +16,7 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 | F3 | Cinta: navegador de bloques (lista de lo que hay en la cinta; ENTER la deja en el bloque elegido, Inicio = rebobinar; F2 copia, mueve, borra o renombra bloques, ver abajo) |
 | F4 | Cambiar joystick |
 | F5 | NMI: Multiface, navegador de esxDOS o menú de la Spectranet |
-| Alt+F5 | Navegador de ficheros (como F1 y ENTER). Con `f5=files` se intercambian: F5 abre los ficheros y Alt+F5 hace la NMI. Dentro, F2 copia, mueve, renombra, borra o crea carpetas (ver abajo) |
+| Alt+F5 | Navegador de ficheros (como F1 y ENTER). Con `f5=files` se intercambian: F5 abre los ficheros y Alt+F5 hace la NMI. Dentro, F2 copia, mueve, renombra, borra o crea carpetas (ver abajo). Arriba, a la derecha de la carpeta, la fecha y la hora; abajo, el tamaño y la fecha del fichero elegido |
 | F6 | Velocidad de carga: instantánea / rápida / real |
 | F7 | Lista de modelos para elegir (con el actual marcado; los que no tienen ROM lo indican) |
 | Alt+F7 | Pasar al siguiente modelo (16K, 48K, 128K, +2, +2A, +3, +3e) |
@@ -48,6 +48,17 @@ Correspondencia del teclado del PC con el del Spectrum:
 - **Cursores**: siempre son las teclas de cursor del Spectrum (CAPS SHIFT + 5/6/7/8). Con un joystick elegido, además mueven el joystick, y **las teclas Windows** (o el 0 del teclado numérico) son el disparo; **los dos Ctrl son SYMBOL SHIFT**. Se puede cambiar con `cursors=` y, la tecla de disparo, con `kbdfire=` o en la página 5 de la configuración: teclas Windows, Ctrl derecho (como antes de la 1.08) o ninguna. Sin joystick, o con `cursors=keys`, la tecla de disparo no dispara.
 
 Para cargar una cinta: pulsa F1 y luego ENTER, elige el `.TAP`, `.TZX`, `.PZX` o `.CSW` y escribe `LOAD ""` (en el 128K/+2A, elige "Tape Loader" o "Loader" en el menú). La cinta arranca sola cuando la ROM o un cargador propio empiezan a leerla, y se para sola cuando el programa deja de leerla como un cargador durante 2 segundos. Lo que cuenta es leer como un cargador (el mismo IN una y otra vez, con un contador que avanza, como hace Fuse), no leer mucho: los menús que miran el teclado sin parar no arrancan la cinta ni la mantienen en marcha, y así las multicargas encuentran el siguiente bloque donde lo dejaron. En el modo rápido, el emulador va a toda velocidad mientras dura la carga.
+
+## Pantalla Sistema (F1 y luego S)
+
+Lo que hay que mirar cuando algo falla, en una sola pantalla. Con el teclado GPIO, la S con la ayuda abierta.
+
+- **Raspberry Pi**: el modelo, la RAM (y la libre), la CPU (MHz y temperatura, en rojo desde 80 °C), los **avisos** del firmware (**bajo voltaje** en rojo: la fuente no da bastante, la causa típica de cuelgues y de aparatos USB que se pierden; **CPU frenada** en amarillo: por calor o por la tensión), la pantalla (resolución y frecuencia; si sale 60 Hz, el Spectrum no irá fino) y el sonido.
+- **Emulador**: la versión y cuándo se compiló, el kernel que ha arrancado (y si es de 32 o 64 bits), la versión de Circle y del compilador, y la tarjeta (su tamaño y lo libre; «SD (USB)» si es un pincho).
+- **Red y hora**: cable o WiFi y la IP; con WiFi, el nombre de la red y la **señal** (buena por encima de -60 dBm, regular hasta -70, mala por debajo); el nombre en la red (`zxmetalcircle.local`); la hora y la zona (`tz=`, `dst=`); y el tiempo que lleva encendida.
+- **USB**: cuántos teclados, ratones y mandos ve el emulador, y si está el teclado GPIO.
+
+La primera vez que el firmware detecta bajo voltaje, además, sale un aviso abajo («Bajo voltaje: la fuente no da bastante»).
 
 ## Ficheros de la SD desde el navegador (F2)
 

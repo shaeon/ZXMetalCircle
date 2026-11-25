@@ -177,6 +177,8 @@ private:
 	void CheckTapeModel (void);
 	void OpenTapeSelect (void);
 	void UpdateRTC (void);
+	void UpdateSystemLines (boolean bOpening);	// pantalla Sistema (kernelsystem.cpp)
+	void CheckPowerWarning (void);			// bajo voltaje: aviso la primera vez
 	void RebootPi (boolean bSaveSettings);
 	void LoadPadAlias (unsigned nPad);		// joysticks/VVVV-PPPP/alias.txt
 	unsigned PadInstance (unsigned nPad) const;	// 1 = el primero de su modelo, 2 = el segundo...
@@ -330,6 +332,14 @@ private:
 	CEMMCDevice		m_EMMC;
 	FATFS			m_FileSystem;
 	boolean			m_bSDMounted;
+	boolean			m_bSDOnUSB;		// SD: es un pincho USB (sin microSD)
+	unsigned		m_nSystemLast;		// pantalla Sistema: segundo de la última vez
+	CString			m_SystemSD;		// su línea de la tarjeta (al abrirla)
+	unsigned		m_nDisplayHz;		// frecuencia de la pantalla (0 = no se sabe)
+	int			m_nSystemRSSI;		// señal de la WiFi (dBm) y cuándo se midió
+	unsigned		m_nSystemRSSITime;
+	boolean			m_bPowerWarned;		// ya se avisó del bajo voltaje
+	unsigned		m_nPowerCheckTime;
 	boolean			m_bUSBRescan;		// mirar los aparatos USB aunque no haya cambios
 
 	CVideo			m_Video;

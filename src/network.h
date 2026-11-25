@@ -66,6 +66,8 @@ public:
 	const char *GetIPAddress (void) const	{ return m_IPAddress; }
 	const char *GetStateText (void) const;	// para la ayuda (F1)
 	boolean HasTime (void) const;		// hora puesta por NTP
+	int GetTimeZone (void) const		{ return m_nTimeZone; }		// tz= (minutos)
+	TSummerTime GetSummerTime (void) const	{ return m_SummerTime; }	// dst=
 
 	// Estado del emulador para la web (lo actualiza el kernel)
 	void SetEmulatorStatus (const char *pText)	{ m_EmulatorStatus = pText; }

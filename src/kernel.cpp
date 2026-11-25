@@ -384,6 +384,13 @@ CKernel::CKernel (void)
 	m_nRepeatKey = 0;
 	m_nRepeatNext = 0;
 	m_nWarningFrames = 0;
+	m_bSDOnUSB = FALSE;
+	m_nSystemLast = 0;
+	m_nDisplayHz = 0;
+	m_nSystemRSSI = 0;
+	m_nSystemRSSITime = 0;
+	m_bPowerWarned = FALSE;
+	m_nPowerCheckTime = 0;
 	m_OptionWarning[0] = '\0';
 	m_nSnetSaveFrames = 0;
 	m_nRTCLast = 0;
@@ -542,6 +549,7 @@ boolean CKernel::Initialize (void)
 		{
 			m_Logger.Write (FromKernel, LogWarning, "Cannot mount SD card");
 			m_bSDMounted = MountUSBAsSD ();
+			m_bSDOnUSB = m_bSDMounted;
 		}
 	}
 
@@ -1708,6 +1716,17 @@ void CKernel::UpdateStatusLines (void)
 		Line.Format (T ("Red: |%s|"), m_Network.GetStateText ());
 	}
 	m_Menu.SetStatusLine (8, Line);
+
+	char Now[20];
+	if (CMenu::FormatNow (Now, sizeof Now))
+	{
+		Line.Format (T ("Hora: |%s|"), Now);
+	}
+	else
+	{
+		Line = T ("Hora: |sin hora (se toma de internet)|");
+	}
+	m_Menu.SetStatusLine (9, Line);
 }
 
 boolean CKernel::LoadFile (const char *pPath, u8 *pBuffer, unsigned nSize)
@@ -5421,6 +5440,10 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			// F8 con la ULAplus en uso: ¿en SZX?
 		}
+		else if (Result == MenuResultOpenSystem)
+		{
+			UpdateSystemLines (TRUE);		// S en la ayuda
+		}
 		else if (Result == MenuResultFileSelected)
 		{
 			int nUnit = m_Menu.TakeUnitTarget ();
@@ -6630,6 +6653,10 @@ TShutdownMode CKernel::Run (void)
 							// porque con el menú abierto el bucle no sigue)
 				FileCopyPoll ();	// copiar un fichero (F2), a trozos
 				UpdateStatusLines ();
+				if (m_Menu.IsSystemOpen ())
+				{
+					UpdateSystemLines (FALSE);	// una vez por segundo
+				}
 				memcpy (Overlay, m_pFrozen, nOverlayBytes);
 				m_Menu.Draw (Overlay);
 				DrawMessage (Overlay);		// los avisos también con el menú abierto
@@ -6686,6 +6713,8 @@ TShutdownMode CKernel::Run (void)
 			m_pSpectrum->RunFrame ();
 			m_Keyboard.TickHeld ();			// Alt+V: teclas mantenidas
 			ZX81Frame ();				// la carga de un .P, si hay una en marcha
+
+			CheckPowerWarning ();			// bajo voltaje (cada pocos segundos)
 
 			// Reloj para esxDOS (RTC.SYS): la hora de la Pi, si ya la tiene (NTP)
 			if (m_pSpectrum->IsDivMMCActive ())

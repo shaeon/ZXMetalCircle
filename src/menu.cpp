@@ -14,6 +14,8 @@
 #include "i18n.h"
 #include <fatfs/ff.h>
 #include <circle/util.h>
+#include <circle/timer.h>
+#include <circle/time.h>
 
 #define ROOT_DIR	"SD:/"
 
@@ -102,6 +104,7 @@ CMenu::CMenu (CVideo *pVideo)
 	m_SelectedPath[0] = '\0';
 	m_Error[0] = '\0';
 	memset (m_Status, 0, sizeof m_Status);
+	memset (m_System, 0, sizeof m_System);
 	memset (m_Help, 0, sizeof m_Help);
 }
 
@@ -119,12 +122,13 @@ void CMenu::DrawMarked (TPixel *pScreen, int x, int y, const char *pText,
 {
 	char Part[64];
 	unsigned nCol = 0;
-	boolean bValue = FALSE;
+	char chOpen = '\0';		// marca abierta: | valor, ~ aviso, ^ alerta
 	const char *p = pText;
 	while (*p != '\0' && nCol < nMaxCols)
 	{
 		unsigned n = 0;
-		while (p[n] != '\0' && p[n] != '|' && n < sizeof Part - 1)
+		while (   p[n] != '\0' && p[n] != '|' && p[n] != '~' && p[n] != '^'
+		       && n < sizeof Part - 1)
 		{
 			Part[n] = p[n];
 			n++;
@@ -132,17 +136,84 @@ void CMenu::DrawMarked (TPixel *pScreen, int x, int y, const char *pText,
 		Part[n] = '\0';
 		if (n > 0)
 		{
-			m_pVideo->DrawText (pScreen, x + nCol * 8, y, Part, bValue ? nValue : nLabel, nBack,
-					    nMaxCols - nCol);
+			u8 nColor = chOpen == '|' ? nValue
+				  : chOpen == '~' ? COLOR_UI_TITLE
+				  : chOpen == '^' ? COLOR_UI_ALERT : nLabel;
+			m_pVideo->DrawText (pScreen, x + nCol * 8, y, Part, nColor, nBack, nMaxCols - nCol);
 			nCol += UTF8Length (Part);
 		}
 		p += n;
-		if (*p == '|')
+		if (*p == '|' || *p == '~' || *p == '^')
 		{
-			bValue = !bValue;
+			chOpen = chOpen == *p ? '\0' : *p;
 			p++;
 		}
 	}
+}
+
+void CMenu::SetSystemLine (unsigned nLine, const char *pText)
+{
+	if (nLine < MENU_SYSTEM_LINES)
+	{
+		size_t nLen = strnlen (pText, sizeof m_System[nLine] - 1);
+		memcpy (m_System[nLine], pText, nLen);
+		m_System[nLine][nLen] = '\0';
+	}
+}
+
+boolean CMenu::FormatNow (char *pBuffer, unsigned nSize)
+{
+	CTime Time;
+	Time.Set (CTimer::Get ()->GetLocalTime ());
+	if (Time.GetYear () < 2024)		// la Pi aún no tiene hora (sin NTP)
+	{
+		return FALSE;
+	}
+	CString Text;
+	Text.Format ("%02u/%02u/%04u %02u:%02u", Time.GetMonthDay (), Time.GetMonth (), Time.GetYear (),
+		     Time.GetHours (), Time.GetMinutes ());
+	size_t nLen = strnlen (Text, nSize - 1);
+	memcpy (pBuffer, (const char *) Text, nLen);
+	pBuffer[nLen] = '\0';
+	return TRUE;
+}
+
+// "48 KB   23/11/2026 18:02" de un fichero de la SD (FALSE si es una carpeta o no
+// se sabe nada de él)
+boolean CMenu::FormatFileInfo (const TEntry *pEntry, char *pBuffer, unsigned nSize)
+{
+	if (pEntry->bDir || (pEntry->nSize == 0 && pEntry->nDate == 0))
+	{
+		return FALSE;
+	}
+
+	CString Text;
+	if (pEntry->nSize < 1024)
+	{
+		Text.Format (T ("%u bytes"), pEntry->nSize);
+	}
+	else if (pEntry->nSize < 1024 * 1024)
+	{
+		Text.Format ("%u KB", (pEntry->nSize + 1023) / 1024);
+	}
+	else
+	{
+		unsigned nTenths = (unsigned) (((u64) pEntry->nSize * 10 + 512 * 1024) / (1024 * 1024));
+		Text.Format ("%u,%u MB", nTenths / 10, nTenths % 10);
+	}
+
+	if (pEntry->nDate != 0)
+	{
+		CString Date;
+		Date.Format ("   %02u/%02u/%04u %02u:%02u", pEntry->nDate & 0x1F, (pEntry->nDate >> 5) & 0x0F,
+			     (pEntry->nDate >> 9) + 1980, pEntry->nTime >> 11, (pEntry->nTime >> 5) & 0x3F);
+		Text.Append (Date);
+	}
+
+	size_t nLen = strnlen (Text, nSize - 1);
+	memcpy (pBuffer, (const char *) Text, nLen);
+	pBuffer[nLen] = '\0';
+	return TRUE;
 }
 
 void CMenu::SetStatusLine (unsigned nLine, const char *pText)
@@ -800,6 +871,8 @@ void CMenu::OnEntry (const char *pName, boolean bDir)
 	pEntry->bDir = bDir;
 	pEntry->bRemoteRoot = FALSE;
 	pEntry->bZXDB = FALSE;
+	pEntry->nSize = 0;
+	pEntry->nDate = pEntry->nTime = 0;
 }
 
 // "NET:" = lista de servidores; "NET:servidor/ruta" = carpeta remota
@@ -815,6 +888,8 @@ boolean CMenu::ReadRemoteDirectory (void)
 	m_pEntries[0].bDir = TRUE;
 	m_pEntries[0].bRemoteRoot = FALSE;
 	m_pEntries[0].bZXDB = FALSE;
+	m_pEntries[0].nSize = 0;
+	m_pEntries[0].nDate = m_pEntries[0].nTime = 0;
 	m_nEntries = 1;
 
 	if (strcmp (m_CurrentDir, NET_ROOT) == 0)
@@ -872,6 +947,8 @@ boolean CMenu::ReadDirectory (void)
 		m_pEntries[0].bDir = TRUE;
 		m_pEntries[0].bRemoteRoot = FALSE;
 		m_pEntries[0].bZXDB = FALSE;
+	m_pEntries[0].nSize = 0;
+	m_pEntries[0].nDate = m_pEntries[0].nTime = 0;
 		m_nEntries = 1;
 	}
 
@@ -906,7 +983,10 @@ boolean CMenu::ReadDirectory (void)
 		pEntry->Name[MENU_NAME_LEN - 1] = '\0';
 		pEntry->bDir = bDir;
 		pEntry->bRemoteRoot = FALSE;
-	pEntry->bZXDB = FALSE;
+		pEntry->bZXDB = FALSE;
+		pEntry->nSize = (u32) FileInfo.fsize;
+		pEntry->nDate = FileInfo.fdate;
+		pEntry->nTime = FileInfo.ftime;
 	}
 
 	f_closedir (&Directory);
@@ -921,6 +1001,8 @@ boolean CMenu::ReadDirectory (void)
 		pEntry->bDir = TRUE;
 		pEntry->bRemoteRoot = TRUE;
 		pEntry->bZXDB = FALSE;
+		pEntry->nSize = 0;
+		pEntry->nDate = pEntry->nTime = 0;
 	}
 	boolean bZXDB =    m_nUnitTarget < 0 && strcmp (m_CurrentDir, ROOT_DIR) == 0
 			 && CNetworkManager::IsNetRunning () && m_nEntries < MENU_MAX_ENTRIES;
@@ -932,6 +1014,8 @@ boolean CMenu::ReadDirectory (void)
 		pEntry->bDir = TRUE;
 		pEntry->bRemoteRoot = FALSE;
 		pEntry->bZXDB = TRUE;
+		pEntry->nSize = 0;
+		pEntry->nDate = pEntry->nTime = 0;
 	}
 
 	SortEntries ();
@@ -1213,6 +1297,11 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 			m_nAboutTop = 0;
 			m_Mode = ModeAbout;
 		}
+		else if (nKey == 0x16)		// S: sistema (las líneas las rellena el kernel)
+		{
+			m_Mode = ModeSystem;
+			Result = MenuResultOpenSystem;
+		}
 		else if (nKey == 0x18)		// U: unidades (las líneas las rellena el kernel)
 		{
 			Result = MenuResultOpenUnits;
@@ -1320,6 +1409,20 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		else if (m_nTapeSelected >= m_nTapeTop + TAPE_LIST_LINES)
 		{
 			m_nTapeTop = m_nTapeSelected - TAPE_LIST_LINES + 1;
+		}
+		return Result;
+	}
+
+	if (m_Mode == ModeSystem)
+	{
+		if (nKey == HID_KEY_ESC || nKey == HID_KEY_BACKSPACE || nKey == HID_KEY_ENTER || nKey == 0x58)
+		{
+			m_Mode = ModeHelp;
+		}
+		else if (nKey == HID_KEY_F1)
+		{
+			m_Mode = ModeClosed;
+			Result = MenuResultClose;
 		}
 		return Result;
 	}
@@ -2048,7 +2151,7 @@ void CMenu::Draw (TPixel *pScreen)
 		// ESC a la izquierda y A a la derecha
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ESC volver"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
-		const char *pAbout = T ("A Acerca del proyecto");
+		const char *pAbout = T ("S Sistema   A Acerca de");
 		unsigned nAboutCols = UTF8Length (pAbout);
 		if (nAboutCols > TEXT_COLS)
 		{
@@ -2157,6 +2260,12 @@ void CMenu::Draw (TPixel *pScreen)
 			Title.Append (" *");		// cambios sin guardar
 		}
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		char Now[20];
+		if (m_TapeMessage[0] == '\0' && FormatNow (Now, sizeof Now))	// fecha y hora a la derecha
+		{
+			m_pVideo->DrawText (pScreen, tx + (TEXT_COLS - 16) * 8, ROW_Y (2), Now,
+					    COLOR_UI_VALUE, COLOR_UI_PANEL, 16);
+		}
 		if (m_TapeMessage[0] != '\0')
 		{
 			m_pVideo->DrawText (pScreen, tx, ROW_Y (2), m_TapeMessage, COLOR_UI_HILITE, COLOR_UI_PANEL, TEXT_COLS);
@@ -2212,6 +2321,29 @@ void CMenu::Draw (TPixel *pScreen)
 					    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		}
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ENTER poner aquí  Inicio/Fin  ESC volver"),
+				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		return;
+	}
+
+	if (m_Mode == ModeSystem)
+	{
+		CString Title;
+		Title.Format ("ZXMetalCircle %s - %s", ZXCIRCLE_VERSION, T ("Sistema"));
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), Title, COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+		for (unsigned i = 0; i < MENU_SYSTEM_LINES && 3 + i < PANEL_ROWS - 3; i++)
+		{
+			if (m_System[i][0] == '#')		// título de un grupo
+			{
+				m_pVideo->DrawText (pScreen, tx, ROW_Y (3 + i), m_System[i] + 1,
+						    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
+			}
+			else if (m_System[i][0] != '\0')
+			{
+				DrawMarked (pScreen, tx, ROW_Y (3 + i), m_System[i],
+					    COLOR_UI_TEXT, COLOR_UI_VALUE, COLOR_UI_PANEL, TEXT_COLS);
+			}
+		}
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2), T ("ESC volver"),
 				    COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		return;
 	}
@@ -2661,12 +2793,23 @@ void CMenu::Draw (TPixel *pScreen)
 				    COLOR_UI_TITLE, COLOR_UI_PANEL);
 	}
 
+	// Fecha y hora a la derecha de la ruta, si la Pi ya la tiene (no con un
+	// mensaje, que va en lugar de la ruta y necesita toda la fila)
+	char Now[20];
+	unsigned nDirCols = TEXT_COLS;
+	if (m_Error[0] == '\0' && FormatNow (Now, sizeof Now))
+	{
+		nDirCols = TEXT_COLS - 17;
+		m_pVideo->DrawText (pScreen, tx + (TEXT_COLS - 16) * 8, ROW_Y (2), Now,
+				    COLOR_UI_VALUE, COLOR_UI_PANEL, 16);
+	}
+
 	// Ruta actual (se recorta por la izquierda si es larga)
 	const char *pDir = m_CurrentDir;
 	size_t nDirLen = strlen (pDir);
-	if (nDirLen > TEXT_COLS)
+	if (nDirLen > nDirCols)
 	{
-		pDir += nDirLen - TEXT_COLS;
+		pDir += nDirLen - nDirCols;
 	}
 	// los errores (de la SD o de un servidor TNFS) se muestran en lugar de la ruta
 	if (m_Error[0] != '\0')
@@ -2677,7 +2820,7 @@ void CMenu::Draw (TPixel *pScreen)
 	{
 		char DirUTF8[MENU_PATH_LEN * 2];
 		CP850ToUTF8 (pDir, DirUTF8, sizeof DirUTF8);
-		m_pVideo->DrawText (pScreen, tx, ROW_Y (2), DirUTF8, COLOR_UI_DIM, COLOR_UI_PANEL, TEXT_COLS);
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (2), DirUTF8, COLOR_UI_DIM, COLOR_UI_PANEL, nDirCols);
 	}
 
 	if (m_nEntries == 0)
@@ -2753,7 +2896,8 @@ void CMenu::Draw (TPixel *pScreen)
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (LIST_ROW + nLine), UTF8, nInk, nPaper);
 	}
 
-	// Barra de posición
+	// Barra de posición (abajo, a la derecha de la línea de datos del fichero)
+	unsigned nPosCols = 0;
 	if (m_nEntries > LIST_LINES)
 	{
 		char Pos[16];
@@ -2769,8 +2913,9 @@ void CMenu::Draw (TPixel *pScreen)
 		while (nDigits > 0) Pos[nLen++] = Digits[--nDigits];
 		Pos[nLen] = '\0';
 
-		m_pVideo->DrawText (pScreen, x0 + (PANEL_COLS - 1 - nLen) * 8, ROW_Y (2), Pos,
+		m_pVideo->DrawText (pScreen, tx + (TEXT_COLS - nLen) * 8, ROW_Y (PANEL_ROWS - 5), Pos,
 				    COLOR_UI_DIM, COLOR_UI_PANEL);
+		nPosCols = nLen + 1;
 	}
 
 	// con F2 (no al elegir para una unidad ni en TNFS), una línea más
@@ -2786,7 +2931,17 @@ void CMenu::Draw (TPixel *pScreen)
 		if (bClip)
 		{
 			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 5), m_BrowserClip, COLOR_UI_HILITE,
-					    COLOR_UI_PANEL, TEXT_COLS);
+					    COLOR_UI_PANEL, TEXT_COLS - nPosCols);
+		}
+	}
+	// tamaño, fecha y hora del fichero seleccionado (en lugar de lo que se va a copiar)
+	if ((!bF2 || m_BrowserClip[0] == '\0') && m_nSelected < m_nEntries)
+	{
+		char Info[40];
+		if (FormatFileInfo (&m_pEntries[m_Order[m_nSelected]], Info, sizeof Info))
+		{
+			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 5), Info, COLOR_UI_DIM,
+					    COLOR_UI_PANEL, TEXT_COLS - nPosCols);
 		}
 	}
 	// con red, la tecla de la búsqueda en ZXDB (F3)

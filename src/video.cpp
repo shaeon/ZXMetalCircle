@@ -40,6 +40,7 @@
 #include <circle/bcmpropertytags.h>
 #include <circle/util.h>
 #include <circle/logger.h>
+#include <circle/timer.h>
 
 // Colores de la interfaz (después de los 16 del Spectrum)
 static const u32 UIPaletteRGB[COLOR_COUNT - 16] =
@@ -52,6 +53,7 @@ static const u32 UIPaletteRGB[COLOR_COUNT - 16] =
 	0x8A8CA0,	// COLOR_UI_DIM
 	0x7FD6FF,	// COLOR_UI_DIR
 	0x8CE678,	// COLOR_UI_VALUE (verde claro)
+	0xFF5A50,	// COLOR_UI_ALERT (rojo)
 };
 
 // Parte visible de la imagen generada para cada tamaño de borde
@@ -133,6 +135,30 @@ boolean CVideo::Initialize (TBorderSize Border, boolean bScanlines)
 	}
 
 	return SetMode (Border, bScanlines);
+}
+
+// Frecuencia de la pantalla: tiempo de cinco refrescos (PROPTAG_WAIT_FOR_VSYNC).
+// Si el firmware no espera de verdad (QEMU) o la medida no tiene sentido, 0.
+unsigned CVideo::MeasureRefresh (void)
+{
+	if (m_pFrameBuffer == 0 || !m_pFrameBuffer->WaitForVerticalSync ())
+	{
+		return 0;
+	}
+	unsigned nStart = CTimer::Get ()->GetClockTicks ();
+	for (unsigned i = 0; i < 5; i++)
+	{
+		if (!m_pFrameBuffer->WaitForVerticalSync ())
+		{
+			return 0;
+		}
+	}
+	unsigned nMicros = CTimer::Get ()->GetClockTicks () - nStart;
+	if (nMicros < 5 * 1000000 / 150 || nMicros > 5 * 1000000 / 20)
+	{
+		return 0;			// más de 150 Hz o menos de 20 Hz: no ha esperado
+	}
+	return (5 * 1000000 + nMicros / 2) / nMicros;
 }
 
 boolean CVideo::ScanlinesAvailable (void) const
