@@ -47,7 +47,7 @@ La licencia y los créditos también se ven en el propio emulador: F1 y luego **
 
 - **MAME** (https://github.com/mamedev/mame): controlador uPD765 y PLL de disquete (BSD-3-Clause, Olivier Galibert); la lectura de .DSK y la generación de pistas MFM siguen su código. Texto de la licencia en `third_party/mame/LICENSE`.
 
-- **CPU Z80**: [z80cpp](https://github.com/jsanchezv/z80cpp) de José Luis Sánchez (GPL 3), sin modificaciones, en `third_party/z80cpp`.
+- **CPU Z80**: [z80cpp](https://github.com/jsanchezv/z80cpp) de José Luis Sánchez (GPL 3), en `third_party/z80cpp`, con un arreglo de su autor (el registro Q tras los prefijos DD y FD).
 - **ULA, contención, bus flotante, paginación y AY-3-8912**: portados a C++ desde [JSpeccy](https://github.com/jsanchezv/JSpeccy), de José Luis Sánchez.
 - **ROMs**: las de JSpeccy (Spectrum e Interface 1). Amstrad permite distribuir las ROMs del Spectrum para su uso en emuladores.
 - **Circle**: Rene Stange (GPL 3).

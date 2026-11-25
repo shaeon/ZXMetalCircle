@@ -73,6 +73,8 @@ jobs:
           ./floatbus_test
           g++ $FLAGS -o snapshot_snet_test snapshot_snet_test.cpp $S/snapshot.cpp $CORE roms_host.S
           ./snapshot_snet_test
+          g++ $FLAGS -o z80_q_test z80_q_test.cpp ../../third_party/z80cpp/z80.cpp
+          ./z80_q_test
           g++ $FLAGS -o sp_test sp_test.cpp $S/snapshot.cpp $CORE roms_host.S
           ./sp_test
           g++ $FLAGS -o zx81_test zx81_test.cpp $S/zx81.cpp $CORE roms_host.S

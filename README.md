@@ -41,7 +41,7 @@ The licence and the credits can also be seen in the emulator itself: F1 and then
 - **+3e ROMs** by Garry Lancaster (https://worldofspectrum.org/zxplus3e/), version 1.43 for the ZXMMC; free distribution with Amstrad's permission.
 - **zxp3** by Kyp (https://github.com/Kyp069/zxp3) and **MiST** (`sd_card.v`): reference for the ZXMMC and the SD card.
 - **MAME** (https://github.com/mamedev/mame): uPD765 controller and floppy PLL (BSD-3-Clause, Olivier Galibert); the .DSK reading and the MFM track generation follow its code. Licence text in `third_party/mame/LICENSE`.
-- **Z80 CPU**: [z80cpp](https://github.com/jsanchezv/z80cpp) by José Luis Sánchez (GPL 3), unmodified, in `third_party/z80cpp`.
+- **Z80 CPU**: [z80cpp](https://github.com/jsanchezv/z80cpp) by José Luis Sánchez (GPL 3), in `third_party/z80cpp`, with a fix by its author (the Q register after the DD and FD prefixes).
 - **ULA, contention, floating bus, paging and AY-3-8912**: ported to C++ from José Luis Sánchez's [JSpeccy](https://github.com/jsanchezv/JSpeccy).
 - **ROMs**: JSpeccy's (Spectrum and Interface 1). Amstrad allows the Spectrum ROMs to be distributed for use in emulators.
 - **Circle**: Rene Stange (GPL 3).

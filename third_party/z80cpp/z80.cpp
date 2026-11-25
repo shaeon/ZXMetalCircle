@@ -2254,6 +2254,7 @@ void Z80::decodeOpcode(uint8_t opCode) {
         { /* Subconjunto de instrucciones */
             opCode = Z80opsImpl->fetchOpcode(REG_PC++);
             regR++;
+            lastFlagQ = false;
             decodeDDFD(opCode, regIX);
             break;
         }
@@ -2449,6 +2450,7 @@ void Z80::decodeOpcode(uint8_t opCode) {
         case 0xFD: /* Subconjunto de instrucciones */
             opCode = Z80opsImpl->fetchOpcode(REG_PC++);
             regR++;
+            lastFlagQ = false;
             decodeDDFD(opCode, regIY);
             break;
         case 0xFE: /* CP n */
