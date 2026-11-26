@@ -93,8 +93,8 @@ From the help screen (F1), the **C** key opens the settings: ten pages with the 
 | 3 Tapes and saving | loading mode, hear loading, SAVE to the SD card, SAVE format, F8 format |
 | 4 Keyboard | F5 / Alt+F5, Recreated ZX, GPIO keyboard*, ZX81 keyboard, mouse sensitivity (greyed out with no mouse or when the Kempston is the joystick's) |
 | 5 Joysticks and pads | players 1 and 2 joysticks, each player's gamepad, extra gamepads, PC cursor keys, keyboard fire, gamepad buttons (see [04_usb_gamepads.md](04_usb_gamepads.md)) |
-| 6 Peripherals | Spectranet, divMMC with esxDOS, LEC memory, Interface 1, Multiface, RS232*, ZX Net* |
-| 7 Network, time and tape | network*, time zone*, summer time*, fixed IP*, mask*, gateway*, DNS*, check HTTPS*, real cassette*, invert cassette*, cassette GPIO* |
+| 6 Peripherals | Spectranet, divMMC with esxDOS, LEC memory, Interface 1, Multiface, RS232*, ZX Net*, real cassette*, invert cassette*, cassette GPIO* |
+| 7 Network and time | network*, time zone*, summer time*, fixed IP*, mask*, gateway*, DNS*, check HTTPS* |
 | 8 ROMs and folders | ROM of each machine*, of the Interface 1*, of esxDOS* and the Spectranet flash* (those in the `roms` folder with the right size), esxDOS folder* |
 | 9 Web server | web page* (yes, read-only or no) and its password* |
 | 10 Update | check and install, saved package, check at boot, saved packages, settings on update |

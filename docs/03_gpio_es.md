@@ -18,7 +18,7 @@ interna a 3,3 V (pull-up): **nunca les metas 5 V**.
 | Pulsador de NMI (solo con el teclado 48K/128) | va con `gpiokbd=48` | — |
 | Copia del sonido PWM por el GPIO12 (Pi 1, 2, 3 y Zero) | `sounddev=sndpwm gpioaudio=1` | 2 Imagen y sonido: "Sonido por GPIO12" |
 | Sonido PWM en la Pi 5 (no tiene jack) | `sounddev=sndpwm` | "Salida de sonido" = jack (PWM) |
-| Entrada de un casete real (con un comparador, p. ej. LM393) | `ear=gpio earpin=...` | 7 Red, hora y casete: "Casete real" = GPIO, "GPIO del casete" |
+| Entrada de un casete real (con un comparador, p. ej. LM393) | `ear=gpio earpin=...` | 6 Periféricos: "Casete real" = GPIO, "GPIO del casete" |
 | Registro por el puerto serie | `logdev=ttyS1` | — |
 
 El montaje del teclado es el de pastbytes para ZXBaremulator

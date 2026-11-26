@@ -15,7 +15,7 @@ Numbers are always **GPIO (BCM)**; in brackets, the **physical pin** on the head
 | NMI button (48K/128 keyboard only) | comes with `gpiokbd=48` | — |
 | Copy of the PWM sound on GPIO12 (Pi 1, 2, 3 and Zero) | `sounddev=sndpwm gpioaudio=1` | 2 Picture and sound: "Sound via GPIO12" |
 | PWM sound on the Pi 5 (it has no jack) | `sounddev=sndpwm` | "Sound output" = jack (PWM) |
-| Input from a real cassette player (with a comparator, e.g. LM393) | `ear=gpio earpin=...` | 7 Network, time and cassette: "Real cassette" = GPIO, "Cassette GPIO" |
+| Input from a real cassette player (with a comparator, e.g. LM393) | `ear=gpio earpin=...` | 6 Peripherals: "Real cassette" = GPIO, "Cassette GPIO" |
 | Logging through the serial port | `logdev=ttyS1` | — |
 
 The keyboard wiring is pastbytes' design for ZXBaremulator (https://pastbytes.com/zxb/), with a diode on each row (cathode towards the Raspberry Pi). The +2A/+3 one follows spark2k06's zxunops2 project.

@@ -18,7 +18,7 @@ static const char *PageTitles[] =
 	N_("Teclado"),
 	N_("Joysticks y mandos"),
 	N_("Periféricos"),
-	N_("Red, hora y casete"),
+	N_("Red y hora"),
 	N_("ROMs y carpetas"),
 	N_("Servidor web"),
 	N_("Actualización")
@@ -84,7 +84,7 @@ static TSettingDef Settings[] =
 	{"mousesens",	N_("Sensibilidad ratón"), 3, "10|20|30|40|50|60|70|80|90|100|110|120|130|140|150|160|170|180|190|200",
 			"10 %|20 %|30 %|40 %|50 %|60 %|70 %|80 %|90 %|100 %|110 %|120 %|130 %|140 %|150 %|160 %|170 %|180 %|190 %|200 %", "100", TRUE},
 
-	// 4 Periféricos
+	// 4 Periféricos (y el casete real)
 	{"spectranet",	N_("Spectranet"),	5, "0|1", N_("no|sí"),					"0",	TRUE},
 	{"divmmc",	N_("divMMC con esxDOS"), 5, "0|esxdos", N_("no|sí"),				"0",	TRUE},
 	{"lec",		N_("Memoria LEC"),	5, "0|1", N_("no|sí"),					"0",	TRUE},
@@ -92,8 +92,12 @@ static TSettingDef Settings[] =
 	{"multiface",	N_("Multiface"),	5, "1|0", N_("sí|no"),					"1",	TRUE},
 	{"rs232",	N_("RS232 (TCP 2323)"),	5, "1|0", N_("sí|no"),					"1",	FALSE},
 	{"zxnet",	N_("Red ZX Net (UDP 5050)"), 5, "1|0", N_("sí|no"),				"1",	FALSE},
+	{"ear",		N_("Casete real"),	5, "0|gpio|usb", N_("no|GPIO|USB"),			"0",	FALSE},
+	{"earinvert",	N_("Invertir casete"),	5, "0|1", N_("no|sí"),					"0",	TRUE},
+	{"earpin",	N_("GPIO del casete"),	5, "auto|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27",
+				   N_("automático|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27"), "auto", FALSE},
 
-	// 5 Red, hora y casete
+	// 5 Red y hora
 	{"net",		N_("Red"),		6, "auto|wifi|eth|0", N_("automática|WiFi|cable|no"),	"auto",	FALSE},
 	{"tz",		N_("Zona horaria"),	6, "-480|-300|-240|-180|0|60|120|180|240|330|480|540|600",
 				   "UTC-8|UTC-5|UTC-4|UTC-3|UTC|UTC+1|UTC+2|UTC+3|UTC+4|UTC+5:30|UTC+8|UTC+9|UTC+10", "60", TRUE},
@@ -103,10 +107,6 @@ static TSettingDef Settings[] =
 	{"gw",		N_("Puerta de enlace"),	6, "*ip", N_("automática"),			"",	FALSE},
 	{"dns",		N_("Servidor DNS"),	6, "*ip", N_("automático"),			"",	FALSE},
 	{"tlsverify",	N_("Comprobar HTTPS"),	6, "1|0", N_("sí|no"),					"1",	TRUE},
-	{"ear",		N_("Casete real"),	6, "0|gpio|usb", N_("no|GPIO|USB"),			"0",	FALSE},
-	{"earinvert",	N_("Invertir casete"),	6, "0|1", N_("no|sí"),					"0",	TRUE},
-	{"earpin",	N_("GPIO del casete"),	6, "auto|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27",
-				   N_("automático|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27"), "auto", FALSE},
 
 	// 6 ROMs y carpetas (las listas se rellenan al arrancar con lo que hay
 	// en roms/ con el tamaño de cada una, y con las carpetas de la SD)
