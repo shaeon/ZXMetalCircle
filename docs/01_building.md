@@ -130,7 +130,7 @@ When it finishes it says:
 Listo: copia el contenido de .../sdcard a una tarjeta FAT32.
 ```
 
-("Done: copy the contents of .../sdcard to a FAT32 card"), and for each kernel it shows how much memory it takes (`Tamaño del kernel en memoria: ... (47 % de 4 MB)`).
+("Done: copy the contents of .../sdcard to a FAT32 card"), and for each kernel it shows how much memory it takes (`Tamaño del kernel en memoria: ... (34 % de 8 MB)`).
 
 Useful options:
 
@@ -220,7 +220,7 @@ The result ends up in the `sdcard` folder, as when building without Docker. The 
 | `bad interpreter` or `$'\r': command not found` | the code was downloaded with Windows line endings: clone it inside WSL (step 4), not on `C:` |
 | `mcopy: command not found` | `mtools` is missing (step 2) |
 | It stops while downloading Circle or the firmware | check the connection and run `./build.sh` again; if it keeps failing, delete the `build` folder (below) and start from scratch |
-| `ERROR: el kernel ocupa ... (máximo 4 MB)` (kernel too big) | the kernel has grown too much: large buffers have to be moved to dynamic memory |
+| `ERROR: el kernel ocupa ... (máximo 8 MB)` (kernel too big) | the kernel has grown too much: large buffers have to be moved to dynamic memory |
 
 To start from scratch (for example, after changing the Circle version), delete the `build` folder:
 

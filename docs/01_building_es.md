@@ -130,7 +130,7 @@ Al terminar dice:
 Listo: copia el contenido de .../sdcard a una tarjeta FAT32.
 ```
 
-y de cada kernel muestra cuánto ocupa (`Tamaño del kernel en memoria: ... (47 % de 4 MB)`).
+y de cada kernel muestra cuánto ocupa (`Tamaño del kernel en memoria: ... (34 % de 8 MB)`).
 
 Opciones útiles:
 
@@ -219,7 +219,7 @@ El resultado queda en la carpeta `sdcard`, como al compilar sin Docker. La prime
 | `bad interpreter` o `$'\r': command not found` | el código se descargó con finales de línea de Windows: clónalo dentro de WSL (paso 4), no en `C:` |
 | `mcopy: command not found` | falta `mtools` (paso 2) |
 | Se corta al descargar Circle o el firmware | revisa la conexión y vuelve a lanzar `./build.sh`; si sigue fallando, borra la carpeta `build` (abajo) y empieza de cero |
-| `ERROR: el kernel ocupa ... (máximo 4 MB)` | el kernel ha crecido demasiado: hay que mover búferes grandes a memoria dinámica |
+| `ERROR: el kernel ocupa ... (máximo 8 MB)` | el kernel ha crecido demasiado: hay que mover búferes grandes a memoria dinámica |
 
 Para empezar de cero (por ejemplo, tras cambiar de versión de Circle), borra la carpeta `build`:
 

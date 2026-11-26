@@ -45,6 +45,12 @@ JOBS="${JOBS:-$(nproc)}"
 QEMU="${QEMU:-0}"
 LIMPIO="${LIMPIO:-0}"
 
+# Zona reservada para el kernel (código + datos + BSS), en MB: KERNEL_MAX_SIZE
+# de Circle (--kernel-max-size del configure de circle-stdlib). Con 8 hay
+# margen para las máquinas nuevas; solo quita esa memoria al heap.
+KERNEL_MB=8
+KERNEL_MAX_HEX=$(printf "0x%X" $((KERNEL_MB * 0x100000)))
+
 TARGETS="${1:-1 2 3-32 4-32 3-64 4-64 5}"
 
 # Por objetivo: modelo para ./configure -r, bits, kernel y carpeta de
@@ -126,19 +132,21 @@ for T in $TARGETS; do
 	S="$WORK/${SDIR[$T]}"
 	C="$S/libs/circle"
 	if [ "${BITS[$T]}" = 64 ]; then NL=aarch64-none-circle; else NL=arm-none-circle; fi
-	if [ ! -f "$C/lib/libcircle.a" ] || [ ! -f "$S/install/$NL/lib/libc.a" ]; then
+	# Se rehace todo si faltan las bibliotecas o si se compilaron con otro
+	# tamaño de kernel (una compilación incremental de antes de cambiarlo)
+	if [ ! -f "$C/lib/libcircle.a" ] || [ ! -f "$S/install/$NL/lib/libc.a" ] \
+	   || ! grep -q "KERNEL_MAX_SIZE=$KERNEL_MAX_HEX\b" "$C/Config.mk"; then
 		rm -rf "$S"
 		cp -a "$SRC" "$S"
 		# Pi 2, 3 y 4: soporte multinúcleo de Circle (la imagen se amplía en
 		# el núcleo 1, ver src/videocore.h). La Pi 5 no lo necesita (va
-		# sobrada) y de momento se compila sin él. La zona del kernel ya es
-		# de 4 MB (KERNEL_MAX_SIZE, lo pone el configure de circle-stdlib):
-		# margen para los modelos nuevos.
+		# sobrada) y de momento se compila sin él.
 		OPT=""
 		if [ "$R" -ge 2 ] && [ "$R" -le 4 ]; then
 			OPT="-o ARM_ALLOW_MULTI_CORE"
 		fi
-		( cd "$S" && ./configure -r "$R" -p "$P" $OPT > "$S/configure.log" 2>&1 ) \
+		( cd "$S" && ./configure -r "$R" -p "$P" --kernel-max-size "$KERNEL_MB" $OPT \
+				> "$S/configure.log" 2>&1 ) \
 			|| { tail -30 "$S/configure.log"; exit 1; }
 		echo "Compilando newlib (unos minutos)..."
 		# MAKEINFO=true: sin texinfo (solo hace la documentación de newlib)
@@ -221,15 +229,15 @@ for T in $TARGETS; do
 		} >> "$GITHUB_STEP_SUMMARY"
 	fi
 
-	# Zona reservada para el kernel (código + datos + BSS): 4 MB (ver
-	# KERNEL_MAX_SIZE arriba). Si se pasa, Circle se detiene al arrancar.
+	# Zona reservada para el kernel (código + datos + BSS): KERNEL_MB (ver
+	# arriba). Si se pasa, Circle se detiene al arrancar.
 	ELF="$B/${KERNEL[$T]%.img}.elf"
 	TOTAL=$(${P}size "$ELF" | awk 'NR==2 {print $4}')
-	if [ "$TOTAL" -ge $((4 * 1024 * 1024)) ]; then
-		echo "ERROR: el kernel ocupa $TOTAL bytes (máximo 4 MB). Mueve búferes grandes al heap."
+	if [ "$TOTAL" -ge $((KERNEL_MB * 1024 * 1024)) ]; then
+		echo "ERROR: el kernel ocupa $TOTAL bytes (máximo $KERNEL_MB MB). Mueve búferes grandes al heap."
 		exit 1
 	fi
-	echo "Tamaño del kernel en memoria: $TOTAL bytes ($((TOTAL * 100 / (4 * 1024 * 1024))) % de 4 MB)"
+	echo "Tamaño del kernel en memoria: $TOTAL bytes ($((TOTAL * 100 / (KERNEL_MB * 1024 * 1024))) % de $KERNEL_MB MB)"
 
 	if [ "$QEMU" = 1 ]; then
 		mkdir -p "$ROOT/qemu"
