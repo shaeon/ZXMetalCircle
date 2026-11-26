@@ -350,6 +350,10 @@ defecto.
 ------------------------------------------------------------------------------
  logdev=ttyS1     Mensajes de diagnostico por el puerto serie (GPIO14/15,
                   115200 baudios). Util solo para depurar.
+ bench=1          Medir la velocidad al arrancar: un programa de prueba en el
+                  48K, el 128K y el +3 (unos 35 s); el resultado sale abajo y
+                  se anade a medida.txt. Para comparar versiones; quitarlo
+                  despues. Mejor con force_turbo=1 en config.txt.
 
 ==============================================================================
  La configuracion de la WiFi va aparte, en wpa_supplicant.conf: se elige

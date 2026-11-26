@@ -312,6 +312,7 @@
 	"F1 ayuda": "F1 help",
 	"%s | Cinta: %s | %u.%02u c/s": "%s | Tape: %s | %u.%02u f/s",
 	"(ninguna)": "(none)",
+	"Midiendo la velocidad: %s (%u s)": "Measuring speed: %s (%u s)",
 	"Protegido: %s": "Protected: %s",
 	"En uso: %s (sácalo antes)": "In use: %s (eject it first)",
 	"Mover aquí: %s": "Move here: %s",

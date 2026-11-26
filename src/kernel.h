@@ -73,6 +73,10 @@ struct TUpdateBootResult
 	char URL[600];
 };
 
+// La CPU de la Pi ahora (kernelsystem.cpp): MHz y temperatura (0 si no se sabe)
+unsigned GetCPUMHz (void);
+unsigned GetCelsius (void);
+
 class CKernel : public CTapeSaveHandler
 {
 public:
@@ -268,6 +272,8 @@ private:
 	// Red WiFi y País WiFi en la configuración (kernelwifi.cpp)
 	enum TWiFiStep { WiFiStepNone, WiFiStepList, WiFiStepSaved, WiFiStepName, WiFiStepPassword,
 			 WiFiStepReboot, WiFiStepCountry };
+	void RunBenchmark (void);		// bench=1 (kernelbench.cpp)
+
 	void WiFiRows (void);
 	boolean WiFiLoad (void);
 	void WiFiAction (const char *pKey);

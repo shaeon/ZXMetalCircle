@@ -89,7 +89,7 @@ static boolean GetThrottled (unsigned *pState)
 	return TRUE;
 }
 
-static unsigned GetCPUMHz (void)
+unsigned GetCPUMHz (void)
 {
 	CBcmPropertyTags Tags;
 	TPropertyTagClockRate Clock;
@@ -101,7 +101,7 @@ static unsigned GetCPUMHz (void)
 	return (Clock.nRate + 500000) / 1000000;
 }
 
-static unsigned GetCelsius (void)
+unsigned GetCelsius (void)
 {
 	CBcmPropertyTags Tags;
 	TPropertyTagTemperature Temperature;

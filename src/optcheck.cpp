@@ -40,6 +40,7 @@ static const TOptionDef Options[] =
 	{"gpioaudio",	"0|1"},
 	{"ulaplus",	"0|1"},
 	{"snow",	"0|1"},
+	{"bench",	"0|1"},
 	{"pureblack",	"0|1"},
 	{"aystereo",	"abc|acb|bac|mono"},
 	{"tapesound",	"0|1"},

@@ -312,6 +312,7 @@
 	"F1 ayuda": "F1 ajuda",
 	"%s | Cinta: %s | %u.%02u c/s": "%s | Fita: %s | %u.%02u q/s",
 	"(ninguna)": "(nenhuma)",
+	"Midiendo la velocidad: %s (%u s)": "Medindo a velocidade: %s (%u s)",
 	"Protegido: %s": "Protegido: %s",
 	"En uso: %s (sácalo antes)": "Em uso: %s (ejete antes)",
 	"Mover aquí: %s": "Mover para cá: %s",

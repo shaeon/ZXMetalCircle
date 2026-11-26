@@ -353,6 +353,10 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
 ------------------------------------------------------------------------------
  logdev=ttyS1     Diagnostic messages through the serial port (GPIO14/15,
                   115200 baud). Only useful for debugging.
+ bench=1          Measure the speed at boot: a test program on the 48K, the
+                  128K and the +3 (about 35 s); the result is shown at the
+                  bottom and appended to medida.txt. To compare versions;
+                  remove it afterwards. Best with force_turbo=1 in config.txt.
 
 ==============================================================================
  The WiFi settings go separately, in wpa_supplicant.conf: chosen from the

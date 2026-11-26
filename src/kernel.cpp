@@ -6646,6 +6646,13 @@ TShutdownMode CKernel::Run (void)
 	}
 	}
 
+	// bench=1: medir la velocidad de la emulación (con la red aún parada,
+	// para que no moleste)
+	if (m_Options.GetAppOptionDecimal ("bench", 0) != 0)
+	{
+		RunBenchmark ();
+	}
+
 	StartNetwork ();
 
 	// Servidores TNFS en el selector
