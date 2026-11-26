@@ -158,14 +158,24 @@ for T in $TARGETS; do
 		make -C "$C/addon/wlan" -j"$JOBS" > /dev/null
 	fi
 
-	# Estado de la conexión WiFi (buscando, conectando, contraseña rechazada):
-	# una función al final de main_circle.cpp de wpa_supplicant
-	# (tools/circle/wpa_zxmc_main.cpp) y otra en events.c que apunta cuando la
-	# red rechaza la contraseña (tools/circle/wpa_zxmc_events.c), con su
-	# llamada después de wpas_notify_psk_mismatch
+	# Estado de la conexión WiFi (buscando, conectando, contraseña rechazada)
+	# y búsqueda de redes: unas funciones al final de main_circle.cpp de
+	# wpa_supplicant (tools/circle/wpa_zxmc_main.cpp) y otra en events.c que
+	# apunta cuando la red rechaza la contraseña (tools/circle/wpa_zxmc_events.c),
+	# con su llamada después de wpas_notify_psk_mismatch. Si main_circle.cpp
+	# tiene las de una versión anterior (sin zxmc_wpa_get_bss), se quitan antes
+	# de poner las nuevas (compilaciones incrementales).
 	W="$C/addon/wlan/hostap/wpa_supplicant"
-	if ! grep -q "zxmc_wpa_get_state" "$W/main_circle.cpp"; then
+	if ! grep -q "zxmc_wpa_get_bss" "$W/main_circle.cpp"; then
+		N=$(grep -n "ZXMetalCircle: lo añade build.sh" "$W/main_circle.cpp" | head -1 | cut -d: -f1)
+		if [ -n "$N" ]; then
+			head -n $((N - 3)) "$W/main_circle.cpp" > "$W/main_circle.cpp.tmp"
+			mv "$W/main_circle.cpp.tmp" "$W/main_circle.cpp"
+		fi
 		cat "$ROOT/tools/circle/wpa_zxmc_main.cpp" >> "$W/main_circle.cpp"
+		make -C "$W" -f Makefile.circle -j"$JOBS" > /dev/null
+	fi
+	if ! grep -q "zxmc_wpa_psk_mismatch" "$W/events.c"; then
 		sed -i '1i void zxmc_wpa_psk_mismatch (void *p);' "$W/events.c"
 		sed -i 's/^\(\t*\)wpas_notify_psk_mismatch(wpa_s);$/&\n\1zxmc_wpa_psk_mismatch(wpa_s);/' "$W/events.c"
 		cat "$ROOT/tools/circle/wpa_zxmc_events.c" >> "$W/events.c"

@@ -400,6 +400,9 @@ CKernel::CKernel (void)
 	m_WiFiSSID[0] = '\0';
 	m_bWiFiHidden = FALSE;
 	m_WiFiCountry[0] = '\0';
+	m_nWiFiScan = 0;
+	m_bWiFiScanOK = FALSE;
+	m_pWiFiScanError = "";
 	m_bModelChoice = FALSE;
 	m_SuggestedModel = Model48K;
 	m_bDiskChoice = FALSE;

@@ -126,6 +126,9 @@ public:
 	void SetChoiceInfo (boolean bInfo)	{ m_bChoiceInfo = bInfo; }
 	// Una línea de aviso debajo del título ("" = ninguna); OpenChoice la quita
 	void SetChoiceNote (const char *pNote);
+	// Las opciones llevan partes de color, como DrawMarked (|verde|, ~amarillo~,
+	// ^rojo^); en la elegida no. OpenChoice lo quita.
+	void SetChoiceMarked (void)		{ m_bChoiceMarked = TRUE; }
 
 	// Línea de texto (letras, números y espacio): título y dos líneas de
 	// explicación; ENTER da MenuResultInput y ESC MenuResultInputCancel
@@ -300,6 +303,7 @@ private:
 	unsigned m_nChoiceTop;			// la primera que se ve (listas largas)
 	boolean m_bChoiceInfo;
 	char m_ChoiceNote[48];
+	boolean m_bChoiceMarked;
 	unsigned ChoiceRows (void) const	{ return m_ChoiceNote[0] != '\0' ? MENU_CHOICE_ROWS - 1 : MENU_CHOICE_ROWS; }
 	unsigned m_nAboutTop;		// primera línea visible de los créditos
 	char m_UnitName[UNIT_COUNT][MENU_PATH_LEN];

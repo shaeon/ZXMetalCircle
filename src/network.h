@@ -23,6 +23,15 @@
 #include "wificonfig.h"
 
 class CBcm4343Device;
+
+// Una red vista al buscar (ScanWiFi)
+struct TWiFiScanEntry
+{
+	char SSID[WIFI_SSID_MAX + 1];
+	int nRSSI;		// dBm
+	boolean bOpen;		// sin cifrado
+};
+#define WIFI_SCAN_MAX	32
 class CWPASupplicant;
 class CmDNSPublisher;
 
@@ -61,6 +70,14 @@ public:
 	// temporal y lo pone en su sitio; el anterior queda como .bak.
 	static boolean LoadWiFiConfig (CWiFiConfig *pConfig);
 	static boolean ModelHasWiFi (void);	// la Pi lleva WiFi
+
+	// Busca redes WiFi de 2,4 GHz (esperando unos segundos, con la red y sus
+	// tareas en marcha): con la WiFi ya arrancada, se lo pide a wpa_supplicant;
+	// si no (arrancó por cable o sin red), arranca solo el chip y busca con él.
+	// Una entrada por nombre (la de más señal), sin las ocultas, de más a
+	// menos señal. FALSE si no se puede (*ppError: por qué, sin traducir).
+	boolean ScanWiFi (TWiFiScanEntry *pEntries, unsigned nMax, unsigned *pCount,
+			  const char *pCountry, const char **ppError);
 	static boolean SaveWiFiConfig (const CWiFiConfig &Config);
 
 	void Start (TNetMode Mode, const char *pHostname, int nTimeZoneMinutes, TSummerTime SummerTime,

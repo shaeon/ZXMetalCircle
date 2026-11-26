@@ -16,6 +16,7 @@
 #include <circle/net/mdnspublisher.h>
 #include <circle/machineinfo.h>
 #include <circle/timer.h>
+#include <circle/sched/scheduler.h>
 #include <circle/logger.h>
 #include <circle/util.h>
 #include <fatfs/ff.h>
@@ -32,6 +33,9 @@ static const char FromNet[] = "net";
 // Lo que build.sh añade a wpa_supplicant (tools/circle/wpa_zxmc_*): en qué
 // paso está la conexión y si la red ha rechazado la contraseña
 int zxmc_wpa_get_state (char *pSSID, int nSize);
+int zxmc_wpa_scan_start (void);
+int zxmc_wpa_scanning (void);
+int zxmc_wpa_get_bss (int nIndex, char *pSSID, int nSize, int *pLevel, int *pFreq, int *pOpen);
 extern "C" int zxmc_wpa_psk_mismatches;
 extern "C" char zxmc_wpa_psk_ssid[33];
 
@@ -586,4 +590,202 @@ void WebBusy (const char *pText)
 boolean WebTLSVerify (void)
 {
 	return CNetworkManager::Get ()->GetTLSVerify ();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Buscar redes WiFi
+
+// Lo que da el chip al buscar sin wpa_supplicant (como en driver_circle.cpp
+// de Circle: mismos campos y la misma alineación)
+struct TBrcmBSSInfo
+{
+	u32 nVersion;
+	u32 nLength;			// de este registro, con sus IE
+	u8 BSSID[6];
+	u16 nBeaconPeriod;
+	u16 nCapability;		// bit 4: cifrada
+	u8 nSSIDLen;
+	u8 SSID[32];
+	struct
+	{
+		u32 nCount;
+		u8 Rates[16];
+	} RateSet;
+	u16 nChanSpec;			// canal en los 8 bits bajos
+	u16 nATIMWindow;
+	u8 nDTIMPeriod;
+	u16 nRSSI;			// dBm (con signo)
+};
+
+struct TBrcmEScanResult
+{
+	u32 nBufLen;
+	u32 nVersion;
+	u16 nSyncID;
+	u16 nBSSCount;
+	TBrcmBSSInfo BSSInfo;		// nBSSCount de ellos, cada uno de nLength bytes
+};
+
+// Añade una red a la lista (si ya está, se queda con la de más señal)
+static void AddScanEntry (TWiFiScanEntry *pEntries, unsigned nMax, unsigned *pCount,
+			  const char *pSSID, int nRSSI, boolean bOpen)
+{
+	if (pSSID[0] == '\0')
+	{
+		return;				// oculta
+	}
+	for (unsigned i = 0; i < *pCount; i++)
+	{
+		if (strcmp (pEntries[i].SSID, pSSID) == 0)
+		{
+			if (nRSSI > pEntries[i].nRSSI)
+			{
+				pEntries[i].nRSSI = nRSSI;
+				pEntries[i].bOpen = bOpen;
+			}
+			return;
+		}
+	}
+	if (*pCount >= nMax)
+	{
+		return;
+	}
+	TWiFiScanEntry *p = &pEntries[(*pCount)++];
+	strncpy (p->SSID, pSSID, sizeof p->SSID - 1);
+	p->SSID[sizeof p->SSID - 1] = '\0';
+	p->nRSSI = nRSSI;
+	p->bOpen = bOpen;
+}
+
+boolean CNetworkManager::ScanWiFi (TWiFiScanEntry *pEntries, unsigned nMax, unsigned *pCount,
+				   const char *pCountry, const char **ppError)
+{
+	*pCount = 0;
+	*ppError = "";
+	if (!ModelHasWiFi ())
+	{
+		*ppError = N_("esta Pi no tiene WiFi");
+		return FALSE;
+	}
+	CScheduler *pScheduler = CScheduler::Get ();
+
+	if (m_pSupplicant != 0 && m_State != NetStateError)
+	{
+		// WiFi en marcha: que busque wpa_supplicant (unos 3 s) y leer lo que ha visto
+		zxmc_wpa_scan_start ();
+		unsigned nStart = CTimer::Get ()->GetClockTicks ();
+		boolean bStarted = FALSE;
+		while (CTimer::Get ()->GetClockTicks () - nStart < 10 * CLOCKHZ)
+		{
+			pScheduler->MsSleep (100);
+			if (zxmc_wpa_scanning ())
+			{
+				bStarted = TRUE;
+			}
+			else if (bStarted || CTimer::Get ()->GetClockTicks () - nStart > 2 * CLOCKHZ)
+			{
+				break;			// terminada (o no empezó: lo que haya)
+			}
+		}
+		char SSID[WIFI_SSID_MAX + 1];
+		int nLevel, nFreq, bOpen;
+		for (int i = 0; zxmc_wpa_get_bss (i, SSID, sizeof SSID, &nLevel, &nFreq, &bOpen); i++)
+		{
+			if (nFreq < 3000)		// solo 2,4 GHz
+			{
+				AddScanEntry (pEntries, nMax, pCount, SSID, nLevel, bOpen);
+			}
+		}
+	}
+	else
+	{
+		// Sin WiFi arrancada: solo el chip (la primera vez carga su firmware)
+		if (m_pWLAN == 0)
+		{
+			if (!FileExists (FIRMWARE_PATH "brcmfmac43430-sdio.bin"))
+			{
+				*ppError = N_("falta el firmware de la WiFi");
+				return FALSE;
+			}
+			m_pWLAN = new CBcm4343Device (FIRMWARE_PATH);
+			if (m_pWLAN == 0 || !m_pWLAN->Initialize ())
+			{
+				CLogger::Get ()->Write (FromNet, LogError, "Buscar redes: no arranca el chip WiFi");
+				delete m_pWLAN;
+				m_pWLAN = 0;
+				*ppError = N_("no arranca el chip WiFi");
+				return FALSE;
+			}
+		}
+		if (pCountry != 0 && pCountry[0] != '\0')
+		{
+			m_pWLAN->Control ("country %s", pCountry);
+		}
+		u8 *pBuffer = new u8[FRAME_BUFFER_SIZE];
+		if (pBuffer == 0)
+		{
+			return FALSE;
+		}
+		unsigned nLength;
+		while (m_pWLAN->ReceiveScanResult (pBuffer, &nLength))
+		{
+			// lo que quedara de antes
+		}
+		if (!m_pWLAN->Control ("escan 4"))
+		{
+			delete [] pBuffer;
+			*ppError = N_("el chip WiFi no busca");
+			return FALSE;
+		}
+		unsigned nStart = CTimer::Get ()->GetClockTicks ();
+		while (CTimer::Get ()->GetClockTicks () - nStart < 5 * CLOCKHZ)
+		{
+			pScheduler->MsSleep (50);
+			while (m_pWLAN->ReceiveScanResult (pBuffer, &nLength))
+			{
+				if (nLength < sizeof (TBrcmEScanResult))
+				{
+					continue;
+				}
+				const TBrcmEScanResult *pResult = (const TBrcmEScanResult *) pBuffer;
+				const u8 *pBSS = (const u8 *) &pResult->BSSInfo;
+				for (unsigned i = 0; i < pResult->nBSSCount; i++)
+				{
+					const TBrcmBSSInfo *pInfo = (const TBrcmBSSInfo *) pBSS;
+					if (   pBSS + sizeof (TBrcmBSSInfo) > pBuffer + nLength
+					    || pInfo->nLength < sizeof (TBrcmBSSInfo))
+					{
+						break;
+					}
+					unsigned nChannel = pInfo->nChanSpec & 0xFF;
+					if (nChannel >= 1 && nChannel <= 14 && pInfo->nSSIDLen <= 32)
+					{
+						char SSID[WIFI_SSID_MAX + 1];
+						memcpy (SSID, pInfo->SSID, pInfo->nSSIDLen);
+						SSID[pInfo->nSSIDLen] = '\0';
+						AddScanEntry (pEntries, nMax, pCount, SSID, (s16) pInfo->nRSSI,
+							      !(pInfo->nCapability & 0x0010));
+					}
+					pBSS += pInfo->nLength;
+				}
+			}
+		}
+		m_pWLAN->Control ("escan 0");		// por si sigue
+		delete [] pBuffer;
+	}
+
+	// de más a menos señal
+	for (unsigned i = 1; i < *pCount; i++)
+	{
+		TWiFiScanEntry Entry = pEntries[i];
+		unsigned j = i;
+		while (j > 0 && pEntries[j - 1].nRSSI < Entry.nRSSI)
+		{
+			pEntries[j] = pEntries[j - 1];
+			j--;
+		}
+		pEntries[j] = Entry;
+	}
+	CLogger::Get ()->Write (FromNet, LogNotice, "Buscar redes: %u", *pCount);
+	return TRUE;
 }

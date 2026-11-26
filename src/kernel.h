@@ -271,6 +271,7 @@ private:
 	void WiFiRows (void);
 	boolean WiFiLoad (void);
 	void WiFiAction (const char *pKey);
+	void WiFiScan (void);
 	void WiFiOpenList (void);
 	void WiFiAskName (const char *pInitial, const char *pError);
 	void WiFiAskPassword (const char *pInitial, const char *pError);
@@ -518,6 +519,16 @@ private:
 	char			m_WiFiSSID[WIFI_SSID_MAX + 1];	// la que se está cambiando
 	boolean			m_bWiFiHidden;		// escrita a mano: scan_ssid=1
 	char			m_WiFiCountry[3];	// país elegido sin redes guardadas aún
+	TWiFiScanEntry		m_WiFiScan[WIFI_SCAN_MAX];	// las redes que se ven (WiFiScan)
+	unsigned		m_nWiFiScan;
+	boolean			m_bWiFiScanOK;
+	const char		*m_pWiFiScanError;
+	enum TWiFiRowType { WiFiRowScan, WiFiRowSaved, WiFiRowOther, WiFiRowRescan };
+	struct
+	{
+		TWiFiRowType	nType;
+		unsigned	nIndex;			// en m_WiFiScan o en las guardadas
+	}			m_WiFiRow[WIFI_SCAN_MAX + WIFI_MAX_NETWORKS + 2];	// filas de la lista
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZXDBInput;		// la línea de texto es el título para ZXDB
 	// F2 en el navegador (kernelfiles.cpp)

@@ -189,6 +189,7 @@ void CKernel::WiFiAction (const char *pKey)
 
 	if (strcmp (pKey, "_wifinet") == 0)
 	{
+		WiFiScan ();
 		WiFiOpenList ();
 		return;
 	}
@@ -209,7 +210,78 @@ void CKernel::WiFiAction (const char *pKey)
 	}
 }
 
-// La lista de redes: las guardadas (la conectada con *) y "Otra red"
+// Busca las redes de alrededor (unos segundos, con un aviso abajo); si no se
+// puede, la lista solo tendrá las guardadas y dirá por qué
+void CKernel::WiFiScan (void)
+{
+	NetBusyHandler (T ("Buscando redes WiFi..."), this);
+	const char *pCountry = m_pWiFiConfig->GetCountry ()[0] != '\0' ? m_pWiFiConfig->GetCountry ()
+			     : m_WiFiCountry[0] != '\0' ? m_WiFiCountry : DefaultCountry ();
+	const char *pError;
+	m_bWiFiScanOK = m_Network.ScanWiFi (m_WiFiScan, WIFI_SCAN_MAX, &m_nWiFiScan, pCountry, &pError);
+	m_pWiFiScanError = pError;
+	ShowMessage ("");
+}
+
+// Texto de una red de la lista: "*Nombre              buena    clave", con
+// la señal en color (verde, amarillo o rojo) y "guardada" en las guardadas
+static void ListItem (CString *pItem, const char *pSSID, boolean bConnected, int nRSSI,
+		      boolean bOpen, boolean bSaved)
+{
+	*pItem = bConnected ? "*" : " ";
+	// el nombre, a 19 columnas (si no cabe, acaba en '>'); las marcas de
+	// color de la lista (| ~ ^), si las lleva el nombre, se ven como '?'
+	boolean bLong = Columns (pSSID) > 19;
+	unsigned nCols = 0;
+	for (const char *p = pSSID; *p != '\0'; p++)
+	{
+		if ((*p & 0xC0) != 0x80)
+		{
+			if (bLong && nCols == 18)
+			{
+				break;
+			}
+			nCols++;
+		}
+		char c[2] = {*p == '|' || *p == '~' || *p == '^' ? '?' : *p, '\0'};
+		pItem->Append (c);
+	}
+	if (bLong)
+	{
+		pItem->Append (">");
+		nCols++;
+	}
+	for (; nCols < 19; nCols++)
+	{
+		pItem->Append (" ");
+	}
+	pItem->Append (" ");
+
+	const char *pQuality = "";
+	char chMark = '|';
+	if (nRSSI < 0)
+	{
+		pQuality = nRSSI > -60 ? T ("buena") : nRSSI >= -70 ? T ("regular") : T ("mala");
+		chMark = nRSSI > -60 ? '|' : nRSSI >= -70 ? '~' : '^';
+	}
+	else
+	{
+		pQuality = T ("no está");
+	}
+	char Mark[2] = {chMark, '\0'};
+	if (nRSSI < 0) pItem->Append (Mark);
+	pItem->Append (pQuality);
+	if (nRSSI < 0) pItem->Append (Mark);
+	for (unsigned n = Columns (pQuality); n < 9; n++)
+	{
+		pItem->Append (" ");
+	}
+	pItem->Append (bSaved ? T ("guardada") : bOpen ? T ("abierta") : T ("clave"));
+}
+
+// La lista de redes: las que se ven, de más a menos señal (las guardadas
+// lo dicen; la conectada con *), las guardadas que no se ven, "Otra red
+// (oculta)" y "Buscar otra vez"
 void CKernel::WiFiOpenList (void)
 {
 	char Connected[WIFI_SSID_MAX + 1] = "";
@@ -221,29 +293,60 @@ void CKernel::WiFiOpenList (void)
 
 	m_WiFiStep = WiFiStepList;
 	m_Menu.OpenChoice (T ("Redes WiFi"));
-	unsigned nCount = m_pWiFiConfig->GetCount ();
+	m_Menu.SetChoiceMarked ();
+	unsigned nRows = 0;
 	boolean bAnyConnected = FALSE;
-	for (unsigned i = 0; i < nCount; i++)
+	for (unsigned i = 0; i < m_nWiFiScan; i++)
+	{
+		const TWiFiScanEntry *pScan = &m_WiFiScan[i];
+		boolean bConnected = strcmp (pScan->SSID, Connected) == 0;
+		bAnyConnected = bAnyConnected || bConnected;
+		CString Item;
+		ListItem (&Item, pScan->SSID, bConnected, pScan->nRSSI, pScan->bOpen,
+			  m_pWiFiConfig->Find (pScan->SSID) >= 0);
+		m_WiFiRow[nRows].nType = WiFiRowScan;
+		m_WiFiRow[nRows].nIndex = i;
+		m_Menu.SetChoiceItem (nRows++, Item);
+	}
+	for (unsigned i = 0; i < m_pWiFiConfig->GetCount (); i++)
 	{
 		const TWiFiNetwork *pNet = m_pWiFiConfig->Get (i);
+		boolean bSeen = FALSE;
+		for (unsigned j = 0; j < m_nWiFiScan; j++)
+		{
+			bSeen = bSeen || strcmp (m_WiFiScan[j].SSID, pNet->SSID) == 0;
+		}
+		if (bSeen)
+		{
+			continue;
+		}
 		boolean bConnected = strcmp (pNet->SSID, Connected) == 0;
 		bAnyConnected = bAnyConnected || bConnected;
-
-		// "*Nombre                    abierta", con el nombre a 26 columnas
-		CString Item (bConnected ? "*" : " ");
-		Item.Append (pNet->SSID);
-		for (unsigned n = Columns (pNet->SSID); n < 26; n++)
-		{
-			Item.Append (" ");
-		}
-		Item.Append (" ");
-		Item.Append (pNet->bOpen ? T ("abierta") : T ("clave"));
-		m_Menu.SetChoiceItem (i, Item);
+		CString Item;
+		ListItem (&Item, pNet->SSID, bConnected, 0, pNet->bOpen, TRUE);
+		m_WiFiRow[nRows].nType = WiFiRowSaved;
+		m_WiFiRow[nRows].nIndex = i;
+		m_Menu.SetChoiceItem (nRows++, Item);
 	}
-	m_Menu.SetChoiceItem (nCount, T (" Otra red (escribir su nombre)..."));
-	m_Menu.SetChoiceNote (  bAnyConnected ? T ("* conectada ahora")
-			      : nCount == 0 ? T ("No hay ninguna red guardada")
-					    : T ("Guardadas: se usa la primera que haya"));
+	m_WiFiRow[nRows].nType = WiFiRowOther;
+	m_Menu.SetChoiceItem (nRows++, T (" Otra red (oculta)..."));
+	m_WiFiRow[nRows].nType = WiFiRowRescan;
+	m_Menu.SetChoiceItem (nRows++, T (" Buscar otra vez"));
+
+	CString Note;
+	if (!m_bWiFiScanOK)
+	{
+		Note.Format (T ("Sin buscar: %s"), T (m_pWiFiScanError));
+	}
+	else if (m_nWiFiScan == 0)
+	{
+		Note = T ("No se ve ninguna red de 2,4 GHz");
+	}
+	else
+	{
+		Note = bAnyConnected ? T ("* conectada   Solo redes de 2,4 GHz") : T ("Solo redes de 2,4 GHz");
+	}
+	m_Menu.SetChoiceNote (Note);
 }
 
 // La contraseña de m_WiFiSSID (pInitial: lo que ya hay escrito)
@@ -341,11 +444,48 @@ boolean CKernel::WiFiMenuResult (TMenuResult Result)
 		{
 			m_Menu.OpenSettings ();
 		}
-		else if (nChoice < m_pWiFiConfig->GetCount ())
+		else if (m_WiFiRow[nChoice].nType == WiFiRowRescan)
 		{
+			WiFiScan ();
+			WiFiOpenList ();
+		}
+		else if (m_WiFiRow[nChoice].nType == WiFiRowOther)
+		{
+			m_bWiFiHidden = TRUE;		// escrita a mano: puede estar oculta
+			WiFiAskName ("", 0);
+		}
+		else
+		{
+			const char *pSSID = m_WiFiRow[nChoice].nType == WiFiRowScan
+					  ? m_WiFiScan[m_WiFiRow[nChoice].nIndex].SSID
+					  : m_pWiFiConfig->Get (m_WiFiRow[nChoice].nIndex)->SSID;
+			strcpy (m_WiFiSSID, pSSID);
+			int nSaved = m_pWiFiConfig->Find (m_WiFiSSID);
+			if (nSaved < 0)
+			{
+				// una nueva de la lista: abierta, se guarda ya; si no, su contraseña
+				m_bWiFiHidden = FALSE;
+				if (m_WiFiScan[m_WiFiRow[nChoice].nIndex].bOpen)
+				{
+					if (m_pWiFiConfig->Add (m_WiFiSSID, "", FALSE))
+					{
+						WiFiSaveAndAsk ();
+					}
+					else
+					{
+						ShowMessage (T ("Ya hay 8 redes: olvida alguna antes"));
+						WiFiOpenList ();
+					}
+				}
+				else
+				{
+					WiFiAskPassword ("", 0);
+				}
+				break;
+			}
+
 			// una guardada: conectar, cambiar la contraseña u olvidarla
-			const TWiFiNetwork *pNet = m_pWiFiConfig->Get (nChoice);
-			strcpy (m_WiFiSSID, pNet->SSID);
+			const TWiFiNetwork *pNet = m_pWiFiConfig->Get (nSaved);
 			CString Title;
 			Title.Format (T ("%s (guardada)"), pNet->SSID);
 			CString Note;
@@ -367,11 +507,6 @@ boolean CKernel::WiFiMenuResult (TMenuResult Result)
 			m_Menu.SetChoiceItem (0, T ("Conectar"));
 			m_Menu.SetChoiceItem (1, pNet->bOpen ? T ("Ponerle contraseña") : T ("Cambiar la contraseña"));
 			m_Menu.SetChoiceItem (2, T ("Olvidar esta red"));
-		}
-		else
-		{
-			m_bWiFiHidden = TRUE;		// escrita a mano: puede estar oculta
-			WiFiAskName ("", 0);
 		}
 		break;
 

@@ -62,6 +62,7 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nChoiceTop = 0;
 	m_bChoiceInfo = FALSE;
 	m_ChoiceNote[0] = '\0';
+	m_bChoiceMarked = FALSE;
 	m_nListCount = 0;
 	m_nListSelected = 0;
 	m_nListTop = 0;
@@ -397,6 +398,7 @@ void CMenu::OpenChoice (const char *pTitle)
 	m_nChoiceTop = 0;
 	m_bChoiceInfo = FALSE;
 	m_ChoiceNote[0] = '\0';
+	m_bChoiceMarked = FALSE;
 	m_Mode = ModeChoice;
 }
 
@@ -2564,9 +2566,30 @@ void CMenu::Draw (TPixel *pScreen)
 			}
 			m_pVideo->DrawText (pScreen, tx, y, Number, nInk, nPaper, 2);
 
+			// Con partes de color: las demás, con DrawMarked; la elegida, sin las marcas
+			char Plain[sizeof m_Choice[i]];
+			const char *pName = m_Choice[i];
+			if (m_bChoiceMarked)
+			{
+				if (!bSel)
+				{
+					DrawMarked (pScreen, tx + 2 * 8, y, pName, nInk, COLOR_UI_VALUE, nPaper, nNameCols);
+					continue;
+				}
+				unsigned n = 0;
+				for (const char *p = pName; *p != '\0'; p++)
+				{
+					if (*p != '|' && *p != '~' && *p != '^')
+					{
+						Plain[n++] = *p;
+					}
+				}
+				Plain[n] = '\0';
+				pName = Plain;
+			}
+
 			// Si el nombre no cabe, el de la opción elegida se desplaza poco a
 			// poco (como en el selector de ficheros) y los demás acaban en '>'
-			const char *pName = m_Choice[i];
 			unsigned nLen = UTF8Length (pName);
 			if (nLen > nNameCols)
 			{
