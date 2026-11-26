@@ -4295,6 +4295,10 @@ void CKernel::BusyHandler (const char *pText, void *pParam)
 	{
 		pThis->m_Menu.Draw (Overlay);
 	}
+	else
+	{
+		pThis->MenuClosed ();		// ver NetBusyHandler
+	}
 	strncpy (pThis->m_Message, pText, sizeof pThis->m_Message - 1);
 	pThis->m_Message[sizeof pThis->m_Message - 1] = '\0';
 	pThis->m_nMessageFrames = 1;
@@ -4319,6 +4323,12 @@ void CKernel::NetBusyHandler (const char *pText, void *pParam)
 	}
 	else
 	{
+		// Recién cerrado el menú (al elegir algo que se descarga y se carga),
+		// el borde sigue siendo el de los menús hasta que vuelve el bucle
+		// principal: con "sin borde" o "estándar", la imagen se veía un
+		// momento más pequeña, con el borde completo. Se vuelve ya al del
+		// usuario (si ya está, no hace nada).
+		pThis->MenuClosed ();
 		memcpy (Overlay, pThis->m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 	}
 	pThis->ShowMessage (pText);

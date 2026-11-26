@@ -21,7 +21,9 @@
 #include <stdarg.h>
 
 CCircleTransport::CCircleTransport (void)
-:	m_pSocket (0)
+:	m_pSocket (0),
+	m_nFrameLen (0),
+	m_nFramePos (0)
 {
 }
 
@@ -90,33 +92,24 @@ int CCircleTransport::Receive (unsigned char *pBuffer, size_t nSize)
 		return -1;
 	}
 	// Receive necesita espacio para un paquete entero (FRAME_BUFFER_SIZE)
-	static u8 Frame[FRAME_BUFFER_SIZE];
-	static size_t nFrameLen = 0, nFramePos = 0;
-	static CSocket *pFrameSocket = 0;
-	if (pFrameSocket != m_pSocket)
+	if (m_nFramePos >= m_nFrameLen)
 	{
-		nFrameLen = nFramePos = 0;
-		pFrameSocket = m_pSocket;
-	}
-
-	if (nFramePos >= nFrameLen)
-	{
-		int r = m_pSocket->Receive (Frame, sizeof Frame, 0);	// bloquea cediendo el control
+		int r = m_pSocket->Receive (m_Frame, sizeof m_Frame, 0);	// bloquea cediendo el control
 		if (r <= 0)
 		{
 			return r < 0 ? -1 : 0;
 		}
-		nFrameLen = r;
-		nFramePos = 0;
+		m_nFrameLen = r;
+		m_nFramePos = 0;
 	}
 
-	size_t n = nFrameLen - nFramePos;
+	size_t n = m_nFrameLen - m_nFramePos;
 	if (n > nSize)
 	{
 		n = nSize;
 	}
-	memcpy (pBuffer, Frame + nFramePos, n);
-	nFramePos += n;
+	memcpy (pBuffer, m_Frame + m_nFramePos, n);
+	m_nFramePos += n;
 	return (int) n;
 }
 
@@ -124,6 +117,7 @@ void CCircleTransport::Close (void)
 {
 	delete m_pSocket;
 	m_pSocket = 0;
+	m_nFrameLen = m_nFramePos = 0;		// lo que quedara era de esta conexión
 }
 
 //------------------------------------------------------------------------------

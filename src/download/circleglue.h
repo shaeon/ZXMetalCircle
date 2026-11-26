@@ -11,6 +11,7 @@
 
 #include "httpsclient.h"
 #include <circle/net/socket.h>
+#include <circle/netdevice.h>	// FRAME_BUFFER_SIZE
 
 class CCircleTransport : public ITransport
 {
@@ -26,6 +27,16 @@ public:
 
 private:
 	CSocket *m_pSocket;
+
+	// Lo recibido de un paquete que aún no se ha leído. Es de cada conexión:
+	// antes era estático y solo se vaciaba si el socket nuevo tenía otra
+	// dirección, pero el nuevo suele ocupar la misma memoria que el anterior,
+	// así que lo que sobraba de la conexión anterior (el aviso de cierre de
+	// TLS, o el cuerpo de una redirección) llegaba al principio de la
+	// siguiente, su TLS fallaba y había que reintentar.
+	u8 m_Frame[FRAME_BUFFER_SIZE];
+	size_t m_nFrameLen;
+	size_t m_nFramePos;
 };
 
 #endif
