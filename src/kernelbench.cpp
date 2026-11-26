@@ -177,9 +177,9 @@ void CKernel::RunBenchmark (void)
 		for (unsigned nFrame = 0; nFrame < BENCH_WARMUP + BENCH_FRAMES; nFrame++)
 		{
 			unsigned nStart = CTimer::GetClockTicks ();
-			m_pSpectrum->RunFrame ();
+			m_pMachine->RunFrame ();
 			unsigned nUs = CTimer::GetClockTicks () - nStart;
-			m_pSpectrum->GetAudio ()->ClearBuffer ();	// sin sonido
+			m_pMachine->GetAudio ()->ClearBuffer ();	// sin sonido
 
 			if (nFrame >= BENCH_WARMUP)
 			{
@@ -195,7 +195,7 @@ void CKernel::RunBenchmark (void)
 					     (BENCH_WARMUP + BENCH_FRAMES - nFrame) / 50);
 				ShowMessage (Busy);
 			}
-			memcpy (m_pOverlay, m_pSpectrum->GetScreenBuffer (),
+			memcpy (m_pOverlay, m_pMachine->GetScreenBuffer (),
 				SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			m_nMessageFrames = 1;
 			DrawMessage (m_pOverlay);

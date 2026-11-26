@@ -131,7 +131,7 @@ void CKernel::PokeSetGame (const char *pPath, unsigned nKind)
 	m_PokeGamePath[sizeof m_PokeGamePath - 1] = '\0';
 	m_PokeZXDBID[0] = '\0';
 	m_bPokeOnline = FALSE;
-	m_nPokeResets = m_pSpectrum->GetResetCount ();
+	m_nPokeResets = m_pMachine->GetResetCount ();
 }
 
 void CKernel::PokeSetZXDBID (const char *pID)
@@ -188,12 +188,12 @@ boolean CKernel::PokeAvailable (void)
 	// era un snapshot (o se ha quitado su cinta, disco o cartucho), ya no hay
 	// juego, como al encender; si sigue puesto, se puede volver a cargar: sus
 	// trucos se quedan, sin aplicar
-	if (m_nPokeResets != m_pSpectrum->GetResetCount ())
+	if (m_nPokeResets != m_pMachine->GetResetCount ())
 	{
 		if (PokeGameStillThere ())
 		{
 			m_Pokes.Forget ();
-			m_nPokeResets = m_pSpectrum->GetResetCount ();
+			m_nPokeResets = m_pMachine->GetResetCount ();
 		}
 		else
 		{
@@ -244,7 +244,7 @@ void CKernel::PokeEnterMenu (void)
 {
 	if (!m_Menu.IsOpen ())
 	{
-		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		UpdateStatusLines ();
 		OpenMenu ();
 		m_Keyboard.SetCaptured (TRUE);
@@ -379,7 +379,7 @@ void CKernel::PokeToggle (unsigned nTrainer)
 	}
 
 	m_Pokes.Activate (nTrainer, &Memory);
-	m_nPokeResets = m_pSpectrum->GetResetCount ();
+	m_nPokeResets = m_pMachine->GetResetCount ();
 	PokeShowList (nTrainer);
 }
 
@@ -455,7 +455,7 @@ boolean CKernel::PokeMenuResult (TMenuResult Result)
 			}
 			CPokSpectrumMemory Memory (m_pSpectrum);
 			m_Pokes.Activate (m_nPokePending, &Memory, nValue);
-			m_nPokeResets = m_pSpectrum->GetResetCount ();
+			m_nPokeResets = m_pMachine->GetResetCount ();
 			PokeShowList (m_nPokePending);
 			return TRUE;
 		}
@@ -501,7 +501,7 @@ boolean CKernel::PokeMenuResult (TMenuResult Result)
 						nLast = nTrainer;
 					}
 				}
-				m_nPokeResets = m_pSpectrum->GetResetCount ();
+				m_nPokeResets = m_pMachine->GetResetCount ();
 
 				if (nLast < 0)
 				{

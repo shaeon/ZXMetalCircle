@@ -14,6 +14,7 @@
 #define _zx_spectrum_h
 
 #include "machine.h"
+#include "machinebase.h"
 #include "palette.h"
 #include "ay8912.h"
 #include "audiomixer.h"
@@ -48,7 +49,9 @@ public:
 
 class CSnapshot;
 
-class CSpectrum : public Z80operations
+// final: nadie hereda de CSpectrum, así que sus propias llamadas a lo de
+// CMachine (RunFrame, WriteMemory...) siguen siendo directas, sin tabla virtual
+class CSpectrum final : public Z80operations, public CMachine
 {
 	friend class CSnapshot;		// carga y grabación de snapshots
 
@@ -60,7 +63,7 @@ public:
 	TModel GetModel (void) const		{ return m_Model; }
 	const TMachineTiming *GetTiming (void) const	{ return m_pTiming; }
 
-	void Reset (void);
+	void Reset (void) override;
 	// La NMI se lanza a mitad del próximo cuadro, lejos de la interrupción
 	// del comienzo del cuadro: con la divMMC, una NMI que llega mientras
 	// esxDOS atiende esa interrupción se ignora (como en la máquina real si el
@@ -68,11 +71,11 @@ public:
 	void TriggerNMI (void)			{ m_bNMIPending = TRUE; }
 
 	// Ejecuta un cuadro completo (50 Hz) y genera imagen y sonido
-	void RunFrame (void);
+	void RunFrame (void) override;
 
 	// Imagen: SCREEN_WIDTH x SCREEN_HEIGHT píxeles RGB565
-	TPixel *GetScreenBuffer (void)		{ return m_Screen; }
-	CAudioMixer *GetAudio (void)		{ return &m_Audio; }
+	TPixel *GetScreenBuffer (void) override	{ return m_Screen; }
+	CAudioMixer *GetAudio (void) override	{ return &m_Audio; }
 	CAY8912 *GetAY (void)			{ return &m_AY; }
 
 	void SetTapeMode (TTapeMode Mode)	{ m_TapeMode = Mode; }
@@ -159,14 +162,14 @@ public:
 	boolean IsIF1Connected (void) const	{ return m_bIF1Connected; }
 	CInterface1 *GetInterface1 (void)	{ return &m_IF1; }
 	// Lectura de la memoria tal como la ve ahora la CPU (sin contención; pruebas)
-	u8 ReadMemory (u16 nAddress) const	{ return m_pReadPage[nAddress >> 14][nAddress & 0x3FFF]; }
+	u8 ReadMemory (u16 nAddress) const override	{ return m_pReadPage[nAddress >> 14][nAddress & 0x3FFF]; }
 	// Escritura en la memoria tal como la ve ahora la CPU (la ROM no se escribe)
-	void WriteMemory (u16 nAddress, u8 nValue)	{ m_pWritePage[nAddress >> 14][nAddress & 0x3FFF] = nValue; }
+	void WriteMemory (u16 nAddress, u8 nValue) override	{ m_pWritePage[nAddress >> 14][nAddress & 0x3FFF] = nValue; }
 	// Una página de RAM (0-7) directamente, esté paginada o no (pokes del 128K)
 	u8 ReadRAM (unsigned nBank, u16 nOffset) const	{ return m_RAM[nBank & 7][nOffset & 0x3FFF]; }
 	void WriteRAM (unsigned nBank, u16 nOffset, u8 nValue)	{ m_RAM[nBank & 7][nOffset & 0x3FFF] = nValue; }
 	// Los reset que lleva: con uno, los pokes aplicados se pierden
-	unsigned GetResetCount (void) const	{ return m_nResetCount; }
+	unsigned GetResetCount (void) const override	{ return m_nResetCount; }
 
 	// Ampliación de memoria LEC: 16 páginas de 32 KB que sustituyen a los 32 KB
 	// bajos (0x0000-0x7FFF). Necesaria para el CP/M de LEC. En los 128K (128,

@@ -365,6 +365,8 @@ private:
 	CZXKeyboard		m_Keyboard;
 	CTape			m_Tape;
 	CSpectrum		*m_pSpectrum;
+	CMachine		*m_pMachine;	// la misma máquina, por lo que vale para cualquiera
+					// (cuadro, imagen, sonido, reset, memoria): ver machinebase.h
 	CMenu			m_Menu;
 	CNetworkManager		m_Network;
 	CSoundBaseDevice	*m_pSound;

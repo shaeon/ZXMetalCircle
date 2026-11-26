@@ -273,6 +273,7 @@ CKernel::CKernel (void)
 	m_bSDMounted (FALSE),
 	m_bUSBRescan (FALSE),
 	m_pSpectrum (0),
+	m_pMachine (0),
 	m_Menu (&m_Video),
 	m_pSound (0),
 	m_pSoundName (N_("ninguno")),
@@ -564,6 +565,7 @@ boolean CKernel::Initialize (void)
 	if (bOK)
 	{
 		m_pSpectrum = new CSpectrum (&m_Keyboard, &m_Tape);
+		m_pMachine = m_pSpectrum;
 		bOK = m_pSpectrum != 0;
 	}
 
@@ -770,9 +772,9 @@ void CKernel::ParseOptions (void)
 			m_pSpectrum->GetAY ()->SetStereoMode ((TAYStereoMode) i);
 		}
 	}
-	m_pSpectrum->GetAudio ()->SetTapeSound (m_Options.GetAppOptionDecimal ("tapesound", 1) != 0);
+	m_pMachine->GetAudio ()->SetTapeSound (m_Options.GetAppOptionDecimal ("tapesound", 1) != 0);
 	SetVolume (m_Options.GetAppOptionDecimal ("volume", 100));
-	m_pSpectrum->GetAudio ()->SetBeeperFilter (m_Options.GetAppOptionDecimal ("beeperfilter", 1) != 0);
+	m_pMachine->GetAudio ()->SetBeeperFilter (m_Options.GetAppOptionDecimal ("beeperfilter", 1) != 0);
 	strncpy (m_Speaker, m_Options.GetAppOptionString ("speaker", "auto"), sizeof m_Speaker - 1);
 	m_Speaker[sizeof m_Speaker - 1] = '\0';
 	ApplySpeaker ();
@@ -2365,7 +2367,7 @@ void CKernel::OpenZip (const char *pPath, const char *pEntry)
 	// varios: se elige en una lista
 	if (!m_Menu.IsOpen ())
 	{
-		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
 		m_Keyboard.SetCaptured (TRUE);
 	}
@@ -2488,7 +2490,7 @@ void CKernel::LoadZipEntry (unsigned nEntry)
 		{
 			if (!m_Menu.IsOpen ())
 			{
-				memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+				memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 				OpenMenu ();
 				m_Keyboard.SetCaptured (TRUE);
 			}
@@ -2637,7 +2639,7 @@ void CKernel::ToggleSpectranet (void)
 			SaveSpectranetFlash ();
 		}
 		m_pSpectrum->SetSpectranetEnabled (FALSE);
-		m_pSpectrum->Reset ();
+		m_pMachine->Reset ();
 		ShowMessage (T ("Spectranet desconectada"));
 		SyncPeripheralSettings ();
 		return;
@@ -2654,7 +2656,7 @@ void CKernel::ToggleSpectranet (void)
 	m_pSpectrum->SetLECConnected (FALSE);
 	m_pSpectrum->SetIF1Connected (FALSE);
 	m_pSpectrum->SetSpectranetEnabled (TRUE);
-	m_pSpectrum->Reset ();
+	m_pMachine->Reset ();
 	ShowMessage (CNetworkManager::IsNetRunning () ? T ("Spectranet conectada")
 						      : T ("Spectranet conectada (sin red)"));
 	SyncPeripheralSettings ();
@@ -2665,7 +2667,7 @@ void CKernel::ToggleDivMMC (void)
 	if (m_pSpectrum->IsDivMMCActive ())
 	{
 		m_pSpectrum->SetDivMMCEnabled (FALSE);
-		m_pSpectrum->Reset ();
+		m_pMachine->Reset ();
 		ShowMessage (T ("divMMC desconectada"));
 		SyncPeripheralSettings ();
 		return;
@@ -2713,7 +2715,7 @@ void CKernel::ToggleDivMMC (void)
 		}
 	}
 
-	m_pSpectrum->Reset ();
+	m_pMachine->Reset ();
 	ShowMessage (m_HDDPath[0] != '\0' ? T ("divMMC conectada") : T ("divMMC conectada (sin tarjeta)"));
 	SyncPeripheralSettings ();
 }
@@ -2723,7 +2725,7 @@ void CKernel::ToggleLEC (void)
 	if (m_pSpectrum->IsLECConnected ())
 	{
 		m_pSpectrum->SetLECConnected (FALSE);
-		m_pSpectrum->Reset ();
+		m_pMachine->Reset ();
 		ShowMessage (T ("Memoria LEC desconectada"));
 		SyncPeripheralSettings ();
 		return;
@@ -2744,7 +2746,7 @@ void CKernel::ToggleLEC (void)
 
 	if (m_pSpectrum->SetLECConnected (TRUE))
 	{
-		m_pSpectrum->Reset ();
+		m_pMachine->Reset ();
 		ShowMessage (m_pSpectrum->GetModel () == Model48K ? T ("Memoria LEC conectada (528 KB)")
 				 : T ("Memoria LEC conectada: úsala desde 48 BASIC"));
 	}
@@ -3021,7 +3023,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 			}
 		}
 	}
-	else if (strcmp (pKey, "tapesound") == 0)	m_pSpectrum->GetAudio ()->SetTapeSound (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "tapesound") == 0)	m_pMachine->GetAudio ()->SetTapeSound (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "tapeaccel") == 0)	m_pSpectrum->SetLoaderAcceleration (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "diskaccel") == 0)	m_pSpectrum->SetDiskAcceleration (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "p3elang") == 0 || strncmp (pKey, "rom", 3) == 0)
@@ -3089,7 +3091,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 			SetModel (Current);		// con los tiempos de la ULA nueva
 		}
 	}
-	else if (strcmp (pKey, "beeperfilter") == 0)	m_pSpectrum->GetAudio ()->SetBeeperFilter (strcmp (pValue, "1") == 0);
+	else if (strcmp (pKey, "beeperfilter") == 0)	m_pMachine->GetAudio ()->SetBeeperFilter (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "speaker") == 0)
 	{
 		strncpy (m_Speaker, pValue, sizeof m_Speaker - 1);
@@ -3314,7 +3316,7 @@ void CKernel::UpdateRTC (void)
 // del juego que se quiere cargar)
 void CKernel::OpenTapeSelect (void)
 {
-	memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+	memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 	OpenMenu ();
 	m_Menu.OpenChoice (T ("La cinta pide elegir qué cargar:"));
 	for (unsigned i = 0; i < m_Tape.GetSelectCount () && i < MENU_CHOICE_ITEMS; i++)
@@ -3578,7 +3580,7 @@ void CKernel::OpenUnitsScreen (void)
 {
 	if (!m_Menu.IsOpen ())
 	{
-		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
 		m_Keyboard.SetCaptured (TRUE);
 	}
@@ -4329,7 +4331,7 @@ void CKernel::NetBusyHandler (const char *pText, void *pParam)
 		// momento más pequeña, con el borde completo. Se vuelve ya al del
 		// usuario (si ya está, no hace nada).
 		pThis->MenuClosed ();
-		memcpy (Overlay, pThis->m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		memcpy (Overlay, pThis->m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 	}
 	pThis->ShowMessage (pText);
 	pThis->DrawMessage (Overlay);
@@ -5060,7 +5062,7 @@ boolean CKernel::SaveSnapshot (int nFormat)
 		{
 			if (!m_Menu.IsOpen ())
 			{
-				memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+				memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 				UpdateStatusLines ();
 				OpenMenu ();
 				m_Keyboard.SetCaptured (TRUE);
@@ -5332,7 +5334,7 @@ void CKernel::CheckTapeModel (void)
 	m_bModelChoice = TRUE;
 	if (!m_Menu.IsOpen ())
 	{
-		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
 		m_Keyboard.SetCaptured (TRUE);
 	}
@@ -5360,7 +5362,7 @@ void CKernel::ApplySpeaker (void)
 		Speaker = Model == Model16K || Model == Model48K ? CAudioMixer::SpeakerBeeper
 								  : CAudioMixer::SpeakerTV;
 	}
-	m_pSpectrum->GetAudio ()->SetSpeaker (Speaker);
+	m_pMachine->GetAudio ()->SetSpeaker (Speaker);
 }
 
 void CKernel::SetModel (TModel Model)
@@ -5734,7 +5736,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		break;
 
 	case ActionHelp:
-		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		UpdateStatusLines ();
 		OpenMenu ();
 		m_Menu.OpenHelp ();
@@ -5743,7 +5745,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 
 	case ActionSettings:
 		// Alt+F1: la configuración directamente; ESC vuelve al Spectrum
-		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		UpdateStatusLines ();
 		OpenMenu ();
 		if (!m_Settings.IsDirty ())
@@ -5757,7 +5759,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		break;
 
 	case ActionKeyHelp:
-		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
 		m_Menu.OpenKeyHelp (IsZX81Active ());
 		m_Keyboard.SetCaptured (TRUE);
@@ -5788,7 +5790,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		}
 		if (!m_Menu.IsOpen ())
 		{
-			memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+			memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			OpenMenu ();
 			m_Keyboard.SetCaptured (TRUE);
 		}
@@ -5806,7 +5808,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 
 	case ActionFiles:
 		// el navegador de ficheros directamente, como F1 y ENTER
-		memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		UpdateStatusLines ();
 		OpenMenu ();
 		m_Menu.OpenBrowser ();
@@ -5830,7 +5832,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		// salen con un aviso y no se pueden elegir
 		if (!m_Menu.IsOpen ())
 		{
-			memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+			memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			OpenMenu ();
 			m_Keyboard.SetCaptured (TRUE);
 		}
@@ -5885,7 +5887,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	case ActionReset:
 		m_ZX81Loader.Cancel (&m_Keyboard);	// una carga de .P a medias se abandona
 		EsxFolderToImage (TRUE);	// esxDOS: lo nuevo de la carpeta, antes de arrancar
-		m_pSpectrum->Reset ();
+		m_pMachine->Reset ();
 		ShowMessage (T ("Reset"));
 		break;
 
@@ -5958,7 +5960,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		// VICTOR en Profanation, con teclados que no registran tantas juntas)
 		if (!m_Menu.IsOpen ())
 		{
-			memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+			memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			OpenMenu ();
 			m_Keyboard.SetCaptured (TRUE);
 		}
@@ -5971,7 +5973,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		// disco nuevo: se pregunta el formato (3" de siempre o 3,5" de 720K)
 		if (!m_Menu.IsOpen ())
 		{
-			memcpy (m_pFrozen, m_pSpectrum->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+			memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			OpenMenu ();
 			m_Keyboard.SetCaptured (TRUE);
 		}
@@ -6469,7 +6471,7 @@ void CKernel::DrawIndicators (TPixel *pScreen)
 
 void CKernel::OutputAudio (void)
 {
-	CAudioMixer *pAudio = m_pSpectrum->GetAudio ();
+	CAudioMixer *pAudio = m_pMachine->GetAudio ();
 
 	// Si la cola de audio va llena (la tarjeta consume algo más despacio que el
 	// emulador), se descarta este cuadro de sonido para no acumular retraso
@@ -6699,7 +6701,7 @@ TShutdownMode CKernel::Run (void)
 			}
 			else
 			{
-				memcpy (Overlay, m_pSpectrum->GetScreenBuffer (), nOverlayBytes);
+				memcpy (Overlay, m_pMachine->GetScreenBuffer (), nOverlayBytes);
 				DrawMessage (Overlay);
 			}
 
@@ -6742,7 +6744,7 @@ TShutdownMode CKernel::Run (void)
 				}
 			}
 
-			m_pSpectrum->RunFrame ();
+			m_pMachine->RunFrame ();
 			m_Keyboard.TickHeld ();			// Alt+V: teclas mantenidas
 			ZX81Frame ();				// la carga de un .P, si hay una en marcha
 
@@ -6789,7 +6791,7 @@ TShutdownMode CKernel::Run (void)
 			}
 			else
 			{
-				m_pSpectrum->GetAudio ()->ClearBuffer ();
+				m_pMachine->GetAudio ()->ClearBuffer ();
 			}
 		}
 
@@ -6929,7 +6931,7 @@ TShutdownMode CKernel::Run (void)
 			// pinta, se muestra (ShowFrame la copia o la escala al momento) y
 			// se reponen: solo esas líneas, no la imagen entera. Los indicadores
 			// (pequeños) siguen en la imagen, como siempre
-			TPixel *pScreen = m_pSpectrum->GetScreenBuffer ();
+			TPixel *pScreen = m_pMachine->GetScreenBuffer ();
 			DrawIndicators (pScreen);
 			int Band[2][2];
 			unsigned nBands = 0;
