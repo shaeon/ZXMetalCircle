@@ -2986,6 +2986,10 @@ void CKernel::ApplySetting (unsigned nIndex)
 	else if (strcmp (pKey, "snow") == 0)		m_pSpectrum->SetSnowEnabled (strcmp (pValue, "0") != 0);
 	else if (strcmp (pKey, "pureblack") == 0)	m_pSpectrum->SetPureBlack (strcmp (pValue, "1") == 0);
 	else if (strcmp (pKey, "indicators") == 0)	m_bIndicators = strcmp (pValue, "1") == 0;
+	else if (strcmp (pKey, "fast") == 0)
+	{
+		m_CPUThrottle.SetSpeed (strcmp (pValue, "true") == 0 ? CPUSpeedMaximum : CPUSpeedLow);
+	}
 	else if (strcmp (pKey, "border") == 0 || strcmp (pKey, "scanlines") == 0)
 	{
 		static const char *Borders[] = {"none", "standard", "full", "huge"};
@@ -6747,6 +6751,7 @@ TShutdownMode CKernel::Run (void)
 			ZX81Frame ();				// la carga de un .P, si hay una en marcha
 
 			CheckPowerWarning ();			// bajo voltaje (cada pocos segundos)
+			m_CPUThrottle.Update ();		// fast=true: más lenta si se calienta (cada 4 s)
 
 			// Reloj para esxDOS (RTC.SYS): la hora de la Pi, si ya la tiene (NTP)
 			if (m_pSpectrum->IsDivMMCActive ())

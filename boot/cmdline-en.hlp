@@ -353,10 +353,16 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
 ------------------------------------------------------------------------------
  logdev=ttyS1     Diagnostic messages through the serial port (GPIO14/15,
                   115200 baud). Only useful for debugging.
+ fast=false       Speed of the Pi's CPU: false = normal (the minimum, e.g.
+                  600 MHz on the Pi 3), true = the maximum (1200 MHz on the
+                  Pi 3). With true, if the Pi gets hot it goes back to normal
+                  until it cools down (see socmaxtemp).
+ socmaxtemp=60    With fast=true, temperature (40 to 78 degrees) above which
+                  the CPU goes back to its normal speed.
  bench=1          Measure the speed at boot: a test program on the 48K, the
                   128K and the +3 (about 35 s); the result is shown at the
                   bottom and appended to medida.txt. To compare versions;
-                  remove it afterwards. Best with force_turbo=1 in config.txt.
+                  remove it afterwards. Only compare runs with the same fast=.
 
 ==============================================================================
  The WiFi settings go separately, in wpa_supplicant.conf: chosen from the

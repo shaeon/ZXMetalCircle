@@ -209,7 +209,18 @@ void CKernel::UpdateSystemLines (boolean bOpening)
 	{
 		Temperature.Format (nCelsius >= SYSTEM_HOT_CELSIUS ? "^%u °C^" : "|%u °C|", nCelsius);
 	}
-	Line.Format (T ("CPU:       |%u MHz|   Temp.: %s"), nMHz, (const char *) Temperature);
+	// Con fast=true (velocidad máxima), si se ha calentado y la ha bajado, los
+	// MHz en amarillo
+	boolean bSlowed = FALSE;
+	CCPUThrottle *pThrottle = CCPUThrottle::Get ();
+	int nFast = m_Settings.Find ("fast");
+	if (   pThrottle != 0 && pThrottle->IsDynamic () && nFast >= 0
+	    && strcmp (m_Settings.GetValue (nFast), "true") == 0)
+	{
+		bSlowed = nMHz + 5 < (pThrottle->GetMaxClockRate () + 500000) / 1000000;
+	}
+	Line.Format (bSlowed ? T ("CPU:       ~%u MHz~   Temp.: %s") : T ("CPU:       |%u MHz|   Temp.: %s"),
+		     nMHz, (const char *) Temperature);
 	m_Menu.SetSystemLine (nLine++, Line);
 
 	unsigned nThrottled;

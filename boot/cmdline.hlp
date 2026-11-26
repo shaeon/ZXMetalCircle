@@ -350,10 +350,16 @@ defecto.
 ------------------------------------------------------------------------------
  logdev=ttyS1     Mensajes de diagnostico por el puerto serie (GPIO14/15,
                   115200 baudios). Util solo para depurar.
+ fast=false       Velocidad de la CPU de la Pi: false = la normal (la minima,
+                  p. ej. 600 MHz en la Pi 3), true = la maxima (1200 MHz en la
+                  Pi 3). Con true, si la Pi se calienta vuelve a la normal
+                  hasta que se enfria (ver socmaxtemp).
+ socmaxtemp=60    Con fast=true, temperatura (40 a 78 grados) a partir de la
+                  que la CPU vuelve a su velocidad normal.
  bench=1          Medir la velocidad al arrancar: un programa de prueba en el
                   48K, el 128K y el +3 (unos 35 s); el resultado sale abajo y
                   se anade a medida.txt. Para comparar versiones; quitarlo
-                  despues. Mejor con force_turbo=1 en config.txt.
+                  despues. Las medidas solo se comparan con la misma fast=.
 
 ==============================================================================
  La configuracion de la WiFi va aparte, en wpa_supplicant.conf: se elige

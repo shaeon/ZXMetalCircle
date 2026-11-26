@@ -150,14 +150,17 @@ void CKernel::RunBenchmark (void)
 	}
 
 	CString Report;
-	Report.Format ("ZXMetalCircle %s - %s, %u bits, %u MHz, %u C%s\r\n",
+	Report.Format ("ZXMetalCircle %s - %s, %u bits, %u MHz%s, %u C%s\r\n",
 		       ZXCIRCLE_VERSION, CMachineInfo::Get ()->GetMachineName (),
 #if AARCH == 64
 		       64,
 #else
 		       32,
 #endif
-		       GetCPUMHz (), GetCelsius (),
+		       GetCPUMHz (), CCPUThrottle::Get () != 0 && CCPUThrottle::Get ()->IsDynamic ()
+				     && GetCPUMHz () + 5 >= (CCPUThrottle::Get ()->GetMaxClockRate () + 500000) / 1000000
+				     ? " (la maxima)" : "",
+		       GetCelsius (),
 #ifdef ARM_ALLOW_MULTI_CORE
 		       m_pVideoCore != 0 ? ", multinucleo" : ""
 #else

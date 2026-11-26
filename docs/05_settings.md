@@ -40,6 +40,7 @@ All the options go on a single line:
 | `pureblack=` | `1` (pure black also in the 16K/48K palette), `0` | `0` |
 | `indicators=` | `1` (the D, H, M1-M8 and recording dot at the top of the picture), `0` (none of them; the keyboard extended-mode icon is still shown) | `1` |
 | `multicore=` | `1` (image scaling on core 1, Pi 2/3/4), `0` | `1` |
+| `fast=` | `false` (the Pi's CPU at its normal speed, the minimum: for example 600 MHz on the Pi 3), `true` (at the maximum: 1200 MHz on the Pi 3; if the Pi goes over 60 °C, or the value of `socmaxtemp=`, 40 to 78, it goes back to normal until it cools down, and the System screen shows the MHz in yellow). Applied at once. More headroom for the emulation, at the cost of more heat and power | `false` |
 | `issue=` | `3` (Issue 3), `2` (Issue 2, only affects the 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |
 | `ulaplus=` | `1` (ULAplus available), `0` (disabled) | `1` |
@@ -89,7 +90,7 @@ From the help screen (F1), the **C** key opens the settings: ten pages with the 
 | Page | Options |
 | --- | --- |
 | 1 Machine | language, model, Issue 2/3 keyboard, speed, ULAplus, +3e language*, boot hard disk* |
-| 2 Video and sound | border, scanlines, AY sound, volume, speaker, remove 1-bit whine, sound output*, sound on GPIO12*, video on core 1* |
+| 2 Video and sound | border, scanlines, AY sound, volume, speaker, remove 1-bit whine, sound output*, sound on GPIO12*, video on core 1*, Pi speed |
 | 3 Tapes and saving | loading mode, hear loading, SAVE to the SD card, SAVE format, F8 format |
 | 4 Keyboard | F5 / Alt+F5, Recreated ZX, GPIO keyboard*, ZX81 keyboard, mouse sensitivity (greyed out with no mouse or when the Kempston is the joystick's) |
 | 5 Joysticks and pads | players 1 and 2 joysticks, each player's gamepad, extra gamepads, PC cursor keys, keyboard fire, gamepad buttons (see [04_usb_gamepads.md](04_usb_gamepads.md)) |

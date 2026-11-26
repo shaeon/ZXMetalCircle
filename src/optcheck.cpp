@@ -107,7 +107,7 @@ static const TOptionDef Options[] =
 	{"usbignore",	0},
 	{"usbsoundchannels", 0},
 	{"soundopt",	0},
-	{"fast",	0},
+	{"fast",	"true|false"},
 	{"socmaxtemp",	0},
 	{"gpiofanpin",	0},
 	{"touchscreen",	0},
