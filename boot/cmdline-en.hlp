@@ -301,8 +301,8 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
  NETWORK (WiFi or cable)
 ------------------------------------------------------------------------------
  net=auto         Network:
-                    auto  WiFi if wpa_supplicant.conf exists and the model
-                          has WiFi; otherwise cable         (default)
+                    auto  WiFi if wpa_supplicant.conf has networks and
+                          the model has WiFi; otherwise cable (default)
                     wifi  WiFi only
                     eth   cable only (or USB network adapter)
                     0     no network
@@ -355,6 +355,7 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                   115200 baud). Only useful for debugging.
 
 ==============================================================================
- The WiFi settings go separately, in wpa_supplicant.conf (see
+ The WiFi settings go separately, in wpa_supplicant.conf: chosen from the
+ Pi (Alt+F1, page 7, "WiFi network") or by hand (see
  wpa_supplicant.conf.ejemplo). The function keys are in the help (F1).
 ==============================================================================

@@ -4,14 +4,18 @@
 
 ## Red: WiFi, servidor web y hora
 
-**Modelos**: WiFi en la Raspberry Pi 3, 3B+, 3A+, 4, 400, Zero W y Zero 2 W, y **en pruebas en la Pi 5 y la 500** (Circle avisa de que en la Pi 5 la WiFi puede ser inestable con una pantalla HDMI a la vez; su firmware, `brcmfmac43455-sdio.raspberrypi,5-model-b.*`, va también en `firmware`). Las Pi con conector de red (1B, 2B, 3B, 4, 5) también pueden usar cable, igual que un adaptador USB de red compatible con Circle. Con `net=auto` se usa la WiFi si hay `wpa_supplicant.conf` en la SD; para forzar el cable, `net=eth`.
+**Modelos**: WiFi en la Raspberry Pi 3, 3B+, 3A+, 4, 400, Zero W y Zero 2 W, y **en pruebas en la Pi 5 y la 500** (Circle avisa de que en la Pi 5 la WiFi puede ser inestable con una pantalla HDMI a la vez; su firmware, `brcmfmac43455-sdio.raspberrypi,5-model-b.*`, va también en `firmware`). Las Pi con conector de red (1B, 2B, 3B, 4, 5) también pueden usar cable, igual que un adaptador USB de red compatible con Circle. Con `net=auto` se usa la WiFi si hay alguna red guardada en `wpa_supplicant.conf`; para forzar el cable, `net=eth`.
 
-**Configurar la WiFi**:
-1. En la SD, cambia el nombre de `wpa_supplicant.conf.ejemplo` a `wpa_supplicant.conf`.
-2. Escribe en él el nombre de tu red y su contraseña. Solo valen redes de 2,4 GHz con WPA/WPA2.
-3. El firmware del chip WiFi ya va en la carpeta `firmware` de la SD.
+**Configurar la WiFi desde la Pi**: Alt+F1 (o F1 y luego C), página 7 «Red y hora», y ENTER en **«Red WiFi»**:
+1. Sale la lista de redes guardadas (la conectada, con `*`) y **«Otra red (escribir su nombre)...»**. Para una red nueva, elige esta última y escribe su nombre tal cual (las mayúsculas cuentan); vale también para las redes ocultas.
+2. Escribe la **contraseña** (de 8 a 63 caracteres; vacía si la red es abierta). Se ve mientras se escribe, para comprobar que está bien; **TAB** la oculta o la vuelve a mostrar. Mayúsculas con Mayúsculas o CAPS SHIFT; símbolos con Ctrl o SYMBOL SHIFT, como en el Spectrum: además de los de los nombres de fichero, `* ? / : < >` (SS + B, C, V, Z, R, T) y, en modo extendido, `| \` (S, D).
+3. **«Guardada. Para conectar, reiniciar»**: **Reiniciar ahora** o **Más tarde**. La red recién guardada es la primera, la de más prioridad. Si «Red» estaba en «cable» o «no», pasa a «automática» (y se guarda al reiniciar).
 
-Al arrancar, la conexión se hace en segundo plano. Cuando está lista, aparece un mensaje con la dirección, por ejemplo `WiFi http://192.168.1.50`, y la ayuda (F1) la muestra en la línea "Red:".
+Con una red guardada, ENTER da **Conectar** (pasa a ser la primera y pregunta si reiniciar), **Cambiar la contraseña** (empieza con la que tiene, para corregirla) y **Olvidar esta red**; arriba se ve su contraseña. Caben 8 redes. **«País WiFi»** (debajo) dice en qué país se usa, porque cambia los canales permitidos: al principio, el del idioma (España para el español). Nada de esto se hace solo: hay que abrirlo desde el menú. El firmware del chip WiFi ya va en la carpeta `firmware` de la SD.
+
+**A mano**: también se puede escribir `wpa_supplicant.conf` en la SD (hay un ejemplo, `wpa_supplicant.conf.ejemplo`). Solo valen redes de 2,4 GHz con WPA/WPA2. La Pi conserva lo que haya escrito a mano que no entienda (comentarios, `proto=`, `bssid=`...) y, al guardar, deja el anterior como `wpa_supplicant.conf.bak`. Si el fichero tiene un error (una red sin cerrar, por ejemplo), no lo toca y lo dice.
+
+Al arrancar, la conexión se hace en segundo plano y la ayuda (F1, línea "Red:") dice en qué paso está: **buscando** la red, **conectando** a ella, **conectada, esperando IP** o que la red **rechaza la contraseña** (esto, además, sale abajo en cuanto pasa). Cuando está lista, aparece un mensaje con la dirección, por ejemplo `WiFi http://192.168.1.50`. Si a los dos minutos no ha conectado, sale una vez el aviso «WiFi sin conectar: mira F1 o reinicia».
 
 **Operaciones largas**: la red y la emulación comparten el núcleo 0, así que mientras se lee o se escribe un fichero grande (desde 32 KB) por la web, o se busca o descarga de ZXDB (HTTPS), la emulación se para un momento. Durante ese rato se ve un aviso abajo, por ejemplo "Red: enviando juego.tap (512 KB)" o "Red: descargando de ZXDB...".
 

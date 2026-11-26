@@ -299,8 +299,8 @@ defecto.
  RED (WiFi o cable)
 ------------------------------------------------------------------------------
  net=auto         Red:
-                    auto  WiFi si existe wpa_supplicant.conf y el modelo
-                          tiene WiFi; si no, cable        (por defecto)
+                    auto  WiFi si hay redes en wpa_supplicant.conf y el
+                          modelo tiene WiFi; si no, cable (por defecto)
                     wifi  solo WiFi
                     eth   solo cable (o adaptador de red USB)
                     0     sin red
@@ -352,6 +352,7 @@ defecto.
                   115200 baudios). Util solo para depurar.
 
 ==============================================================================
- La configuracion de la WiFi va aparte, en wpa_supplicant.conf (ver
+ La configuracion de la WiFi va aparte, en wpa_supplicant.conf: se elige
+ desde la Pi (Alt+F1, pagina 7, "Red WiFi") o a mano (ver
  wpa_supplicant.conf.ejemplo). Las teclas de funcion estan en la ayuda (F1).
 ==============================================================================

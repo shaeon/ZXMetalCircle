@@ -264,6 +264,18 @@ private:
 	void UpdateConfirm (void);
 	void UpdateAction (const char *pKey);
 	boolean UpdateMenuResult (TMenuResult Result);
+
+	// Red WiFi y País WiFi en la configuración (kernelwifi.cpp)
+	enum TWiFiStep { WiFiStepNone, WiFiStepList, WiFiStepSaved, WiFiStepName, WiFiStepPassword,
+			 WiFiStepReboot, WiFiStepCountry };
+	void WiFiRows (void);
+	boolean WiFiLoad (void);
+	void WiFiAction (const char *pKey);
+	void WiFiOpenList (void);
+	void WiFiAskName (const char *pInitial, const char *pError);
+	void WiFiAskPassword (const char *pInitial, const char *pError);
+	void WiFiSaveAndAsk (void);
+	boolean WiFiMenuResult (TMenuResult Result);
 	void UpdateRun (void);
 	void UpdatePrune (void);
 	unsigned UpdateScanPackages (void);
@@ -500,6 +512,12 @@ private:
 	boolean			m_bUpdateBootChecked;
 	boolean			m_bUpdateBootRunning;	// la tarea de al arrancar está buscando
 	TUpdateBootResult	m_UpdateBootResult;
+
+	TWiFiStep		m_WiFiStep;		// la pantalla de la WiFi abierta
+	CWiFiConfig		*m_pWiFiConfig;		// las redes guardadas (al abrir la lista)
+	char			m_WiFiSSID[WIFI_SSID_MAX + 1];	// la que se está cambiando
+	boolean			m_bWiFiHidden;		// escrita a mano: scan_ssid=1
+	char			m_WiFiCountry[3];	// país elegido sin redes guardadas aún
 	boolean			m_bZipChoice;		// pregunta: qué fichero del ZIP
 	boolean			m_bZXDBInput;		// la línea de texto es el título para ZXDB
 	// F2 en el navegador (kernelfiles.cpp)

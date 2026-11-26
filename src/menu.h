@@ -124,6 +124,8 @@ public:
 	// Lista solo informativa (el resultado de una actualización): sin la línea
 	// de "ENTER: elegir" de abajo
 	void SetChoiceInfo (boolean bInfo)	{ m_bChoiceInfo = bInfo; }
+	// Una línea de aviso debajo del título ("" = ninguna); OpenChoice la quita
+	void SetChoiceNote (const char *pNote);
 
 	// Línea de texto (letras, números y espacio): título y dos líneas de
 	// explicación; ENTER da MenuResultInput y ESC MenuResultInputCancel
@@ -139,6 +141,10 @@ public:
 	void OpenText (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter,
 		       const char *pInitial, unsigned nCursor, unsigned nMax = 0);
 	boolean IsTyping (void) const		{ return m_Mode == ModeInput && m_bInputText; }
+	// Tras OpenText: es una contraseña. Valen también los símbolos que no
+	// pueden ir en un nombre de fichero (SYMBOL SHIFT + B * C ? V / Z : R < T >
+	// y, en modo extendido, S | D \) y TAB la oculta o la vuelve a mostrar
+	void SetTextPassword (void)		{ m_bInputPassword = TRUE; m_bInputHidden = FALSE; }
 
 	// Lista de dos columnas (nombre y valor), como la configuración: la lleva
 	// quien la abre. El menú mueve la selección (cursores, RePág, AvPág,
@@ -280,6 +286,8 @@ private:
 	char m_InputBuf[MENU_NAME_LEN];	// lo escrito en la línea de texto
 	unsigned m_nInputMax;		// lo más que cabe (19 en OpenInput)
 	boolean m_bInputText;		// OpenText: texto libre con cursor
+	boolean m_bInputPassword;	// SetTextPassword: más símbolos y TAB
+	boolean m_bInputHidden;		// la contraseña, con asteriscos
 	unsigned m_nInputCursor;
 	boolean m_bFileChanges;		// F2 en el navegador
 	char m_BrowserClip[64];		// "Para copiar: juegos/x.tzx"
@@ -291,6 +299,8 @@ private:
 	unsigned m_nChoiceSelected;
 	unsigned m_nChoiceTop;			// la primera que se ve (listas largas)
 	boolean m_bChoiceInfo;
+	char m_ChoiceNote[48];
+	unsigned ChoiceRows (void) const	{ return m_ChoiceNote[0] != '\0' ? MENU_CHOICE_ROWS - 1 : MENU_CHOICE_ROWS; }
 	unsigned m_nAboutTop;		// primera línea visible de los créditos
 	char m_UnitName[UNIT_COUNT][MENU_PATH_LEN];
 	unsigned m_nUnitSelected;

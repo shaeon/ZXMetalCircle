@@ -60,6 +60,7 @@ public:
 	// no se entiende (entonces no hay que guardar encima). Save: escribe uno
 	// temporal y lo pone en su sitio; el anterior queda como .bak.
 	static boolean LoadWiFiConfig (CWiFiConfig *pConfig);
+	static boolean ModelHasWiFi (void);	// la Pi lleva WiFi
 	static boolean SaveWiFiConfig (const CWiFiConfig &Config);
 
 	void Start (TNetMode Mode, const char *pHostname, int nTimeZoneMinutes, TSummerTime SummerTime,
@@ -73,6 +74,9 @@ public:
 	boolean IsWiFi (void) const		{ return m_bWiFi; }
 	const char *GetIPAddress (void) const	{ return m_IPAddress; }
 	const char *GetStateText (void) const;	// para la ayuda (F1)
+	// Un aviso de la WiFi para enseñar una vez abajo (contraseña rechazada,
+	// o sin conectar tras dos minutos)
+	boolean TakeWarning (CString *pText);
 	boolean HasTime (void) const;		// hora puesta por NTP
 	int GetTimeZone (void) const		{ return m_nTimeZone; }		// tz= (minutos)
 	TSummerTime GetSummerTime (void) const	{ return m_SummerTime; }	// dst=
@@ -116,6 +120,8 @@ public:
 
 private:
 	void UpdateSummerTime (void);
+	void CheckWiFiProgress (void);
+	const char *GetWiFiStepText (void) const;
 
 private:
 	TNetState m_State;
@@ -143,6 +149,15 @@ private:
 	TBusyHandler *m_pBusyHandler;
 	void *m_pBusyParam;
 	CString m_LoadPath;
+
+	boolean m_bNoFirmware;			// NetStateNoConfig: hay redes, falta el firmware
+	unsigned m_nWiFiNetworks;		// redes guardadas al arrancar
+	char m_WiFiFirst[WIFI_SSID_MAX + 1];	// la de más prioridad
+	unsigned m_nConnectStart;		// cuándo empezó a conectar (s)
+	boolean m_bSlowWarned;
+	int m_nPSKWarned;			// contraseñas rechazadas ya avisadas
+	CString m_Warning;
+	boolean m_bWarningPending;
 
 	static CNetworkManager *s_pThis;
 };

@@ -4,14 +4,18 @@
 
 ## Network: WiFi, web server and time
 
-**Models**: WiFi on the Raspberry Pi 3, 3B+, 3A+, 4, 400, Zero W and Zero 2 W, and **in testing on the Pi 5 and 500** (Circle warns that on the Pi 5 WiFi may be unstable with an HDMI display at the same time; its firmware, `brcmfmac43455-sdio.raspberrypi,5-model-b.*`, is also in `firmware`). The Pis with a network socket (1B, 2B, 3B, 4, 5) can also use cable, as can a USB network adapter supported by Circle. With `net=auto` WiFi is used if there is a `wpa_supplicant.conf` on the SD card; to force cable, `net=eth`.
+**Models**: WiFi on the Raspberry Pi 3, 3B+, 3A+, 4, 400, Zero W and Zero 2 W, and **in testing on the Pi 5 and 500** (Circle warns that on the Pi 5 WiFi may be unstable with an HDMI display at the same time; its firmware, `brcmfmac43455-sdio.raspberrypi,5-model-b.*`, is also in `firmware`). The Pis with a network socket (1B, 2B, 3B, 4, 5) can also use cable, as can a USB network adapter supported by Circle. With `net=auto` WiFi is used if there is any network saved in `wpa_supplicant.conf`; to force cable, `net=eth`.
 
-**Setting up the WiFi**:
-1. On the SD card, rename `wpa_supplicant.conf.ejemplo` to `wpa_supplicant.conf`.
-2. Write your network's name and password in it. Only 2.4 GHz networks with WPA/WPA2 work.
-3. The WiFi chip firmware is already in the SD card's `firmware` folder.
+**Setting up the WiFi from the Pi**: Alt+F1 (or F1 and then C), page 7 "Network and time", and ENTER on **"WiFi network"**:
+1. The list of saved networks appears (the connected one marked with `*`) plus **"Other network (type its name)..."**. For a new network, choose the latter and type its name exactly (case matters); it also works for hidden networks.
+2. Type the **password** (8 to 63 characters; empty if the network is open). It is shown while typing, so you can check it; **TAB** hides it or shows it again. Capitals with Shift or CAPS SHIFT; symbols with Ctrl or SYMBOL SHIFT, as on the Spectrum: besides the ones for file names, `* ? / : < >` (SS + B, C, V, Z, R, T) and, in extended mode, `| \` (S, D).
+3. **"Saved. Restart to connect"**: **Restart now** or **Later**. The network just saved is the first one, the highest priority. If "Network" was set to "cable" or "no", it changes to "automatic" (and is saved when restarting).
 
-At boot, the connection is made in the background. When it is ready, a message with the address appears, for example `WiFi http://192.168.1.50`, and the help (F1) shows it on the "Network:" line.
+On a saved network, ENTER gives **Connect** (it becomes the first one and asks whether to restart), **Change the password** (it starts with the current one, to fix it) and **Forget this network**; its password is shown at the top. Up to 8 networks. **"WiFi country"** (below) says the country where it is used, because it changes the allowed channels: at first, the one of the language (Spain for Spanish, United Kingdom for English). None of this happens by itself: it is opened from the menu. The WiFi chip firmware is already in the SD card's `firmware` folder.
+
+**By hand**: `wpa_supplicant.conf` can also be written on the SD card (there is an example, `wpa_supplicant.conf.ejemplo`). Only 2.4 GHz networks with WPA/WPA2 work. The Pi keeps whatever was written by hand that it does not understand (comments, `proto=`, `bssid=`...) and, when saving, leaves the previous one as `wpa_supplicant.conf.bak`. If the file has an error (an unclosed network, for example), it does not touch it and says so.
+
+At boot, the connection is made in the background and the help (F1, "Network:" line) says which step it is at: **looking for** the network, **connecting** to it, **connected, waiting for IP** or the network **rejects the password** (this is also shown at the bottom as soon as it happens). When it is ready, a message with the address appears, for example `WiFi http://192.168.1.50`. If it has not connected after two minutes, the notice "WiFi not connected: see F1 or restart" is shown once.
 
 **Long operations**: the network and the emulation share core 0, so while a large file (from 32 KB) is read or written through the web page, or ZXDB is searched or downloaded from (HTTPS), the emulation stops for a moment. Meanwhile a notice is shown at the bottom, for example "Network: sending game.tap (512 KB)" or "Network: downloading from ZXDB...".
 

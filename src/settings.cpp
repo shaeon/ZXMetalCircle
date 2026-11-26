@@ -99,6 +99,9 @@ static TSettingDef Settings[] =
 
 	// 5 Red y hora
 	{"net",		N_("Red"),		6, "auto|wifi|eth|0", N_("automática|WiFi|cable|no"),	"auto",	FALSE},
+	// la red WiFi y el país, en SD:/wpa_supplicant.conf (lo hace kernelwifi.cpp)
+	{"_wifinet",	N_("Red WiFi"),		6, "*accion", N_("ENTER: elegir"),		"",	TRUE},
+	{"_wificountry", N_("País WiFi"),	6, "*accion", "",				"",	TRUE},
 	{"tz",		N_("Zona horaria"),	6, "-480|-300|-240|-180|0|60|120|180|240|330|480|540|600",
 				   "UTC-8|UTC-5|UTC-4|UTC-3|UTC|UTC+1|UTC+2|UTC+3|UTC+4|UTC+5:30|UTC+8|UTC+9|UTC+10", "60", TRUE},
 	{"dst",		N_("Horario de verano"), 6, "1|on|0", N_("automático|sí|no"),		"1",	TRUE},
@@ -134,6 +137,7 @@ static TSettingDef Settings[] =
 };
 
 #define NUM_SETTINGS	(sizeof Settings / sizeof Settings[0])
+static_assert (NUM_SETTINGS <= SETTINGS_MAX, "SETTINGS_MAX se queda corto");
 
 // n-ésimo elemento de una lista "a|b|c" (copiado en pOut)
 static boolean GetItem (const char *pList, unsigned n, char *pOut, unsigned nSize)
@@ -175,6 +179,7 @@ static int IndexOf (const char *pList, const char *pValue)
 
 CSettings::CSettings (void)
 :	m_bMousePresent (FALSE),
+	m_bWiFiPresent (TRUE),
 	m_bDirty (FALSE)
 {
 	m_nPads = 0;
@@ -666,6 +671,11 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	if (strcmp (pKey, "mousesens") == 0)
 	{
 		return m_bMousePresent && !Is ("joystick", "kempston") && !Is ("joystick2", "kempston");
+	}
+	// la red WiFi y su país, en los modelos con WiFi
+	if (strcmp (pKey, "_wifinet") == 0 || strcmp (pKey, "_wificountry") == 0)
+	{
+		return m_bWiFiPresent;
 	}
 	// el teclado Issue 2/3 solo cambia algo en el 16K y el 48K
 	if (strcmp (pKey, "issue") == 0)

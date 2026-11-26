@@ -395,6 +395,11 @@ CKernel::CKernel (void)
 	m_nSnetSaveFrames = 0;
 	m_nRTCLast = 0;
 	m_bRebootChoice = FALSE;
+	m_WiFiStep = WiFiStepNone;
+	m_pWiFiConfig = 0;
+	m_WiFiSSID[0] = '\0';
+	m_bWiFiHidden = FALSE;
+	m_WiFiCountry[0] = '\0';
 	m_bModelChoice = FALSE;
 	m_SuggestedModel = Model48K;
 	m_bDiskChoice = FALSE;
@@ -5440,6 +5445,11 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			// F8 con la ULAplus en uso: ¿en SZX?
 		}
+		else if (WiFiMenuResult (Result))
+		{
+			// página 7: Red WiFi, País WiFi y sus pantallas (listas y
+			// líneas de texto)
+		}
 		else if (Result == MenuResultOpenSystem)
 		{
 			UpdateSystemLines (TRUE);		// S en la ayuda
@@ -5652,6 +5662,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			{
 				LoadSettings ();
 			}
+			WiFiRows ();
 			m_Menu.OpenSettings ();
 		}
 		else if (Result == MenuResultSetting)
@@ -5726,6 +5737,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			LoadSettings ();		// cmdline.txt puede haber cambiado desde la web
 		}
+		WiFiRows ();
 		m_Menu.OpenSettings ();
 		m_Menu.SetSettingsFromShortcut (TRUE);
 		m_Keyboard.SetCaptured (TRUE);
@@ -6791,6 +6803,19 @@ TShutdownMode CKernel::Run (void)
 			CString Message;
 			Message.Format ("%s", m_Network.GetStateText ());
 			ShowMessage (Message);
+		}
+		{
+			// WiFi: contraseña rechazada o sin conectar tras dos minutos (unos 10 s)
+			CString Warning;
+			if (m_Network.TakeWarning (&Warning))
+			{
+				size_t nLen = strnlen (Warning, sizeof m_OptionWarning - 1);
+				memcpy (m_OptionWarning, (const char *) Warning, nLen);
+				m_OptionWarning[nLen] = '\0';
+				ShowMessage (m_OptionWarning);
+				m_nWarningFrames = 500;
+				m_nMessageFrames = m_nWarningFrames;
+			}
 		}
 		{
 			UpdateBootCheck ();		// "Buscar al arrancar", la primera vez que hay red

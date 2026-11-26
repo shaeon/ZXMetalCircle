@@ -1,6 +1,9 @@
 #
 # Configuración de la WiFi de ZXMetalCircle
 #
+# Lo más fácil es elegir la red desde la Pi: Alt+F1, página 7 (Red y hora),
+# "Red WiFi". Para hacerlo a mano:
+#
 # 1. Cambia el nombre de este fichero a  wpa_supplicant.conf  (quitando ".ejemplo").
 # 2. Pon el nombre de tu red y su contraseña entre las comillas.
 # 3. Si tu país no es España, cambia "ES" por su código (FR, DE, GB, US...).

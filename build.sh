@@ -158,6 +158,22 @@ for T in $TARGETS; do
 		make -C "$C/addon/wlan" -j"$JOBS" > /dev/null
 	fi
 
+	# Estado de la conexión WiFi (buscando, conectando, contraseña rechazada):
+	# una función al final de main_circle.cpp de wpa_supplicant
+	# (tools/circle/wpa_zxmc_main.cpp) y otra en events.c que apunta cuando la
+	# red rechaza la contraseña (tools/circle/wpa_zxmc_events.c), con su
+	# llamada después de wpas_notify_psk_mismatch
+	W="$C/addon/wlan/hostap/wpa_supplicant"
+	if ! grep -q "zxmc_wpa_get_state" "$W/main_circle.cpp"; then
+		cat "$ROOT/tools/circle/wpa_zxmc_main.cpp" >> "$W/main_circle.cpp"
+		sed -i '1i void zxmc_wpa_psk_mismatch (void *p);' "$W/events.c"
+		sed -i 's/^\(\t*\)wpas_notify_psk_mismatch(wpa_s);$/&\n\1zxmc_wpa_psk_mismatch(wpa_s);/' "$W/events.c"
+		cat "$ROOT/tools/circle/wpa_zxmc_events.c" >> "$W/events.c"
+		[ "$(grep -c "zxmc_wpa_psk_mismatch(wpa_s);" "$W/events.c")" = 1 ] \
+			|| { echo "No se pudo añadir lo de la WiFi a events.c"; exit 1; }
+		make -C "$W" -f Makefile.circle -j"$JOBS" > /dev/null
+	fi
+
 	# Carpeta de trabajo de cada objetivo (la de QEMU, aparte: compila con otra
 	# definición). Se conserva entre compilaciones para que make solo recompile
 	# lo que ha cambiado (los .d de Circle dicen qué cabeceras usa cada fichero).

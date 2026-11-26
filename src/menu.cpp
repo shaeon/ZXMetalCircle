@@ -61,6 +61,7 @@ CMenu::CMenu (CVideo *pVideo)
 	m_nChoices = 0;
 	m_nChoiceTop = 0;
 	m_bChoiceInfo = FALSE;
+	m_ChoiceNote[0] = '\0';
 	m_nListCount = 0;
 	m_nListSelected = 0;
 	m_nListTop = 0;
@@ -78,6 +79,7 @@ CMenu::CMenu (CVideo *pVideo)
 	m_InputTitle[0] = m_InputHelp[0][0] = m_InputHelp[1][0] = m_InputBuf[0] = '\0';
 	m_nInputMax = 19;
 	m_bInputText = FALSE;
+	m_bInputPassword = m_bInputHidden = FALSE;
 	m_nInputCursor = 0;
 	m_bFileChanges = TRUE;
 	m_PendingSelect[0] = '\0';
@@ -394,7 +396,14 @@ void CMenu::OpenChoice (const char *pTitle)
 	m_nChoiceSelected = 0;
 	m_nChoiceTop = 0;
 	m_bChoiceInfo = FALSE;
+	m_ChoiceNote[0] = '\0';
 	m_Mode = ModeChoice;
+}
+
+void CMenu::SetChoiceNote (const char *pNote)
+{
+	strncpy (m_ChoiceNote, pNote != 0 ? pNote : "", sizeof m_ChoiceNote - 1);
+	m_ChoiceNote[sizeof m_ChoiceNote - 1] = '\0';
 }
 
 void CMenu::OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp2, const char *pFooter)
@@ -410,6 +419,7 @@ void CMenu::OpenInput (const char *pTitle, const char *pHelp1, const char *pHelp
 	m_InputBuf[0] = '\0';
 	m_nInputMax = 19;		// como siempre: títulos de ZXDB, pokes, teclas...
 	m_bInputText = FALSE;
+	m_bInputPassword = m_bInputHidden = FALSE;
 	m_Mode = ModeInput;
 }
 
@@ -428,8 +438,24 @@ void CMenu::OpenText (const char *pTitle, const char *pHelp1, const char *pHelp2
 // La letra o el símbolo de una tecla en la línea de texto libre (0 si no es
 // para escribir). Con Ctrl o SYMBOL SHIFT, los símbolos de las teclas del
 // Spectrum que valen en un nombre de fichero
-static char TextChar (u8 nKey, boolean bShift, boolean bSymbol)
+static char TextChar (u8 nKey, boolean bShift, boolean bSymbol, boolean bPassword)
 {
+	if (bSymbol && bPassword)
+	{
+		// los que no valen en un nombre de fichero, pero sí en una contraseña
+		static const struct { u8 nKey; char c; } Extra[] =
+		{
+			{0x05, '*'}, {0x06, '?'}, {0x19, '/'}, {0x1D, ':'}, {0x15, '<'}, {0x17, '>'},	// B C V Z R T
+			{0x16, '|'}, {0x07, '\\'}							// S D (modo extendido)
+		};
+		for (unsigned i = 0; i < sizeof Extra / sizeof Extra[0]; i++)
+		{
+			if (Extra[i].nKey == nKey)
+			{
+				return Extra[i].c;
+			}
+		}
+	}
 	if (bSymbol)
 	{
 		static const struct { u8 nKey; char c; } Symbols[] =
@@ -532,9 +558,9 @@ void CMenu::SetChoiceSelected (unsigned nItem)
 	{
 		m_nChoiceTop = nItem;
 	}
-	else if (nItem >= m_nChoiceTop + MENU_CHOICE_ROWS)
+	else if (nItem >= m_nChoiceTop + ChoiceRows ())
 	{
-		m_nChoiceTop = nItem - MENU_CHOICE_ROWS + 1;
+		m_nChoiceTop = nItem - ChoiceRows () + 1;
 	}
 }
 
@@ -1472,7 +1498,7 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		unsigned nLen = strlen (m_InputBuf);
 		boolean bShift = (rEvent.nModifiers & (HID_MOD_LSHIFT | HID_MOD_RSHIFT)) != 0;
 		boolean bSymbol = (rEvent.nModifiers & (HID_MOD_LCTRL | HID_MOD_RCTRL)) != 0;
-		char c = TextChar (nKey, bShift, bSymbol);
+		char c = TextChar (nKey, bShift, bSymbol, m_bInputPassword);
 		if (c != 0)
 		{
 			if (nLen < m_nInputMax)
@@ -1488,6 +1514,13 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		case HID_KEY_RIGHT:	if (m_nInputCursor < nLen) m_nInputCursor++;	break;
 		case HID_KEY_HOME:	m_nInputCursor = 0;				break;
 		case HID_KEY_END:	m_nInputCursor = nLen;				break;
+
+		case 0x2B:			// TAB: ocultar o mostrar la contraseña
+			if (m_bInputPassword)
+			{
+				m_bInputHidden = !m_bInputHidden;
+			}
+			break;
 
 		case HID_KEY_BACKSPACE:		// el de antes del cursor
 			if (m_nInputCursor > 0)
@@ -1619,11 +1652,11 @@ TMenuResult CMenu::HandleKey (const TKeyEvent &rEvent)
 		}
 		else if (nKey == 0x4B && m_nChoices > 0)		// RePág
 		{
-			SetChoiceSelected (m_nChoiceSelected > MENU_CHOICE_ROWS ? m_nChoiceSelected - MENU_CHOICE_ROWS : 0);
+			SetChoiceSelected (m_nChoiceSelected > ChoiceRows () ? m_nChoiceSelected - ChoiceRows () : 0);
 		}
 		else if (nKey == 0x4E && m_nChoices > 0)		// AvPág
 		{
-			unsigned n = m_nChoiceSelected + MENU_CHOICE_ROWS;
+			unsigned n = m_nChoiceSelected + ChoiceRows ();
 			SetChoiceSelected (n < m_nChoices ? n : m_nChoices - 1);
 		}
 		else if (nKey == 0x4A && m_nChoices > 0)		// Inicio
@@ -2422,7 +2455,7 @@ void CMenu::Draw (TPixel *pScreen)
 			unsigned n = 0;
 			for (unsigned i = nFirst; i < nLen && n < nCols; i++)
 			{
-				Visible[n++] = m_InputBuf[i];
+				Visible[n++] = m_bInputHidden ? '*' : m_InputBuf[i];
 			}
 			Visible[n] = '\0';
 			char UTF8[TEXT_COLS * 3 + 8] = "> ";
@@ -2495,7 +2528,9 @@ void CMenu::Draw (TPixel *pScreen)
 
 	if (m_Mode == ModeChoice)
 	{
-		boolean bLong = m_nChoices > MENU_CHOICE_ROWS;
+		boolean bLong = m_nChoices > ChoiceRows ();
+		const unsigned nFirstRow = m_ChoiceNote[0] != '\0' ? 5 : 3;	// con aviso, debajo de él
+		m_pVideo->DrawText (pScreen, tx, ROW_Y (3), m_ChoiceNote, COLOR_UI_VALUE, COLOR_UI_PANEL, TEXT_COLS);
 		CString Pos;
 		if (bLong)
 		{
@@ -2510,12 +2545,12 @@ void CMenu::Draw (TPixel *pScreen)
 					    COLOR_UI_VALUE, COLOR_UI_PANEL, nPosCols);
 		}
 		const unsigned nNameCols = TEXT_COLS - 2;	// tras el número y el espacio
-		for (unsigned i = m_nChoiceTop; i < m_nChoices && i < m_nChoiceTop + MENU_CHOICE_ROWS; i++)
+		for (unsigned i = m_nChoiceTop; i < m_nChoices && i < m_nChoiceTop + ChoiceRows (); i++)
 		{
 			boolean bSel = i == m_nChoiceSelected;
 			u8 nInk = bSel ? COLOR_UI_PANEL : COLOR_UI_TEXT;
 			u8 nPaper = bSel ? COLOR_UI_HILITE : COLOR_UI_PANEL;
-			int y = ROW_Y (3 + 2 * (i - m_nChoiceTop));
+			int y = ROW_Y (nFirstRow + 2 * (i - m_nChoiceTop));
 			if (bSel)
 			{
 				m_pVideo->FillRect (pScreen, tx - 2, y - 1, TEXT_COLS * 8 + 4, 10, COLOR_UI_HILITE);
@@ -2560,7 +2595,7 @@ void CMenu::Draw (TPixel *pScreen)
 		{
 			m_pVideo->DrawText (pScreen, tx, ROW_Y (PANEL_ROWS - 2),
 					      m_nChoices > MENU_CHOICE_KEYS ? T ("ENTER: elegir  RePág/AvPág  ESC: seguir")
-					    : m_nChoices > MENU_CHOICE_ROWS ? T ("0-9 A-Z ENTER  RePág/AvPág  ESC: seguir")
+					    : m_nChoices > ChoiceRows () ? T ("0-9 A-Z ENTER  RePág/AvPág  ESC: seguir")
 					    : m_nChoices > 10 ? T ("ENTER, 0-9, A-Z: elegir   ESC: seguir")
 					    : m_nChoices == 10 ? T ("ENTER o 0-9: elegir   ESC: seguir")
 							       : T ("ENTER o 1-9: elegir   ESC: seguir"),

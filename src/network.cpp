@@ -25,7 +25,15 @@
 #define NTP_SERVER		"pool.ntp.org"
 
 
+#define WIFI_SLOW_SECONDS	120		// sin conectar en este tiempo: se avisa
+
 static const char FromNet[] = "net";
+
+// Lo que build.sh añade a wpa_supplicant (tools/circle/wpa_zxmc_*): en qué
+// paso está la conexión y si la red ha rechazado la contraseña
+int zxmc_wpa_get_state (char *pSSID, int nSize);
+extern "C" int zxmc_wpa_psk_mismatches;
+extern "C" char zxmc_wpa_psk_ssid[33];
 
 CNetworkManager *CNetworkManager::s_pThis = 0;
 
@@ -47,15 +55,22 @@ CNetworkManager::CNetworkManager (void)
 	m_bTLSVerify (TRUE),
 	m_nWebMode (1),
 	m_pBusyHandler (0),
-	m_pBusyParam (0)
+	m_pBusyParam (0),
+	m_bNoFirmware (FALSE),
+	m_nWiFiNetworks (0),
+	m_nConnectStart (0),
+	m_bSlowWarned (FALSE),
+	m_nPSKWarned (0),
+	m_bWarningPending (FALSE)
 {
+	m_WiFiFirst[0] = '\0';
 	m_WebPassword[0] = '\0';
 	m_bWebProtect = true;
 	s_pThis = this;
 	m_IPAddress[0] = '\0';
 }
 
-static boolean ModelHasWiFi (void)
+boolean CNetworkManager::ModelHasWiFi (void)
 {
 	switch (CMachineInfo::Get ()->GetMachineModel ())
 	{
@@ -188,7 +203,26 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 	return;
 #endif
 
-	boolean bConfig = FileExists (WPA_CONFIG_FILE);
+	// Las redes guardadas: sin ninguna, en automático va por cable (como sin
+	// el fichero) y con WiFi se avisa de que hay que elegir una
+	boolean bConfig = FALSE;
+	{
+		CWiFiConfig *pConfig = new CWiFiConfig;
+		if (pConfig != 0)
+		{
+			if (FileExists (WPA_CONFIG_FILE) && !LoadWiFiConfig (pConfig))
+			{
+				bConfig = TRUE;		// no se entiende: que lo intente wpa_supplicant
+			}
+			else if (pConfig->GetCount () > 0)
+			{
+				bConfig = TRUE;
+				m_nWiFiNetworks = pConfig->GetCount ();
+				strcpy (m_WiFiFirst, pConfig->Get (0)->SSID);
+			}
+			delete pConfig;
+		}
+	}
 	if (Mode == NetModeAuto)
 	{
 		Mode = (ModelHasWiFi () && bConfig) ? NetModeWiFi : NetModeEthernet;
@@ -203,6 +237,8 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 		}
 		if (!bConfig || !FileExists (FIRMWARE_PATH "brcmfmac43430-sdio.bin"))
 		{
+			m_bWiFi = TRUE;
+			m_bNoFirmware = bConfig;
 			m_State = NetStateNoConfig;
 			return;
 		}
@@ -247,6 +283,7 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 	}
 
 	m_State = NetStateConnecting;
+	m_nConnectStart = CTimer::Get ()->GetUptime ();
 }
 
 boolean CNetworkManager::Process (void)
@@ -257,8 +294,13 @@ boolean CNetworkManager::Process (void)
 		return FALSE;
 	}
 
-	if (m_State != NetStateConnecting || m_pNet == 0 || !m_pNet->IsRunning ())
+	if (m_State != NetStateConnecting || m_pNet == 0)
 	{
+		return FALSE;
+	}
+	if (!m_pNet->IsRunning ())
+	{
+		CheckWiFiProgress ();
 		return FALSE;
 	}
 
@@ -370,6 +412,82 @@ void CNetworkManager::UpdateSummerTime (void)
 	}
 }
 
+// La WiFi sin conectar: si la red rechaza la contraseña se avisa al momento,
+// y si pasan WIFI_SLOW_SECONDS sin conexión, una vez (lo enseña el kernel)
+void CNetworkManager::CheckWiFiProgress (void)
+{
+	if (!m_bWiFi)
+	{
+		return;
+	}
+	if (zxmc_wpa_get_state (0, 0) == 3)
+	{
+		zxmc_wpa_psk_mismatches = 0;		// conectada: lo de antes ya no vale
+		m_nPSKWarned = 0;
+	}
+	if (zxmc_wpa_psk_mismatches > 0 && m_nPSKWarned == 0)	// solo la primera vez
+	{
+		m_nPSKWarned = zxmc_wpa_psk_mismatches;
+		m_Warning.Format (T ("WiFi: %s rechaza la contraseña"), zxmc_wpa_psk_ssid);
+		m_bWarningPending = TRUE;
+		CLogger::Get ()->Write (FromNet, LogWarning, "%s: contrasena rechazada", zxmc_wpa_psk_ssid);
+	}
+	if (   !m_bSlowWarned
+	    && CTimer::Get ()->GetUptime () - m_nConnectStart >= WIFI_SLOW_SECONDS)
+	{
+		m_bSlowWarned = TRUE;
+		m_Warning = T ("WiFi sin conectar: mira F1 o reinicia");
+		m_bWarningPending = TRUE;
+		CLogger::Get ()->Write (FromNet, LogWarning, "Sin conexion WiFi tras %u s: %s",
+					WIFI_SLOW_SECONDS, GetStateText ());
+	}
+}
+
+boolean CNetworkManager::TakeWarning (CString *pText)
+{
+	if (!m_bWarningPending)
+	{
+		return FALSE;
+	}
+	m_bWarningPending = FALSE;
+	*pText = m_Warning;
+	return TRUE;
+}
+
+// En qué paso está la WiFi (conectando): buscando la red, conectando a ella,
+// esperando la IP o con la contraseña rechazada
+const char *CNetworkManager::GetWiFiStepText (void) const
+{
+	static CString Text;
+	char SSID[WIFI_SSID_MAX + 1];
+	int nStep = zxmc_wpa_get_state (SSID, sizeof SSID);
+	if (nStep == 3)
+	{
+		Text.Format (T ("WiFi: conectada a %s, esperando IP"), SSID);
+	}
+	else if (zxmc_wpa_psk_mismatches > 0)
+	{
+		Text.Format (T ("WiFi: %s rechaza la contraseña"), zxmc_wpa_psk_ssid);
+	}
+	else if (nStep == 2)
+	{
+		Text.Format (T ("WiFi: conectando a %s..."), SSID[0] != '\0' ? SSID : m_WiFiFirst);
+	}
+	else if (m_nWiFiNetworks > 1)
+	{
+		Text.Format (T ("WiFi: buscando tus %u redes..."), m_nWiFiNetworks);
+	}
+	else if (m_nWiFiNetworks == 1)
+	{
+		Text.Format (T ("WiFi: buscando %s..."), m_WiFiFirst);
+	}
+	else
+	{
+		return T ("WiFi: conectando...");	// fichero a mano que no se entiende
+	}
+	return Text;
+}
+
 const char *CNetworkManager::GetStateText (void) const
 {
 	static CString Text;
@@ -378,8 +496,9 @@ const char *CNetworkManager::GetStateText (void) const
 	{
 	case NetStateOff:		return T ("desactivada");
 	case NetStateNoHardware:	return m_bWiFi ? T ("sin WiFi") : T ("sin conexión");
-	case NetStateNoConfig:		return T ("falta wpa_supplicant.conf");
-	case NetStateConnecting:	return m_bWiFi ? T ("WiFi: conectando...") : T ("cable: esperando conexión");
+	case NetStateNoConfig:		return m_bNoFirmware ? T ("falta el firmware de la WiFi")
+								     : T ("WiFi sin redes: Alt+F1, pág. 7");
+	case NetStateConnecting:	return m_bWiFi ? GetWiFiStepText () : T ("cable: esperando conexión");
 	case NetStateError:
 		Text.Format (T ("error: %s"), T (m_pErrorReason));
 		return Text;

@@ -28,7 +28,7 @@ struct TSettingDef
 	boolean bLive;			// se aplica al momento (si no, al reiniciar)
 };
 
-#define SETTINGS_MAX		80
+#define SETTINGS_MAX		96
 #define SETTING_NAME_LEN	32
 #define SETTING_VALUE_LEN	96	// (rutas de hdd=)
 #define SETTING_PAD_ID		16	// "045e:028e" o, el segundo igual, "045e:028e#2"
@@ -84,6 +84,7 @@ public:
 
 	boolean IsDirty (void) const			{ return m_bDirty; }
 	void SetMousePresent (boolean bPresent)		{ m_bMousePresent = bPresent; }	// para IsApplicable
+	void SetWiFiPresent (boolean bPresent)		{ m_bWiFiPresent = bPresent; }	// ídem
 	void ClearDirty (void)				{ m_bDirty = FALSE; }
 
 	// Línea nueva de cmdline.txt a partir de la que hay (pOld): cambia o
@@ -95,6 +96,7 @@ private:
 	char m_PadName[SETTING_MAX_PADS][SETTING_NAME_LEN];
 	unsigned m_nPads;
 	boolean m_bMousePresent;
+	boolean m_bWiFiPresent;
 	char m_Value[SETTINGS_MAX][SETTING_VALUE_LEN];
 	boolean m_bDirty;
 };
