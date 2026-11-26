@@ -166,7 +166,7 @@ struct TKeyBinding
 static const TKeyBinding KeyBindings[] =
 {
 	// Cintas
-	{0,              FALSE, ActionListOnly,         "F1 ENTER",  GroupTape,  N_("Elegir cinta, disco...")},
+	{0,              FALSE, ActionListOnly,         "F1 ENTER",  GroupTape,  N_("Elegir cinta, disquete...")},
 	{HID_KEY_F1 + 1, FALSE, ActionTapePlayStop, "F2",        GroupTape,  N_("Cinta: play / stop")},
 	{HID_KEY_F1 + 2, FALSE, ActionTapeRewind,   "F3",        GroupTape,  N_("Cinta: lista de bloques")},
 	{HID_KEY_F1 + 5, FALSE, ActionTapeMode,     "F6",        GroupTape,  N_("Velocidad de carga")},
@@ -175,8 +175,8 @@ static const TKeyBinding KeyBindings[] =
 	// Unidades
 	{0x18,           TRUE,  ActionUnits,        "Alt+U",     GroupUnits, N_("Ver, montar y vaciar")},
 	{HID_KEY_F1 + 4, TRUE,  ActionFiles,        "Alt+F5",    GroupUnits, N_("Navegador de ficheros")},	// ver f5=
-	{0x09,           TRUE,  ActionBlankDisk,    "Alt+F",     GroupUnits, N_("Disco +3: nuevo")},
-	{0x08,           TRUE,  ActionEjectDisks,   "Alt+E",     GroupUnits, N_("Disco +3: expulsar")},
+	{0x09,           TRUE,  ActionBlankDisk,    "Alt+F",     GroupUnits, N_("Disquete +3: nuevo")},
+	{0x08,           TRUE,  ActionEjectDisks,   "Alt+E",     GroupUnits, N_("Disquete +3: expulsar")},
 	{0x11,           TRUE,  ActionBlankMicrodrive, "Alt+N",  GroupUnits, N_("Microdrive: cartucho nuevo")},
 	{0x10,           TRUE,  ActionEjectMicrodrives, "Alt+M", GroupUnits, N_("Microdrives: grabar y sacar")},
 	{HID_KEY_F1 + 10, FALSE, ActionEjectCartridge, "F11",    GroupUnits, N_("Quitar cartucho (IF2)")},
@@ -1644,7 +1644,7 @@ void CKernel::UpdateStatusLines (void)
 	else if (m_pSpectrum->HasDiskDrive ())
 	{
 		CPlus3Disk *pDisk = m_pSpectrum->GetDisk ();
-		Line.Format (T ("Carga: |%s|  Discos A:|%s| B:|%s%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
+		Line.Format (T ("Carga: |%s|  Disq. A:|%s| B:|%s%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
 			     pDisk->HasDisk (0) ? T ("sí") : "-", pDisk->HasDisk (1) ? T ("sí") : "-",
 			     m_pSpectrum->HasZXMMC () && m_HardDisk.IsOpen () ? T (" HD:sí") : "");
 	}
@@ -3597,7 +3597,7 @@ void CKernel::UpdateUnitLines (void)
 		CString Line;
 		if (pDisk->HasDisk (i))
 		{
-			pName = m_DSKPath[i][0] != '\0' ? m_DSKPath[i] : T ("disco nuevo");
+			pName = m_DSKPath[i][0] != '\0' ? m_DSKPath[i] : T ("disquete nuevo");
 			if (pDisk->Is35 (i))
 			{
 				Line.Format ("%s%s", pName, T (" (unidad de 3,5\")"));
@@ -3669,7 +3669,7 @@ void CKernel::EjectUnit (unsigned nUnit)
 			SaveDisks (TRUE);
 			pDisk->Eject (i);
 			m_DSKPath[i][0] = '\0';
-			ShowMessage (i == 0 ? T ("Disco A: expulsado") : T ("Disco B: expulsado"));
+			ShowMessage (i == 0 ? T ("Disquete A: expulsado") : T ("Disquete B: expulsado"));
 		}
 	}
 	else if (nUnit == UNIT_HARDDISK)
@@ -4430,7 +4430,7 @@ void CKernel::InsertDisk (const char *pPath, int nForceUnit)
 		nSize = ReadWholeFile (pPath, m_pWork, WORK_BUFFER_SIZE);
 		if (nSize == 0)
 		{
-			ShowMessage (T ("No se pudo leer el disco"));
+			ShowMessage (T ("No se pudo leer el disquete"));
 			return;
 		}
 	}
@@ -4452,7 +4452,7 @@ void CKernel::InsertDisk (const char *pPath, int nForceUnit)
 	boolean bOK = pPath != 0 ? pDisk->InsertDSK (nUnit, m_pWork, nSize) : pDisk->InsertBlank (nUnit, m_bNewDisk720);
 	if (!bOK)
 	{
-		ShowMessage (pPath != 0 ? T ("El fichero no es un disco .DSK válido") : T ("No se pudo crear el disco"));
+		ShowMessage (pPath != 0 ? T ("El fichero no es un disquete .DSK válido") : T ("No se pudo crear el disquete"));
 		return;
 	}
 
@@ -4472,7 +4472,7 @@ void CKernel::InsertDisk (const char *pPath, int nForceUnit)
 	}
 
 	CString Message;
-	const char *pName = pPath != 0 ? pPath : T ("disco nuevo");
+	const char *pName = pPath != 0 ? pPath : T ("disquete nuevo");
 	for (const char *p = pName; *p != '\0'; p++)
 	{
 		if (*p == '/')
@@ -4493,7 +4493,7 @@ void CKernel::EjectDisks (void)
 	pDisk->Eject (0);
 	pDisk->Eject (1);
 	m_DSKPath[0][0] = m_DSKPath[1][0] = '\0';
-	ShowMessage (T ("Discos expulsados"));
+	ShowMessage (T ("Disquetes expulsados"));
 }
 
 // Graba los discos modificados en su fichero (los nuevos, en saves/disk_NNN.dsk)
@@ -4536,11 +4536,11 @@ void CKernel::SaveDisks (boolean bForce)
 		if (WriteFile (m_DSKPath[i], m_pWork, nSize, FALSE))
 		{
 			pDisk->ClearModified (i);
-			Message.Format (T ("Disco %c: grabado en %s"), 'A' + i, m_DSKPath[i] + 4);
+			Message.Format (T ("Disquete %c: grabado en %s"), 'A' + i, m_DSKPath[i] + 4);
 		}
 		else
 		{
-			Message.Format (T ("Error al grabar el disco %c:"), 'A' + i);
+			Message.Format (T ("Error al grabar el disquete %c:"), 'A' + i);
 		}
 		ShowMessage (Message);
 	}
@@ -5976,7 +5976,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			m_Keyboard.SetCaptured (TRUE);
 		}
 		m_bDiskChoice = TRUE;
-		m_Menu.OpenChoice (T ("Disco nuevo del +3"));
+		m_Menu.OpenChoice (T ("Disquete nuevo del +3"));
 		m_Menu.SetChoiceItem (0, T ("180K (3\", una cara, 40 pistas)"));
 		m_Menu.SetChoiceItem (1, T ("720K (3,5\", dos caras, 80 pistas)"));
 		break;

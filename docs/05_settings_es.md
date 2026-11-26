@@ -19,7 +19,7 @@ Todas las opciones van en una sola línea:
 | `updconfig=` | Al actualizar, los ficheros de configuración: `keep` (se conservan; el nuevo queda como `.nuevo`) o `new` (se pone el nuevo; el tuyo queda como `.bak`) | `keep` |
 | `tape=` | `flash` (instantánea), `fast` (rápida), `normal` (real) | `flash` |
 | `tapeaccel=` | `1` (acelerar cargadores conocidos), `0` | `1` |
-| `diskaccel=` | `1` (+3/+3e: emulación acelerada mientras se usa la disquetera; las protecciones no cambian), `0` | `0` |
+| `diskaccel=` | `1` (+3/+3e: emulación acelerada mientras se usa la disquetera; las protecciones no cambian; en el menú, «Acelerar disquetes», se puede cambiar con cualquier modelo), `0` | `0` |
 | `joystick=` | `none`, `kempston`, `fuller`, `sinclair1`, `sinclair2`, `cursor`, `qaop` | `kempston` |
 | `sounddev=` | `sndhdmi`, `sndpwm`, `sndusb` (Pi 4/400), `none` | `sndhdmi` |
 | `speaker=` | `auto`, `beeper`, `tv`, `off` (modelo del altavoz del beeper) | `auto` |

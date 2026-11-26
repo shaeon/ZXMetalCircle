@@ -32,7 +32,7 @@ Las teclas están en una sola tabla (`KeyBindings` en `src/kernel.cpp`), con el 
 | Alt+N | Microdrive: insertar un cartucho nuevo (sin formatear) |
 | Alt+M | Microdrives: grabar los cambios y sacar todos los cartuchos |
 | Alt+L / Alt+T / Alt+X | Memoria LEC / Spectranet / divMMC sí/no (con reset) |
-| Alt+F / Alt+E | Disco +3: nuevo / expulsar |
+| Alt+F / Alt+E | Disquete +3: nuevo / expulsar |
 | Alt+D | Diagnóstico del teclado: lo que llega por USB, las teclas que ve el Spectrum, los cuadros por segundo y el tiempo de cada cuadro |
 | Alt+V | Pulsar teclas simultáneas (trucos como VICTOR en Profanation) |
 | Alt+C | Pokes y trucos del juego cargado (ver abajo) |

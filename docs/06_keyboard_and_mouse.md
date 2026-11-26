@@ -32,7 +32,7 @@ The keys are in a single table (`KeyBindings` in `src/kernel.cpp`), with the gro
 | Alt+N | Microdrive: insert a new cartridge (unformatted) |
 | Alt+M | Microdrives: save the changes and remove all cartridges |
 | Alt+L / Alt+T / Alt+X | LEC memory / Spectranet / divMMC on/off (with reset) |
-| Alt+F / Alt+E | +3 disk: new / eject |
+| Alt+F / Alt+E | +3 floppy: new / eject |
 | Alt+D | Keyboard diagnostics: what arrives over USB, the keys the Spectrum sees, frames per second and frame times |
 | Alt+V | Press keys simultaneously (cheats like VICTOR in Profanation) |
 | Alt+C | Pokes and cheats for the loaded game (see below) |

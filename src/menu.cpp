@@ -2228,7 +2228,7 @@ void CMenu::Draw (TPixel *pScreen)
 	if (m_Mode == ModeUnits)
 	{
 		static const char *Labels[UNIT_MICRODRIVE] =
-			{N_("Cinta"), N_("Disco A:"), N_("Disco B:"), N_("Disco duro"), N_("Cartucho IF2")};
+			{N_("Cinta"), N_("Disquete A:"), N_("Disquete B:"), N_("Disco duro"), N_("Cartucho IF2")};
 		m_pVideo->DrawText (pScreen, tx, ROW_Y (1), T ("Unidades"), COLOR_UI_TITLE, COLOR_UI_PANEL, TEXT_COLS);
 		for (unsigned i = 0; i < UNIT_COUNT; i++)
 		{
@@ -2839,7 +2839,7 @@ void CMenu::Draw (TPixel *pScreen)
 	if (m_nUnitTarget >= 0)
 	{
 		static const char *Titles[UNIT_MICRODRIVE + 1] =
-			{N_("Elige una cinta"), N_("Elige un disco para A:"), N_("Elige un disco para B:"),
+			{N_("Elige una cinta"), N_("Elige un disquete para A:"), N_("Elige un disquete para B:"),
 			 N_("Elige una imagen de disco duro"), N_("Elige un cartucho del IF2"),
 			 N_("Elige un cartucho de microdrive")};
 		unsigned n = m_nUnitTarget < UNIT_MICRODRIVE ? m_nUnitTarget : UNIT_MICRODRIVE;

@@ -61,7 +61,7 @@ static TSettingDef Settings[] =
 	{"tape",	N_("Carga de cintas"),	2, "flash|fast|normal", N_("instantánea|rápida|real"), "flash", TRUE},
 	{"tapesound",	N_("Oír la carga"),	2, "1|0", N_("sí|no"),					"1",	TRUE},
 	{"tapeaccel",	N_("Acelerar cargadores"), 2, "1|0", N_("sí|no"),				"1",	TRUE},
-	{"diskaccel",	N_("Acelerar discos"),	2, "0|1", N_("no|sí"),					"0",	TRUE},
+	{"diskaccel",	N_("Acelerar disquetes"),	2, "0|1", N_("no|sí"),					"0",	TRUE},
 	{"savetrap",	N_("SAVE a la SD"),	2, "1|0", N_("sí|no"),					"1",	TRUE},
 	{"savefmt",	N_("Formato de SAVE"),	2, "tap|tzx", "TAP|TZX",				"tap",	TRUE},
 	{"snapformat",	N_("Formato de F8"),	2, "z80|sna|szx", "Z80|SNA|SZX",			"z80",	TRUE},
@@ -764,11 +764,9 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 		return Is ("model", "tk90x") || Is ("model", "tk95");
 	}
 
-	// disco acelerado: solo en los modelos con disquetera
-	if (strcmp (pKey, "diskaccel") == 0)
-	{
-		return Is ("model", "plus3") || Is ("model", "plus3e");
-	}
+	// "Acelerar disquetes" se puede cambiar siempre: al cargar un .DSK se pasa
+	// al +3, así que conviene poder dejarlo puesto antes (sin disquetera no
+	// hace nada)
 
 	// negro puro: solo cambia la paleta del 16K/48K (la de los demás ya lo es)
 	if (strcmp (pKey, "pureblack") == 0)
