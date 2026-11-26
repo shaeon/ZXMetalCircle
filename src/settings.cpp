@@ -56,8 +56,6 @@ static TSettingDef Settings[] =
 	{"sounddev",	N_("Salida de sonido"),	1, "sndhdmi|sndpwm|sndusb|none", N_("HDMI|jack (PWM)|USB|ninguna"), "sndhdmi", FALSE},
 	{"gpioaudio",	N_("Sonido por GPIO12"), 1, "1|0", N_("sí|no"),				"1",	FALSE},
 	{"multicore",	N_("Imagen en el núcleo 1"), 1, "1|0", N_("sí|no"),			"1",	FALSE},
-	// la de Circle: con "true", la CPU a su velocidad máxima (por defecto, la mínima)
-	{"fast",	N_("Velocidad de la Pi"), 1, "false|true", N_("normal|máxima"),		"false", TRUE},
 
 	// 2 Cintas y grabación
 	{"tape",	N_("Carga de cintas"),	2, "flash|fast|normal", N_("instantánea|rápida|real"), "flash", TRUE},

@@ -11,7 +11,6 @@
 
 #include <circle/actled.h>
 #include <circle/koptions.h>
-#include <circle/cputhrottle.h>
 #include <circle/devicenameservice.h>
 #include <circle/serial.h>
 #include <circle/exceptionhandler.h>
@@ -341,8 +340,6 @@ private:
 	CActLED			m_ActLED;
 	CKernelOptions		m_Options;
 	CDeviceNameService	m_DeviceNameService;
-	CCPUThrottle		m_CPUThrottle;	// velocidad de la CPU: fast=true, la máxima
-						// (la baja si se calienta, ver socmaxtemp)
 	CSerialDevice		m_Serial;
 	CExceptionHandler	m_ExceptionHandler;
 	CInterruptSystem	m_Interrupt;

@@ -40,7 +40,6 @@ Todas las opciones van en una sola línea:
 | `pureblack=` | `1` (negro puro también en la paleta del 16K/48K), `0` | `0` |
 | `indicators=` | `1` (la D, la H, M1-M8 y el punto de grabación arriba de la imagen), `0` (sin ellos; el icono del modo extendido del teclado sigue saliendo) | `1` |
 | `multicore=` | `1` (ampliación de la imagen en el núcleo 1, Pi 2/3/4), `0` | `1` |
-| `fast=` | `false` (CPU de la Pi a su velocidad normal, la mínima: por ejemplo 600 MHz en la Pi 3), `true` (a la máxima: 1200 MHz en la Pi 3; si la Pi pasa de 60 °C, o de lo que diga `socmaxtemp=`, de 40 a 78, vuelve a la normal hasta que se enfría, y en la pantalla Sistema los MHz salen en amarillo). Se aplica al momento. Más margen para la emulación, a cambio de más calor y consumo | `false` |
 | `issue=` | `3` (Issue 3), `2` (Issue 2, solo afecta al 16K/48K) | `3` |
 | `speed=` | `1`, `2`, `4`, `10` | `1` |
 | `ulaplus=` | `1` (ULAplus disponible), `0` (desactivado) | `1` |
@@ -90,7 +89,7 @@ Desde la ayuda (F1), la tecla **C** abre la configuración: diez páginas con la
 | Página | Opciones |
 | --- | --- |
 | 1 Máquina | idioma, modelo, teclado Issue 2/3, velocidad, ULAplus, idioma del +3e*, disco duro al inicio* |
-| 2 Imagen y sonido | borde, scanlines, sonido AY, volumen, altavoz, quitar pitido 1 bit, salida de sonido*, sonido por GPIO12*, imagen en el núcleo 1*, velocidad de la Pi |
+| 2 Imagen y sonido | borde, scanlines, sonido AY, volumen, altavoz, quitar pitido 1 bit, salida de sonido*, sonido por GPIO12*, imagen en el núcleo 1* |
 | 3 Cintas y grabación | modo de carga, oír la carga, SAVE a la SD, formato de SAVE, formato de F8 |
 | 4 Teclado | F5 / Alt+F5, Recreated ZX, teclado por GPIO*, teclado del ZX81, sensibilidad del ratón (en gris si no hay ratón o el Kempston es del joystick) |
 | 5 Joysticks y mandos | joystick de los jugadores 1 y 2, mando de cada jugador, mandos de más, cursores del PC, disparo con el teclado, botones del mando (ver [04_usb_gamepads_es.md](04_usb_gamepads_es.md)) |
