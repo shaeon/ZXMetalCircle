@@ -1,0 +1,40 @@
+# Huellas de referencia de la emulación (golden_test.cpp). Se regeneran
+# con ./golden_test --grabar solo cuando un cambio de la emulación es a
+# propósito, y el commit lo dice.
+16k/arranque d0681db841f0736d
+16k/teclas 337627966f50babf
+48k/arranque 4d70f36fad03afd6
+48k/teclas cb4bf3f67df288e9
+48k/bench 61e201ba6a16fc74
+128k/arranque cc94dd1b2cbec6c2
+128k/teclas 3b1469be1a363be0
+128k/bench 1be460541c1945e0
++2/arranque c46a08676d496244
++2/teclas 83a4b4345ca73f03
++2/bench baeb1dc92a6eefb4
++2a/arranque 163964d8e459a264
++2a/teclas 95fc3c83e6b18dd6
++2a/bench 7ad556ad7be5f7f1
++3/arranque 73f92100f89e9040
++3/teclas be3efecf6bd62cfd
++3/bench 069c1f2f5568b6aa
++3e/arranque e98d30ffc01a3dc2
++3e/teclas 3d26994f3dfd8576
++3e/bench ff8753cfa3fa9ff0
+tk90x-50/arranque 085cd3dab95e1178
+tk90x-50/teclas 49411f81e4a82e50
+tk90x-50/bench ee790e889ce2f04a
+tk90x-60/arranque 539c7f23dbd99b98
+tk90x-60/teclas 734e0ca8577d6a32
+tk90x-60/bench e8cc868f57bd2c84
+tk90x-ferr/arranque 33540ce1b43f1fae
+tk90x-ferr/teclas e03e71e65a2387b0
+tk90x-ferr/bench 46775d2d7c6464cd
+tk95-50/arranque f988b9090711e6e6
+tk95-50/teclas d493b1ebbd3ac5e3
+tk95-50/bench 3a44afbcd8f0ac67
+48k/cinta-normal 5081f050a4559ee1
+48k/cinta-flash 57638f54e911da0b
++3/disco f78bc290c8137e49
++3/disco-dsk 8046a4e7cf19d102
+48k/ulaplus 20d7e7c2409737a8

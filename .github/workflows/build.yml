@@ -73,6 +73,10 @@ jobs:
           ./floatbus_test
           g++ $FLAGS -o snapshot_snet_test snapshot_snet_test.cpp $S/snapshot.cpp $CORE roms_host.S
           ./snapshot_snet_test
+          # Pruebas de referencia: la emulación de todos los modelos, igual que
+          # en golden/huellas.txt (ver golden_test.cpp)
+          g++ $FLAGS -o golden_test golden_test.cpp $S/snapshot.cpp $CORE roms_host.S
+          ./golden_test
           g++ $FLAGS -o z80_q_test z80_q_test.cpp ../../third_party/z80cpp/z80.cpp
           ./z80_q_test
           g++ $FLAGS -o sp_test sp_test.cpp $S/snapshot.cpp $CORE roms_host.S
