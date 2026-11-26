@@ -23,6 +23,7 @@
 
 // La red a la que está conectada ahora (tools/circle/ether4330_zxmc.c)
 extern "C" int ether4330_get_essid (char *pBuffer, int nSize);
+extern "C" int ether4330_get_rssi (void);		// su señal (dBm), 0 si no se sabe
 
 // Países para country= (el controlador de la WiFi lo exige para conectar: dice
 // qué canales se pueden usar)
@@ -229,15 +230,15 @@ static void ListItem (CString *pItem, const char *pSSID, boolean bConnected, int
 		      boolean bOpen, boolean bSaved)
 {
 	*pItem = bConnected ? "*" : " ";
-	// el nombre, a 19 columnas (si no cabe, acaba en '>'); las marcas de
+	// el nombre, a 18 columnas (si no cabe, acaba en '>'); las marcas de
 	// color de la lista (| ~ ^), si las lleva el nombre, se ven como '?'
-	boolean bLong = Columns (pSSID) > 19;
+	boolean bLong = Columns (pSSID) > 18;
 	unsigned nCols = 0;
 	for (const char *p = pSSID; *p != '\0'; p++)
 	{
 		if ((*p & 0xC0) != 0x80)
 		{
-			if (bLong && nCols == 18)
+			if (bLong && nCols == 17)
 			{
 				break;
 			}
@@ -251,7 +252,7 @@ static void ListItem (CString *pItem, const char *pSSID, boolean bConnected, int
 		pItem->Append (">");
 		nCols++;
 	}
-	for (; nCols < 19; nCols++)
+	for (; nCols < 18; nCols++)
 	{
 		pItem->Append (" ");
 	}
@@ -266,13 +267,13 @@ static void ListItem (CString *pItem, const char *pSSID, boolean bConnected, int
 	}
 	else
 	{
-		pQuality = T ("no está");
+		pQuality = T ("sin señal");	// guardada que no se ve
 	}
 	char Mark[2] = {chMark, '\0'};
 	if (nRSSI < 0) pItem->Append (Mark);
 	pItem->Append (pQuality);
 	if (nRSSI < 0) pItem->Append (Mark);
-	for (unsigned n = Columns (pQuality); n < 9; n++)
+	for (unsigned n = Columns (pQuality); n < 10; n++)
 	{
 		pItem->Append (" ");
 	}
@@ -290,6 +291,9 @@ void CKernel::WiFiOpenList (void)
 	{
 		Connected[0] = '\0';
 	}
+	// la conectada, con la señal que mide el chip ahora (como en la pantalla
+	// Sistema), aunque la búsqueda no la haya visto
+	int nConnectedRSSI = Connected[0] != '\0' ? ether4330_get_rssi () : 0;
 
 	m_WiFiStep = WiFiStepList;
 	m_Menu.OpenChoice (T ("Redes WiFi"));
@@ -302,7 +306,8 @@ void CKernel::WiFiOpenList (void)
 		boolean bConnected = strcmp (pScan->SSID, Connected) == 0;
 		bAnyConnected = bAnyConnected || bConnected;
 		CString Item;
-		ListItem (&Item, pScan->SSID, bConnected, pScan->nRSSI, pScan->bOpen,
+		ListItem (&Item, pScan->SSID, bConnected,
+			  bConnected && nConnectedRSSI < 0 ? nConnectedRSSI : pScan->nRSSI, pScan->bOpen,
 			  m_pWiFiConfig->Find (pScan->SSID) >= 0);
 		m_WiFiRow[nRows].nType = WiFiRowScan;
 		m_WiFiRow[nRows].nIndex = i;
@@ -323,7 +328,7 @@ void CKernel::WiFiOpenList (void)
 		boolean bConnected = strcmp (pNet->SSID, Connected) == 0;
 		bAnyConnected = bAnyConnected || bConnected;
 		CString Item;
-		ListItem (&Item, pNet->SSID, bConnected, 0, pNet->bOpen, TRUE);
+		ListItem (&Item, pNet->SSID, bConnected, bConnected ? nConnectedRSSI : 0, pNet->bOpen, TRUE);
 		m_WiFiRow[nRows].nType = WiFiRowSaved;
 		m_WiFiRow[nRows].nIndex = i;
 		m_Menu.SetChoiceItem (nRows++, Item);

@@ -691,6 +691,12 @@ boolean CNetworkManager::ScanWiFi (TWiFiScanEntry *pEntries, unsigned nMax, unsi
 		int nLevel, nFreq, bOpen;
 		for (int i = 0; zxmc_wpa_get_bss (i, SSID, sizeof SSID, &nLevel, &nFreq, &bOpen); i++)
 		{
+			// el driver de Circle da la señal sin signo (los 16 bits de un
+			// número negativo: -48 dBm llega como 65488)
+			if (nLevel > 0)
+			{
+				nLevel = (s16) (u16) nLevel;
+			}
 			if (nFreq < 3000)		// solo 2,4 GHz
 			{
 				AddScanEntry (pEntries, nMax, pCount, SSID, nLevel, bOpen);
