@@ -17,6 +17,7 @@
 #include <circle/bcmrandom.h>
 #include <circle/string.h>
 #include <circle/util.h>
+#include <circle/sched/scheduler.h>
 #include <stdarg.h>
 
 CCircleTransport::CCircleTransport (void)
@@ -54,6 +55,11 @@ bool CCircleTransport::Connect (const char *pHost, unsigned nPort)
 	}
 
 	return true;
+}
+
+void CCircleTransport::Pause (unsigned nMilliseconds)
+{
+	CScheduler::Get ()->MsSleep (nMilliseconds);
 }
 
 int CCircleTransport::Send (const unsigned char *pData, size_t nLength)

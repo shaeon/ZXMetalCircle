@@ -99,6 +99,15 @@ jobs:
           ./pok_test
           g++ -O2 -std=c++17 -I. -I$S -o zxinfo_pok_test zxinfo_pok_test.cpp $S/download/zxinfo.cpp $S/inflate.cpp t_stub.cpp
           ./zxinfo_pok_test
+          # reintentos del cliente HTTPS: se compila con Mbed TLS, como en la Pi
+          MB=../../third_party/mbedtls; mkdir -p mbedtls_host
+          for f in $MB/library/*.c; do
+            gcc -O1 -c -I$MB/include -I$MB -DMBEDTLS_CONFIG_FILE='"zxmc_config.h"' $f -o mbedtls_host/$(basename $f .c).o
+          done
+          gcc -O1 -c download/glue_host.c -o mbedtls_host/glue_host.o
+          g++ -O2 -std=c++17 -I. -I$S -I$MB/include -I$MB -DMBEDTLS_CONFIG_FILE='"zxmc_config.h"' \
+              -o retry_test download/retry_test.cpp $S/download/httpsclient.cpp t_stub.cpp mbedtls_host/*.o
+          ./retry_test
           g++ -O2 -std=c++17 -I. -I$S -o keyboard_hold_test keyboard_hold_test.cpp $S/zxkeyboard.cpp
           ./keyboard_hold_test
           g++ -O2 -std=c++17 -I. -I$S -o gpio_keys_test gpio_keys_test.cpp $S/zxkeyboard.cpp

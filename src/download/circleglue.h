@@ -22,6 +22,7 @@ public:
 	int Send (const unsigned char *pData, size_t nLength);
 	int Receive (unsigned char *pBuffer, size_t nSize);
 	void Close (void);
+	void Pause (unsigned nMilliseconds);
 
 private:
 	CSocket *m_pSocket;

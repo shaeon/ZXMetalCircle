@@ -1789,17 +1789,41 @@ static void RunJob (TNetJob *pJob)
 	}
 }
 
+// Clientes HTTPS de las tareas de red: cada reintento (fallo pasajero, ver
+// CHTTPSClient) se ve en pantalla y queda en el registro con su causa
+static void OnHTTPRetry (void *pParam, unsigned nAttempt)
+{
+	CHTTPSClient *pClient = static_cast<CHTTPSClient *> (pParam);
+	CLogger::Get ()->Write ("web", LogNotice, "HTTP: retry %u/%u (status %d, %s)", nAttempt, HTTP_ATTEMPTS,
+				pClient->GetLastStatus (), pClient->GetError ());
+	CString Text;
+	Text.Format (T ("Red: reintentando (%u de %u)..."), nAttempt, HTTP_ATTEMPTS);
+	WebBusy (Text);
+}
+
+// Un fallo definitivo, al registro (lo que ve el usuario es el mensaje)
+static void LogHTTPFailure (const char *pWhat, CHTTPSClient *pClient)
+{
+	CLogger::Get ()->Write ("web", LogWarning, "%s failed after %u attempt(s): status %d, %s", pWhat,
+				pClient->GetAttempts (), pClient->GetLastStatus (), pClient->GetError ());
+}
+
 static void DoSearch (TNetJob *pJob)
 {
 	WebBusy (T ("Red: buscando en ZXDB..."));
 	u8 *pWork = new u8[DOWNLOAD_WORK_SIZE];
 	CCircleTransport Transport;
 	CHTTPSClient Client (&Transport);
+	Client.SetRetry (OnHTTPRetry, &Client);
 	const char *pError = N_("No hay memoria");
 	pJob->nCount = pWork != 0
 		       ? ZXInfoSearch (&Client, pJob->Arg, pJob->Results, ZXINFO_MAX_RESULTS, pWork,
 				       DOWNLOAD_WORK_SIZE, &pError)
 		       : -1;
+	if (pWork != 0 && pJob->nCount < 0)
+	{
+		LogHTTPFailure ("ZXDB search", &Client);
+	}
 	strncpy (pJob->Error, T (pError), sizeof pJob->Error - 1);
 	pJob->Error[sizeof pJob->Error - 1] = '\0';
 	delete [] pWork;
@@ -1986,6 +2010,7 @@ static void DoDownload (TNetJob *pJob)
 
 	CCircleTransport Transport;
 	CHTTPSClient Client (&Transport);
+	Client.SetRetry (OnHTTPRetry, &Client);
 	char Name[128];
 	const char *pError = "";
 	size_t nSize = ZXInfoDownload (&Client, pPath, pFile, DOWNLOAD_MAX_FILE, Name, sizeof Name,
@@ -1994,6 +2019,7 @@ static void DoDownload (TNetJob *pJob)
 
 	if (nSize == 0)
 	{
+		LogHTTPFailure ("ZXDB download", &Client);
 		Message.Format (T ("No se pudo descargar: %s"), T (pError));
 		delete [] pFile;
 		strncpy (pJob->Message, Message, sizeof pJob->Message - 1);
@@ -2093,6 +2119,7 @@ static void DoPokes (TNetJob *pJob)
 
 	CCircleTransport Transport;
 	CHTTPSClient Client (&Transport);
+	Client.SetRetry (OnHTTPRetry, &Client);
 	const char *pError = "";
 	char Title[64] = "";
 	CString Message;
@@ -2149,6 +2176,7 @@ static void DoPokes (TNetJob *pJob)
 	delete [] pWork;
 	if (nSize == 0)
 	{
+		LogHTTPFailure ("POK download", &Client);
 		delete [] pFile;
 		Message.Format (T ("No se pudo descargar: %s"), T (pError));
 		PokMessage (pJob, Message, -1);

@@ -151,11 +151,14 @@ public:
 	CConnection (ITransport *pTransport) : m_pTransport (pTransport), m_bTLS (false), m_bOpen (false) {}
 	~CConnection (void) { Close (); }
 
-	bool Open (const char *pHost, unsigned nPort, bool bTLS, char *pError, size_t nErrorSize)
+	bool Open (const char *pHost, unsigned nPort, bool bTLS, char *pError, size_t nErrorSize,
+		   bool *pTransient)
 	{
+		*pTransient = false;
 		if (!m_pTransport->Connect (pHost, nPort))
 		{
 			CopyString (pError, T ("No se pudo conectar con el servidor"), nErrorSize);
+			*pTransient = true;		// DNS o conexión: se reintenta
 			return false;
 		}
 		m_bOpen = true;
@@ -188,6 +191,8 @@ public:
 					    nResult == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED
 					    ? "Certificado del servidor no valido" : "Fallo en la conexion segura",
 					    nErrorSize);
+				// un certificado mal no se arregla reintentando; un corte, sí
+				*pTransient = nResult != MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
 				return false;
 			}
 		}
@@ -261,8 +266,13 @@ private:
 
 CHTTPSClient::CHTTPSClient (ITransport *pTransport)
 :	m_pTransport (pTransport),
+	m_bTransient (false),
+	m_nLastStatus (0),
+	m_nAttempts (0),
 	m_pProgress (0),
-	m_pProgressParam (0)
+	m_pProgressParam (0),
+	m_pRetry (0),
+	m_pRetryParam (0)
 {
 	m_Error[0] = '\0';
 }
@@ -279,12 +289,49 @@ int CHTTPSClient::GetRedirect (const char *pURL, char *pLocation, size_t nLocati
 {
 	static unsigned char Body[16 * 1024];	// la respuesta de una redirección es corta
 	size_t nLength = 0;
-	pLocation[0] = '\0';
-	CopyString (URL, pURL, sizeof URL);
-	return GetOnce (URL, Body, sizeof Body, &nLength, pLocation, nLocationSize);
+	for (unsigned nAttempt = 1; ; nAttempt++)
+	{
+		pLocation[0] = '\0';
+		CopyString (URL, pURL, sizeof URL);
+		int nStatus = GetOnce (URL, Body, sizeof Body, &nLength, pLocation, nLocationSize);
+		if (!RetryAfter (nStatus, nAttempt))
+		{
+			return nStatus;
+		}
+	}
 }
 
 int CHTTPSClient::Get (const char *pURL, unsigned char *pBuffer, size_t nBufferSize, size_t *pLength)
+{
+	for (unsigned nAttempt = 1; ; nAttempt++)
+	{
+		int nStatus = GetFollow (pURL, pBuffer, nBufferSize, pLength);
+		if (!RetryAfter (nStatus, nAttempt))
+		{
+			return nStatus;
+		}
+	}
+}
+
+// ¿Se vuelve a intentar? Solo con fallos pasajeros y si quedan intentos; antes
+// se avisa (m_pRetry) y se espera 1 s, 2 s...
+bool CHTTPSClient::RetryAfter (int nStatus, unsigned nAttempt)
+{
+	m_nAttempts = nAttempt;
+	bool bTransient = nStatus < 0 ? m_bTransient : nStatus == 429 || (nStatus >= 500 && nStatus <= 599);
+	if (!bTransient || nAttempt >= HTTP_ATTEMPTS)
+	{
+		return false;
+	}
+	if (m_pRetry != 0)
+	{
+		(*m_pRetry) (m_pRetryParam, nAttempt + 1);
+	}
+	m_pTransport->Pause (1000 * nAttempt);
+	return true;
+}
+
+int CHTTPSClient::GetFollow (const char *pURL, unsigned char *pBuffer, size_t nBufferSize, size_t *pLength)
 {
 	static char Location[URL_MAX];
 	CopyString (URL, pURL, sizeof URL);
@@ -329,6 +376,8 @@ int CHTTPSClient::GetOnce (const char *pURL, unsigned char *pBuffer, size_t nBuf
 {
 	*pLength = 0;
 	m_Error[0] = '\0';
+	m_bTransient = false;
+	m_nLastStatus = 0;
 
 	// http[s]://servidor[:puerto]/ruta
 	bool bTLS;
@@ -357,7 +406,7 @@ int CHTTPSClient::GetOnce (const char *pURL, unsigned char *pBuffer, size_t nBuf
 	const char *pPath = *p != '\0' ? p : "/";
 
 	CConnection Conn (m_pTransport);
-	if (!Conn.Open (Host, nPort, bTLS, m_Error, sizeof m_Error))
+	if (!Conn.Open (Host, nPort, bTLS, m_Error, sizeof m_Error, &m_bTransient))
 	{
 		return -1;
 	}
@@ -380,6 +429,7 @@ int CHTTPSClient::GetOnce (const char *pURL, unsigned char *pBuffer, size_t nBuf
 	if (Conn.Send ((const unsigned char *) Request, n) < 0)
 	{
 		CopyString (m_Error, T ("Error al enviar la petición"), sizeof m_Error);
+		m_bTransient = true;
 		return -1;
 	}
 
@@ -393,6 +443,7 @@ int CHTTPSClient::GetOnce (const char *pURL, unsigned char *pBuffer, size_t nBuf
 		if (r <= 0)
 		{
 			CopyString (m_Error, T ("Respuesta incompleta"), sizeof m_Error);
+			m_bTransient = true;
 			return -1;
 		}
 		nHeader += r;
@@ -421,6 +472,7 @@ int CHTTPSClient::GetOnce (const char *pURL, unsigned char *pBuffer, size_t nBuf
 	const char *pStatus = Header;
 	while (*pStatus != ' ' && *pStatus != '\0') pStatus++;
 	int nStatus = (int) ParseNumber (pStatus + 1, 10);
+	m_nLastStatus = nStatus;
 
 	long nContentLength = -1;
 	bool bChunked = false;
@@ -481,6 +533,7 @@ int CHTTPSClient::GetOnce (const char *pURL, unsigned char *pBuffer, size_t nBuf
 				break;		// algunos servidores cortan sin aviso
 			}
 			CopyString (m_Error, T ("Conexión interrumpida"), sizeof m_Error);
+			m_bTransient = true;
 			return -1;
 		}
 		nBody += r;

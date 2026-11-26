@@ -429,7 +429,12 @@ size_t ZXInfoDownload (CHTTPSClient *pClient, const char *pPath, unsigned char *
 	int nStatus = pClient->Get (URL, pWork, nWorkSize, &nLength);
 	if (nStatus != 200)
 	{
-		*pError = nStatus < 0 ? pClient->GetError () : N_("El servidor no tiene ese fichero");
+		// solo un 404 quiere decir que no está; 429 o 5xx, que el servidor
+		// está ocupado (ya se ha reintentado, ver CHTTPSClient)
+		*pError =   nStatus < 0 ? pClient->GetError ()
+			  : nStatus == 404 || nStatus == 410 ? N_("El servidor no tiene ese fichero")
+			  : nStatus == 429 || nStatus >= 500 ? N_("El servidor de ficheros no responde ahora: prueba más tarde")
+			  : N_("El servidor de ficheros ha devuelto un error");
 		return 0;
 	}
 
