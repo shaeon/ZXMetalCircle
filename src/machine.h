@@ -12,6 +12,8 @@
 #ifndef _zx_machine_h
 #define _zx_machine_h
 
+#include <circle/util.h>
+
 enum TCodeModel
 {
 	CodeModel48K,
@@ -20,7 +22,7 @@ enum TCodeModel
 };
 
 // El orden de los valores se mantiene por compatibilidad; el orden en que se
-// recorren con F7 está en ModelCycle
+// recorren con F7 está en ModelList (más abajo)
 enum TModel
 {
 	Model48K = 0,
@@ -42,11 +44,91 @@ enum TTKULA
 	TKULAFerranti		// Ferranti (los primeros de exportación): tiempos del 48K
 };
 
-static const TModel ModelCycle[ModelCount] =
+// Registro de modelos: lo que distingue a cada uno fuera de sus tiempos (que
+// están en MachineTiming). De aquí salen la lista de F7 (en este orden), el
+// nombre en cmdline.txt (model=) y en la configuración, y las preguntas «¿tiene
+// disquetera?», «¿es un TK?»... Un modelo nuevo se añade aquí (y sus tiempos
+// en MachineTiming) en vez de en cada sitio que repasa los modelos.
+enum TModelFamily
 {
-	Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E,
-	ModelTK90X, ModelTK95
+	ModelFamilySinclair,		// 16K, 48K, 128K
+	ModelFamilyAmstrad,		// +2, +2A, +3 (y el +3e, que usa su hardware)
+	ModelFamilyMicrodigital		// TK90X, TK95
 };
+
+#define MODEL_DISK	(1 << 0)	// disquetera del +3
+#define MODEL_ZXMMC	(1 << 1)	// ZXMMC (+3e): su disco duro, sin la DivMMC
+#define MODEL_TK	(1 << 2)	// ULA y ROMs de Microdigital (tkula=, tkrom=)
+#define MODEL_48K	(1 << 3)	// 16K o 48K de Sinclair: Issue 2/3, su paleta
+#define MODEL_SNOW	(1 << 4)	// ULA de Sinclair: el efecto nieve (no el +2A/+3 ni los TK)
+
+struct TModelInfo
+{
+	TModel Model;
+	const char *pKey;		// en cmdline.txt (model=) y en la configuración
+	const char *pAlias;		// otro nombre que se acepta en model= (0 si no hay)
+	TModelFamily Family;
+	unsigned nFlags;		// MODEL_*
+};
+
+static constexpr TModelInfo ModelList[ModelCount] =
+{
+	{Model16K,    "16k",    0,     ModelFamilySinclair,     MODEL_48K | MODEL_SNOW},
+	{Model48K,    "48k",    0,     ModelFamilySinclair,     MODEL_48K | MODEL_SNOW},
+	{Model128K,   "128k",   0,     ModelFamilySinclair,     MODEL_SNOW},
+	{ModelPlus2,  "plus2",  "+2",  ModelFamilyAmstrad,      MODEL_SNOW},
+	{ModelPlus2A, "plus2a", "+2a", ModelFamilyAmstrad,      0},
+	{ModelPlus3,  "plus3",  "+3",  ModelFamilyAmstrad,      MODEL_DISK},
+	{ModelPlus3E, "plus3e", "+3e", ModelFamilyAmstrad,      MODEL_DISK | MODEL_ZXMMC},
+	{ModelTK90X,  "tk90x",  0,     ModelFamilyMicrodigital, MODEL_TK},
+	{ModelTK95,   "tk95",   0,     ModelFamilyMicrodigital, MODEL_TK}
+};
+
+// Fila de ModelList de cada TModel (el valor de TModel no es el orden de F7),
+// para no recorrer la tabla en cada pregunta
+static constexpr unsigned char ModelRow[ModelCount] =
+{
+	1,	// Model48K
+	2,	// Model128K
+	4,	// ModelPlus2A
+	0,	// Model16K
+	3,	// ModelPlus2
+	5,	// ModelPlus3
+	6,	// ModelPlus3E
+	7,	// ModelTK90X
+	8	// ModelTK95
+};
+
+static constexpr bool ModelRowsMatch (unsigned i = 0)
+{
+	return i == ModelCount || (ModelList[ModelRow[i]].Model == (TModel) i && ModelRowsMatch (i + 1));
+}
+static_assert (ModelRowsMatch (), "ModelRow no lleva a la fila de cada modelo");
+
+static inline const TModelInfo &GetModelInfo (TModel Model)
+{
+	return ModelList[ModelRow[Model]];
+}
+
+static inline bool ModelHas (TModel Model, unsigned nFlag)
+{
+	return (GetModelInfo (Model).nFlags & nFlag) != 0;
+}
+
+// El modelo de un nombre de cmdline.txt o de la configuración ("plus2a" o
+// "+2a", sin mirar mayúsculas); 0 si no es ninguno
+static inline const TModelInfo *FindModel (const char *pName)
+{
+	for (unsigned i = 0; i < ModelCount; i++)
+	{
+		if (   strcasecmp (pName, ModelList[i].pKey) == 0
+		    || (ModelList[i].pAlias != 0 && strcasecmp (pName, ModelList[i].pAlias) == 0))
+		{
+			return &ModelList[i];
+		}
+	}
+	return 0;
+}
 
 struct TMachineTiming
 {

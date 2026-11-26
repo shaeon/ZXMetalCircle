@@ -620,41 +620,10 @@ void CKernel::ParseOptions (void)
 {
 	const char *pModel = m_Options.GetAppOptionString ("model", "128k");
 	TModel Model = Model128K;
-	if (strcasecmp (pModel, "16k") == 0)
+	const TModelInfo *pInfo = FindModel (pModel);
+	if (pInfo != 0)
 	{
-		Model = Model16K;
-	}
-	else if (strcasecmp (pModel, "48k") == 0)
-	{
-		Model = Model48K;
-	}
-	else if (strcasecmp (pModel, "128k") == 0)
-	{
-		Model = Model128K;
-	}
-	else if (strcasecmp (pModel, "plus2") == 0 || strcasecmp (pModel, "+2") == 0)
-	{
-		Model = ModelPlus2;
-	}
-	else if (strcasecmp (pModel, "plus2a") == 0 || strcasecmp (pModel, "+2a") == 0)
-	{
-		Model = ModelPlus2A;
-	}
-	else if (strcasecmp (pModel, "plus3") == 0 || strcasecmp (pModel, "+3") == 0)
-	{
-		Model = ModelPlus3;
-	}
-	else if (strcasecmp (pModel, "plus3e") == 0 || strcasecmp (pModel, "+3e") == 0)
-	{
-		Model = ModelPlus3E;
-	}
-	else if (strcasecmp (pModel, "tk90x") == 0)
-	{
-		Model = ModelTK90X;
-	}
-	else if (strcasecmp (pModel, "tk95") == 0)
-	{
-		Model = ModelTK95;
+		Model = pInfo->Model;
 	}
 	else if (strcasecmp (pModel, "zx81") == 0)
 	{
@@ -2853,15 +2822,7 @@ void CKernel::SyncSetting (const char *pKey)
 
 	if (strcmp (pKey, "model") == 0)
 	{
-		static const char *Models[] = {"16k", "48k", "128k", "plus2", "plus2a", "plus3", "plus3e", "tk90x", "tk95"};
-		static const TModel ModelIDs[] = {Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E, ModelTK90X, ModelTK95};
-		for (unsigned i = 0; i < sizeof Models / sizeof Models[0]; i++)
-		{
-			if (m_pSpectrum->GetModel () == ModelIDs[i])
-			{
-				pValue = Models[i];
-			}
-		}
+		pValue = GetModelInfo (m_pSpectrum->GetModel ()).pKey;
 		if (IsZX81Active ())
 		{
 			pValue = "zx81";
@@ -2961,20 +2922,16 @@ void CKernel::ApplySetting (unsigned nIndex)
 	}
 	else if (strcmp (pKey, "model") == 0)
 	{
-		static const char *Models[] = {"16k", "48k", "128k", "plus2", "plus2a", "plus3", "plus3e", "tk90x", "tk95"};
-		static const TModel ModelIDs[] = {Model16K, Model48K, Model128K, ModelPlus2, ModelPlus2A, ModelPlus3, ModelPlus3E, ModelTK90X, ModelTK95};
-		for (unsigned i = 0; i < sizeof Models / sizeof Models[0]; i++)
+		const TModelInfo *pInfo = FindModel (pValue);
+		if (pInfo != 0)
 		{
-			if (strcmp (pValue, Models[i]) == 0)
+			if (m_pSpectrum->IsModelAvailable (pInfo->Model))
 			{
-				if (m_pSpectrum->IsModelAvailable (ModelIDs[i]))
-				{
-					SetModel (ModelIDs[i]);
-				}
-				else
-				{
-					ShowMessage (T ("Falta la ROM de ese modelo (se guarda igual)"));
-				}
+				SetModel (pInfo->Model);
+			}
+			else
+			{
+				ShowMessage (T ("Falta la ROM de ese modelo (se guarda igual)"));
 			}
 		}
 		if (strcmp (pValue, "zx81") == 0 && !IsZX81Active ())
@@ -3086,7 +3043,7 @@ void CKernel::ApplySetting (unsigned nIndex)
 		m_pSpectrum->SetTKULA (strcmp (pValue, "60") == 0 ? TKULA60Hz
 				       : strcmp (pValue, "ferranti") == 0 ? TKULAFerranti : TKULA50Hz);
 		TModel Current = m_pSpectrum->GetModel ();
-		if (Current == ModelTK90X || Current == ModelTK95)
+		if (ModelHas (Current, MODEL_TK))
 		{
 			SetModel (Current);		// con los tiempos de la ULA nueva
 		}
@@ -4015,7 +3972,7 @@ void CKernel::LoadTKROMs (const char *pTKROM, const char *pTKLang, const char *p
 		m_pSpectrum->SetModelROM (ModelTK95, m_pTK95ROM);
 
 		TModel Current = m_pSpectrum->GetModel ();
-		if (bReset && (Current == ModelTK90X || Current == ModelTK95))
+		if (bReset && ModelHas (Current, MODEL_TK))
 		{
 			if (m_pSpectrum->IsModelAvailable (Current))
 			{
@@ -5561,7 +5518,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			}
 			else if (Result == MenuResultChoice && m_Menu.GetChoice () < ModelCount)
 			{
-				TModel Model = ModelCycle[m_Menu.GetChoice ()];
+				TModel Model = ModelList[m_Menu.GetChoice ()].Model;
 				m_Menu.Close ();
 				if (!m_pSpectrum->IsModelAvailable (Model))
 				{
@@ -5840,13 +5797,13 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		m_Menu.OpenChoice (T ("Elige el modelo"));
 		for (unsigned i = 0; i < ModelCount; i++)
 		{
-			CString Item (MachineTiming[ModelCycle[i]].pName);
-			if (!m_pSpectrum->IsModelAvailable (ModelCycle[i]))
+			CString Item (MachineTiming[ModelList[i].Model].pName);
+			if (!m_pSpectrum->IsModelAvailable (ModelList[i].Model))
 			{
 				Item.Append (T (" (falta la ROM)"));
 			}
 			m_Menu.SetChoiceItem (i, Item);
-			if (ModelCycle[i] == m_pSpectrum->GetModel () && !IsZX81Active ())
+			if (ModelList[i].Model == m_pSpectrum->GetModel () && !IsZX81Active ())
 			{
 				m_Menu.SetChoiceSelected (i);
 			}
@@ -5869,7 +5826,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 	case ActionModelNext:
 	{
 		unsigned nIndex = 0;
-		while (nIndex < ModelCount && ModelCycle[nIndex] != m_pSpectrum->GetModel ())
+		while (nIndex < ModelCount && ModelList[nIndex].Model != m_pSpectrum->GetModel ())
 		{
 			nIndex++;
 		}
@@ -5878,8 +5835,8 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			nIndex = (nIndex + 1) % ModelCount;
 		}
-		while (!m_pSpectrum->IsModelAvailable (ModelCycle[nIndex]));
-		SetModel (ModelCycle[nIndex]);
+		while (!m_pSpectrum->IsModelAvailable (ModelList[nIndex].Model));
+		SetModel (ModelList[nIndex].Model);
 	}
 		SyncSetting ("model");
 		break;

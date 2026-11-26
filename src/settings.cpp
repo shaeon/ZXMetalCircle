@@ -8,6 +8,7 @@
 //
 #include "settings.h"
 #include "i18n.h"
+#include "machine.h"
 #include <circle/util.h>
 
 static const char *PageTitles[] =
@@ -341,10 +342,11 @@ void CSettings::SetValue (unsigned nIndex, const char *pValue)
 	{
 		if (strcmp (Settings[nIndex].pKey, "model") == 0)
 		{
-			if (strcasecmp (pValue, "+2") == 0)		pValue = "plus2";
-			else if (strcasecmp (pValue, "+2a") == 0)	pValue = "plus2a";
-			else if (strcasecmp (pValue, "+3") == 0)	pValue = "plus3";
-			else if (strcasecmp (pValue, "+3e") == 0)	pValue = "plus3e";
+			const TModelInfo *pInfo = FindModel (pValue);	// (+2a, 48K...)
+			if (pInfo != 0)
+			{
+				pValue = pInfo->pKey;
+			}
 		}
 		else if (strcmp (Settings[nIndex].pKey, "gpiokbd") == 0)
 		{
@@ -665,6 +667,12 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 		int n = Find (pOther);
 		return n >= 0 && strcmp (GetValue (n), pValue) == 0;
 	};
+	// lo que tiene el modelo elegido (MODEL_*; nada con el ZX81)
+	auto ModelIs = [this] (unsigned nFlag) -> boolean
+	{
+		const TModelInfo *pInfo = FindModel (m_Value[Find ("model")]);
+		return pInfo != 0 && (pInfo->nFlags & nFlag) != 0;
+	};
 
 	// la sensibilidad del ratón, con un ratón USB que se use como Kempston
 	// Mouse (no si el Kempston es el de un joystick)
@@ -680,17 +688,17 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	// el teclado Issue 2/3 solo cambia algo en el 16K y el 48K
 	if (strcmp (pKey, "issue") == 0)
 	{
-		return Is ("model", "16k") || Is ("model", "48k");
+		return ModelIs (MODEL_48K);
 	}
 	// el efecto nieve, en el 16K, 48K, 128K y +2 (no en los +2A/+3 ni los TK)
 	if (strcmp (pKey, "snow") == 0)
 	{
-		return Is ("model", "16k") || Is ("model", "48k") || Is ("model", "128k") || Is ("model", "plus2");
+		return ModelIs (MODEL_SNOW);
 	}
 	// idioma y disco duro del +3e
 	if (strcmp (pKey, "p3elang") == 0 || strcmp (pKey, "hdd") == 0)
 	{
-		return Is ("model", "plus3e");
+		return ModelIs (MODEL_ZXMMC);
 	}
 	// la aceleración de cargadores no actúa en la carga real
 	if (strcmp (pKey, "tapeaccel") == 0)
@@ -745,7 +753,7 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	// ULA del TK: con el TK90X o el TK95
 	if (strcmp (pKey, "tkula") == 0)
 	{
-		return Is ("model", "tk90x") || Is ("model", "tk95");
+		return ModelIs (MODEL_TK);
 	}
 
 	// Disparo con el teclado: solo si el teclado maneja un joystick
@@ -761,7 +769,7 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	}
 	if (strcmp (pKey, "tklang") == 0)
 	{
-		return Is ("model", "tk90x") || Is ("model", "tk95");
+		return ModelIs (MODEL_TK);
 	}
 
 	// "Acelerar disquetes" se puede cambiar siempre: al cargar un .DSK se pasa
@@ -771,7 +779,7 @@ boolean CSettings::IsApplicable (unsigned nIndex) const
 	// negro puro: solo cambia la paleta del 16K/48K (la de los demás ya lo es)
 	if (strcmp (pKey, "pureblack") == 0)
 	{
-		return Is ("model", "16k") || Is ("model", "48k");
+		return ModelIs (MODEL_48K);
 	}
 	// contraseña de la web: solo con la web y la red
 	if (strcmp (pKey, "webpass") == 0 || strcmp (pKey, "webprotect") == 0)

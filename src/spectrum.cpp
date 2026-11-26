@@ -235,7 +235,7 @@ void CSpectrum::SetModel (TModel Model)
 	UpdateSnow ();
 	m_pTiming = &MachineTiming[Model];
 	// TK90X/TK95 con la ULA de Microdigital (50 o 60 Hz): sus propios tiempos
-	m_bTKMicro = (Model == ModelTK90X || Model == ModelTK95) && m_nTKULA != TKULAFerranti;
+	m_bTKMicro = ModelHas (Model, MODEL_TK) && m_nTKULA != TKULAFerranti;
 	if (m_bTKMicro)
 	{
 		m_pTiming = &TKMicroTiming[Model == ModelTK95][m_nTKULA == TKULA60Hz];
@@ -1405,7 +1405,7 @@ uint8_t CSpectrum::inPort (uint16_t port)
 		{
 			nValue &= 0xBF;
 		}
-		if (m_Model == ModelTK90X || m_Model == ModelTK95)
+		if (ModelHas (m_Model, MODEL_TK))
 		{
 			// TK: los bits 5 y 7 no están conectados y dan lo que haya en el
 			// bus: el byte que lee la ULA de la memoria de vídeo, o 1 cuando

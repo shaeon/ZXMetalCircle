@@ -116,7 +116,7 @@ public:
 
 	// Disquetera del +3 (solo con el modelo +3)
 	CPlus3Disk *GetDisk (void)		{ return m_pDisk; }
-	boolean HasDiskDrive (void) const	{ return m_Model == ModelPlus3 || m_Model == ModelPlus3E; }
+	boolean HasDiskDrive (void) const	{ return ModelHas (m_Model, MODEL_DISK); }
 
 	// divMMC con esxDOS: puertos 0xE3 (control), 0xE7 (selección de tarjeta) y
 	// 0xEB (datos SPI), 8 KB de ROM (esxmmc.bin) y 128 KB de RAM que aparecen en
@@ -127,9 +127,9 @@ public:
 	// ZX-Uno, para los programas que hablan directamente con la tarjeta.
 	void SetDivMMCROM (const u8 *pROM);		// 8 KB (0 = sin divMMC completa)
 	void SetDivMMCEnabled (boolean bOn);		// divmmc=esxdos
-	boolean IsDivMMCActive (void) const	{ return m_bDivMMC && m_bDivROM && m_Model != ModelPlus3E; }
+	boolean IsDivMMCActive (void) const	{ return m_bDivMMC && m_bDivROM && !HasZXMMC (); }
 	boolean IsDivMMCEnabled (void) const	{ return m_bDivMMC; }	// (en el +3e no se usa)
-	boolean HasDivMMCPorts (void) const	{ return IsDivMMCActive () || m_Model == ModelPlus3E; }
+	boolean HasDivMMCPorts (void) const	{ return IsDivMMCActive () || HasZXMMC (); }
 
 	// Reloj para esxDOS (RTC.SYS de ZXMetalCircle): fecha y hora en formato
 	// MS-DOS (0 = sin hora). Puerto 0x7C3B: un OUT la fija y cuatro IN la
@@ -143,7 +143,7 @@ public:
 
 	// ZXMMC (tarjeta SD del +3e): puertos 0x1F (CS) y 0x3F (datos SPI)
 	CSDCard *GetSDCard (void)		{ return &m_SDCard; }
-	boolean HasZXMMC (void) const		{ return m_Model == ModelPlus3E; }
+	boolean HasZXMMC (void) const		{ return ModelHas (m_Model, MODEL_ZXMMC); }
 
 	// ROMs cargadas de la SD (16 KB por banco: 1 en 16K/48K, 2 en 128K/+2,
 	// 4 en +2A/+3/+3e). Solo el 48K y el 128K tienen ROM incluida; un modelo
