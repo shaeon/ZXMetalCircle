@@ -92,6 +92,73 @@ static boolean FileExists (const char *pPath)
 	return f_stat (pPath, &Info) == FR_OK;
 }
 
+#define WPA_CONFIG_TEMP		"SD:/wpa_supplicant.tmp"
+#define WPA_CONFIG_BACKUP	"SD:/wpa_supplicant.conf.bak"
+
+boolean CNetworkManager::LoadWiFiConfig (CWiFiConfig *pConfig)
+{
+	pConfig->Clear ();
+	FIL File;
+	if (f_open (&File, WPA_CONFIG_FILE, FA_READ) != FR_OK)
+	{
+		return TRUE;			// sin fichero: ninguna red
+	}
+	char *pText = new char[WIFI_FILE_MAX + 1];
+	UINT nRead = 0;
+	boolean bOK =    pText != 0
+		      && f_size (&File) <= WIFI_FILE_MAX
+		      && f_read (&File, pText, WIFI_FILE_MAX, &nRead) == FR_OK;
+	f_close (&File);
+	if (bOK)
+	{
+		pText[nRead] = '\0';
+		bOK = pConfig->Parse (pText);
+	}
+	if (!bOK)
+	{
+		CLogger::Get ()->Write (FromNet, LogWarning, "%s: no se entiende, no se toca", WPA_CONFIG_FILE);
+	}
+	delete [] pText;
+	return bOK;
+}
+
+boolean CNetworkManager::SaveWiFiConfig (const CWiFiConfig &Config)
+{
+	char *pText = new char[WIFI_FILE_MAX + 1];
+	if (pText == 0)
+	{
+		return FALSE;
+	}
+	unsigned nLength = Config.Format (pText, WIFI_FILE_MAX + 1);
+	FIL File;
+	UINT nWritten = 0;
+	boolean bOK =    nLength != 0
+		      && f_open (&File, WPA_CONFIG_TEMP, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK;
+	if (bOK)
+	{
+		bOK = f_write (&File, pText, nLength, &nWritten) == FR_OK && nWritten == nLength;
+		bOK = f_close (&File) == FR_OK && bOK;
+	}
+	delete [] pText;
+
+	// el temporal ya está entero: el de antes pasa a .bak y el nuevo a su sitio
+	if (bOK)
+	{
+		if (FileExists (WPA_CONFIG_FILE))
+		{
+			f_unlink (WPA_CONFIG_BACKUP);
+			bOK = f_rename (WPA_CONFIG_FILE, WPA_CONFIG_BACKUP) == FR_OK;
+		}
+		bOK = bOK && f_rename (WPA_CONFIG_TEMP, WPA_CONFIG_FILE) == FR_OK;
+	}
+	if (!bOK)
+	{
+		f_unlink (WPA_CONFIG_TEMP);
+		CLogger::Get ()->Write (FromNet, LogError, "No se pudo guardar %s", WPA_CONFIG_FILE);
+	}
+	return bOK;
+}
+
 void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZoneMinutes,
 			     TSummerTime SummerTime, const u8 *pIP, const u8 *pMask,
 			     const u8 *pGateway, const u8 *pDNS)

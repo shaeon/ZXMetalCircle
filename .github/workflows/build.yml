@@ -99,6 +99,8 @@ jobs:
           ./pok_test
           g++ -O2 -std=c++17 -I. -I$S -o zxinfo_pok_test zxinfo_pok_test.cpp $S/download/zxinfo.cpp $S/inflate.cpp t_stub.cpp
           ./zxinfo_pok_test
+          g++ -O2 -std=c++17 -Wall -I. -I$S -o wificonfig_test wificonfig_test.cpp $S/wificonfig.cpp
+          ./wificonfig_test
           # reintentos del cliente HTTPS: se compila con Mbed TLS, como en la Pi
           MB=../../third_party/mbedtls; mkdir -p mbedtls_host
           for f in $MB/library/*.c; do

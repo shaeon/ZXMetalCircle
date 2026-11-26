@@ -20,6 +20,7 @@
 #include <circle/net/httpdaemon.h>
 #include <circle/string.h>
 #include <circle/types.h>
+#include "wificonfig.h"
 
 class CBcm4343Device;
 class CWPASupplicant;
@@ -53,6 +54,13 @@ public:
 	// Horario de verano (dst=): no, el europeo automático o siempre (+1 hora)
 	enum TSummerTime { SummerTimeOff, SummerTimeEU, SummerTimeAlways };
 	static TSummerTime ParseSummerTime (const char *pValue);
+
+	// Las redes WiFi guardadas (SD:/wpa_supplicant.conf, ver wificonfig.h).
+	// Load: sin fichero, una configuración vacía y TRUE; FALSE si el fichero
+	// no se entiende (entonces no hay que guardar encima). Save: escribe uno
+	// temporal y lo pone en su sitio; el anterior queda como .bak.
+	static boolean LoadWiFiConfig (CWiFiConfig *pConfig);
+	static boolean SaveWiFiConfig (const CWiFiConfig &Config);
 
 	void Start (TNetMode Mode, const char *pHostname, int nTimeZoneMinutes, TSummerTime SummerTime,
 		    const u8 *pIP = 0, const u8 *pMask = 0, const u8 *pGateway = 0, const u8 *pDNS = 0);
