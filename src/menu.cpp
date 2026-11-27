@@ -7,6 +7,7 @@
 // (at your option) any later version.
 //
 #include "menu.h"
+#include "filetypes.h"
 #include "network.h"		// CNetworkManager::IsNetRunning (la búsqueda en ZXDB)
 #include <circle/string.h>
 #include "exclusions.h"
@@ -28,13 +29,6 @@
 #define LIST_LINES	26	// y una línea libre antes de las de abajo
 #define TAPE_LIST_LINES	(PANEL_ROWS - 10)	// filas de bloques en el navegador de la cinta
 #define TEXT_COLS	(PANEL_COLS - 2)
-
-static boolean HasExtension (const char *pName, const char *pExt)
-{
-	size_t nLen = strlen (pName);
-	size_t nExtLen = strlen (pExt);
-	return nLen > nExtLen && strcasecmp (pName + nLen - nExtLen, pExt) == 0;
-}
 
 static char ToLower (char ch)
 {
@@ -836,23 +830,6 @@ void CMenu::OpenKeyHelp (boolean bZX81)
 	m_bKeyHelpZX81 = bZX81;
 }
 
-static boolean IsLoadableName (const char *pName)
-{
-	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".z80", ".sna", ".szx", ".csw", ".rom", ".mdr",
-				    ".mdv", ".dsk", ".vhd", ".img", ".raw", ".hdf", ".zip",
-				    ".p",	// programas del ZX81
-				    ".sp",	// snapshots de Pedro Gimeno
-				    ".pok"};	// pokes (abre su pantalla)
-	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
-	{
-		if (HasExtension (pName, Ext[i]))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
 #define NET_ROOT	"NET:"
 
 boolean CMenu::IsRemote (void) const
@@ -863,23 +840,11 @@ boolean CMenu::IsRemote (void) const
 // Extensiones de cada unidad (pantalla de unidades)
 static boolean IsUnitName (int nUnit, const char *pName)
 {
-	static const char *Tape[] = {".tap", ".tzx", ".pzx", ".csw", 0};
-	static const char *Disk[] = {".dsk", 0};
-	static const char *Hard[] = {".vhd", ".img", ".raw", ".hdf", 0};
-	static const char *Cart[] = {".rom", 0};
-	static const char *Mdr[] = {".mdr", ".mdv", 0};
-	const char **pExt =   nUnit == UNIT_TAPE ? Tape
-			    : (nUnit == UNIT_DISK_A || nUnit == UNIT_DISK_B) ? Disk
-			    : nUnit == UNIT_HARDDISK ? Hard
-			    : nUnit == UNIT_CARTRIDGE ? Cart : Mdr;
-	for (; *pExt != 0; pExt++)
-	{
-		if (HasExtension (pName, *pExt))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
+	TFileKind Kind =   nUnit == UNIT_TAPE ? FileTape
+			 : (nUnit == UNIT_DISK_A || nUnit == UNIT_DISK_B) ? FileDisk
+			 : nUnit == UNIT_HARDDISK ? FileHardDisk
+			 : nUnit == UNIT_CARTRIDGE ? FileCartridge : FileMicrodrive;
+	return GetFileKind (pName) == Kind;
 }
 
 void CMenu::OnEntry (const char *pName, boolean bDir)
@@ -888,7 +853,7 @@ void CMenu::OnEntry (const char *pName, boolean bDir)
 	{
 		return;
 	}
-	if (!bDir && !(m_nUnitTarget >= 0 ? IsUnitName (m_nUnitTarget, pName) : IsLoadableName (pName)))
+	if (!bDir && !(m_nUnitTarget >= 0 ? IsUnitName (m_nUnitTarget, pName) : IsBrowserFile (pName)))
 	{
 		return;
 	}
@@ -1001,7 +966,7 @@ boolean CMenu::ReadDirectory (void)
 		}
 		if (   !bDir
 		    && !(m_nUnitTarget >= 0 ? IsUnitName (m_nUnitTarget, FileInfo.fname)
-					    : IsLoadableName (FileInfo.fname)))
+					    : IsBrowserFile (FileInfo.fname)))
 		{
 			continue;
 		}

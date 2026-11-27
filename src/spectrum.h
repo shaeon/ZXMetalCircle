@@ -57,6 +57,7 @@ public:
 	unsigned GetFrameTstates (void) const override		{ return m_pTiming->nTstatesFrame; }
 	boolean IsAccelerating (void) const override
 		{ return IsTapeAccelerating () || IsDiskAccelerating (); }
+	const TFileType *GetFileTypes (void) const override;
 
 	void Reset (void) override;
 	// La NMI se lanza a mitad del próximo cuadro, lejos de la interrupción

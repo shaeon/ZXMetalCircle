@@ -47,5 +47,8 @@ teclado y su cinta, teclas, ROMs de `roms/` y lo que hay en la pantalla) y se ej
 - `tapedeck_test.cpp`: el casete con una cinta .TAP hecha en la prueba: carga instantánea,
   rápida (con y sin aceleración de cargadores) y normal, arranque y parada automáticos,
   parada manual, SAVE instantáneo y grabación por pulsos de la salida MIC.
+- `filetypes_test.cpp`: la lista de ficheros del Spectrum (`filetypes.h`) da lo mismo que las
+  listas que había antes en el navegador, la web, los ZIP, la pantalla de unidades y
+  `LoadAnyFile`.
 - `cpm_test.cpp`: el CP/M de LEC (`boot/cpm/cpm22_lec.tzx`) arranca en el 48K y en el 128K
   en modo 48K, y responde a DIR.

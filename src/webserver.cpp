@@ -9,6 +9,7 @@
 //
 #include "webserver.h"
 #include "webfiles.h"
+#include "filetypes.h"
 #include "zipfile.h"
 #include <circle/bcmrandom.h>
 #include "i18n.h"
@@ -217,23 +218,6 @@ static boolean HasExtension (const char *pName, const char *pExt)
 	return nLen > nExtLen && strcasecmp (pName + nLen - nExtLen, pExt) == 0;
 }
 
-static boolean IsLoadable (const char *pName)
-{
-	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx",
-				    ".rom", ".mdr", ".mdv", ".dsk",
-				    ".vhd", ".img", ".raw", ".hdf", ".zip",
-				    ".p",	// programas del ZX81
-				    ".sp"};	// snapshots de Pedro Gimeno
-	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
-	{
-		if (HasExtension (pName, Ext[i]))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
 static const char PageStyle[] =
 	"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
 	"<title>ZXMetalCircle</title><style>"
@@ -264,24 +248,9 @@ static const char PageStyle[] =
 	".acts a,.acts form.i button{text-decoration:underline}}"
 	"</style></head><body>";
 
-static bool IsZipEntryLoadable (const char *pName)
-{
-	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx", ".rom",
-				    ".dsk", ".mdr", ".mdv", ".p", ".sp"};
-	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
-	{
-		if (HasExtension (pName, Ext[i]))
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
 static bool IsHardDisk (const char *pName)
 {
-	return    HasExtension (pName, ".vhd") || HasExtension (pName, ".img")
-	       || HasExtension (pName, ".raw") || HasExtension (pName, ".hdf");
+	return GetFileKind (pName) == FileHardDisk;
 }
 
 // Texto para JavaScript entre comillas simples: sin comillas simples ni '\'
@@ -1290,7 +1259,7 @@ THTTPStatus CZXWebServer::SendZip (const char *pDir, const char *pZip, u8 *pBuff
 			}
 			HTMLEscape (pName, &Esc);
 			CString NameCell;
-			if (IsZipEntryLoadable (pBase))
+			if (IsZipLoadable (pBase))
 			{
 				URLEncode (pName, &Enc);
 				NameCell.Format ("<a href=\"/load?d=%s&f=%s&e=%s\">%s</a>", (const char *) DirEnc,
@@ -1509,7 +1478,7 @@ THTTPStatus CZXWebServer::SendDirectory (const char *pDir, const char *pMessage,
 			Name.Format ("<a href=\"/zip?d=%s&f=%s\">%s</a>", (const char *) DirEnc, (const char *) Enc,
 				     (const char *) Esc);
 		}
-		else if (IsLoadable (pEntries[i].Name))
+		else if (IsWebLoadable (pEntries[i].Name))
 		{
 			CString Confirm;
 			if (IsHardDisk (pEntries[i].Name))

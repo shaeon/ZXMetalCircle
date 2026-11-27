@@ -21,6 +21,36 @@ extern "C" const u8 rom_128_1[];
 // Niveles del beeper según los bits EAR (4) y MIC (3) del puerto 0xFE
 static const int BeeperLevel[4] = {0, 1500, 9000, 10500};
 
+// Los ficheros del Spectrum (ver filetypes.h). Los .P los carga el ZX81 de
+// Paul Farrow, que va como cartucho del Interface 2.
+static const TFileType SpectrumFileTypes[] =
+{
+	{".tap", FileTape},
+	{".tzx", FileTape},
+	{".pzx", FileTape},
+	{".csw", FileTape},
+	{".z80", FileSnapshot},
+	{".sna", FileSnapshot},
+	{".szx", FileSnapshot},
+	{".sp",  FileSnapshot},		// snapshots de Pedro Gimeno
+	{".rom", FileCartridge},	// Interface 2
+	{".mdr", FileMicrodrive},
+	{".mdv", FileMicrodrive},
+	{".dsk", FileDisk},		// +3
+	{".vhd", FileHardDisk},		// +3e y divMMC
+	{".img", FileHardDisk},
+	{".raw", FileHardDisk},
+	{".hdf", FileHardDisk},
+	{".p",   FileProgramZX81},
+	{".pok", FilePokes},
+	{0,      FileUnknown}
+};
+
+const TFileType *CSpectrum::GetFileTypes (void) const
+{
+	return SpectrumFileTypes;
+}
+
 CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 :	m_pKeyboard (pKeyboard),
 	m_pTape (pTape),

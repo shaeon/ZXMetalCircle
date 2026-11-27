@@ -571,6 +571,11 @@ boolean CKernel::Initialize (void)
 
 	if (bOK)
 	{
+		SetFileTypes (m_pMachine->GetFileTypes ());	// navegador, web y ZIP
+	}
+
+	if (bOK)
+	{
 		m_Video.SetFont (m_pSpectrum->GetROMFont ());
 		ParseOptions ();
 	}
@@ -2138,50 +2143,28 @@ void CKernel::LoadAnyFile (const char *pPath)
 		return;
 	}
 
-	size_t nLen = strlen (pPath);
-	const char *pExt = nLen > 4 ? pPath + nLen - 4 : "";
-	if (strcasecmp (pExt, ".pok") == 0)
+	switch (GetFileKind (pPath))		// la lista de la máquina (filetypes.h)
 	{
+	case FilePokes:
 		// pokes: los del juego que hay cargado, en su pantalla
 		if (PokeAvailable () && PokeLoadFile (pPath, FALSE))
 		{
 			PokeShowList (0);
 		}
-	}
-	else if (nLen > 2 && strcasecmp (pPath + nLen - 2, ".p") == 0)
-	{
-		StartZX81 (pPath);		// programa del ZX81
-	}
-	else if (   strcasecmp (pExt, ".z80") == 0 || strcasecmp (pExt, ".sna") == 0
-		 || strcasecmp (pExt, ".szx") == 0
-		 || (nLen > 3 && strcasecmp (pPath + nLen - 3, ".sp") == 0))	// .SP de Pedro Gimeno
-	{
-		LoadSnapshot (pPath);
-	}
-	else if (strcasecmp (pExt, ".rom") == 0)
-	{
-		LoadCartridge (pPath);
-	}
-	else if (strcasecmp (pExt, ".mdr") == 0 || strcasecmp (pExt, ".mdv") == 0)
-	{
-		InsertMicrodrive (pPath);
-	}
-	else if (strcasecmp (pExt, ".dsk") == 0)
-	{
-		InsertDisk (pPath);
-	}
-	else if (strcasecmp (pExt, ".zip") == 0)
-	{
-		OpenZip (pPath);
-	}
-	else if (   strcasecmp (pExt, ".vhd") == 0 || strcasecmp (pExt, ".img") == 0
-		 || strcasecmp (pExt, ".raw") == 0 || strcasecmp (pExt, ".hdf") == 0)
-	{
-		MountHardDisk (pPath);
-	}
-	else
-	{
+		break;
+
+	case FileProgramZX81:	StartZX81 (pPath);		break;
+	case FileSnapshot:	LoadSnapshot (pPath);		break;
+	case FileCartridge:	LoadCartridge (pPath);		break;
+	case FileMicrodrive:	InsertMicrodrive (pPath);	break;
+	case FileDisk:		InsertDisk (pPath);		break;
+	case FileZip:		OpenZip (pPath);		break;
+	case FileHardDisk:	MountHardDisk (pPath);		break;
+
+	case FileTape:
+	case FileUnknown:	// lo demás, como cinta (ella dice si no la entiende)
 		LoadTape (pPath);
+		break;
 	}
 }
 
@@ -2195,34 +2178,6 @@ void CKernel::LoadAnyFile (const char *pPath)
 #define ZIP_MAX_SIZE		(32 * 1024 * 1024)
 #define ZIP_TMP_DIR		"SD:/tmp"
 #define ZIP_PREFIX		"ZIP:"
-
-static boolean ZipLoadable (const char *pName, boolean *pWritable)
-{
-	static const char *Ext[] = {".tap", ".tzx", ".pzx", ".csw", ".z80", ".sna", ".szx", ".rom",
-				    ".dsk", ".mdr", ".mdv"};
-	unsigned nLen = strlen (pName);
-	if (   (nLen > 2 && strcasecmp (pName + nLen - 2, ".p") == 0)	// programa del ZX81
-	    || (nLen > 3 && strcasecmp (pName + nLen - 3, ".sp") == 0))	// snapshot .SP
-	{
-		if (pWritable != 0)
-		{
-			*pWritable = FALSE;
-		}
-		return TRUE;
-	}
-	for (unsigned i = 0; i < sizeof Ext / sizeof Ext[0]; i++)
-	{
-		if (nLen > 4 && strcasecmp (pName + nLen - 4, Ext[i]) == 0)
-		{
-			if (pWritable != 0)
-			{
-				*pWritable = i >= 8;		// .dsk, .mdr, .mdv
-			}
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
 
 // Tamaño de un fichero de la SD o de la entrada del ZIP ya descomprimida
 int CKernel::SourceSize (const char *pPath)
@@ -2297,7 +2252,7 @@ void CKernel::OpenZip (const char *pPath, const char *pEntry)
 		{
 			if (!m_Zip.IsDirectory (i) && strcmp (m_Zip.GetName (i), pEntry) == 0)
 			{
-				if (!ZipLoadable (m_Zip.GetBaseName (i), 0))
+				if (!IsZipLoadable (m_Zip.GetBaseName (i), 0))
 				{
 					break;
 				}
@@ -2316,7 +2271,7 @@ void CKernel::OpenZip (const char *pPath, const char *pEntry)
 		const char *pName = m_Zip.GetName (i);
 		const char *pBase = m_Zip.GetBaseName (i);
 		if (   m_Zip.IsDirectory (i) || strncmp (pName, "__MACOSX", 8) == 0
-		    || pBase[0] == '.' || !ZipLoadable (pBase, 0))
+		    || pBase[0] == '.' || !IsZipLoadable (pBase, 0))
 		{
 			continue;
 		}
@@ -2444,7 +2399,7 @@ void CKernel::LoadZipEntry (unsigned nEntry)
 {
 	const char *pBase = m_Zip.GetBaseName (nEntry);
 	boolean bWritable = FALSE;
-	if (!ZipLoadable (pBase, &bWritable))
+	if (!IsZipLoadable (pBase, &bWritable))
 	{
 		return;
 	}
