@@ -114,6 +114,9 @@ private:
 	// ZX81 con el emulador de Paul Farrow (kernelzx81.cpp)
 	boolean StartZX81 (const char *pProgram);	// 0: solo arrancarlo; si no, un .P
 	void ZX81Frame (void);				// tras cada cuadro: la carga del .P
+	// Lo propio de la máquina en el bucle principal (kernelspectrum.cpp)
+	void MachineFrame (void);			// tras emular cada cuadro
+	void MachineHousekeeping (void);		// una vez por vuelta del bucle
 	void StopZX81 (void);				// fuera el cartucho del ZX81
 	boolean IsZX81Active (void) const;
 	boolean IsZX81ROMPresent (void);

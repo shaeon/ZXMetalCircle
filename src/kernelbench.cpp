@@ -169,8 +169,7 @@ void CKernel::RunBenchmark (void)
 			continue;
 		}
 
-		const TMachineTiming *pTiming = m_pSpectrum->GetTiming ();
-		unsigned nFrameUs = (unsigned) ((u64) pTiming->nTstatesFrame * 1000000 / pTiming->nClockFreq);
+		unsigned nFrameUs = m_pMachine->GetFrameUs ();
 		u64 nSum = 0;
 		unsigned nMin = ~0U, nMax = 0;
 		CString Busy;

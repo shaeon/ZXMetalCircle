@@ -1,12 +1,12 @@
 //
 // machinebase.h - Lo que el kernel necesita de cualquier máquina emulada
 //
-// Primer paso de la capa de máquinas: el kernel habla con la máquina a
-// través de CMachine (emular un cuadro, la imagen, el sonido, el reset y la
-// memoria) en vez de con CSpectrum directamente. De momento la única máquina
-// es CSpectrum (todos los modelos de Spectrum y los TK); lo que solo tiene el
-// Spectrum (cinta, disco del +3, periféricos...) se irá separando en pasos
-// siguientes.
+// El kernel habla con la máquina a través de CMachine (su nombre y sus
+// tiempos, emular un cuadro, la imagen, el sonido, el reset y la memoria) en
+// vez de con CSpectrum directamente. De momento la única máquina es CSpectrum
+// (todos los modelos de Spectrum y los TK); lo que solo tiene el Spectrum
+// (cinta, disco del +3, periféricos...) se va separando en la fase 3 (ver
+// kernelspectrum.cpp).
 //
 // Coste: solo se llama a través de CMachine una vez por cuadro (RunFrame) o
 // desde los menús; lo que se hace millones de veces por segundo (la memoria
@@ -29,6 +29,23 @@ class CMachine
 {
 public:
 	virtual ~CMachine (void) {}
+
+	// El modelo que se emula ahora: "ZX Spectrum 48K" y "48k"
+	virtual const char *GetName (void) const = 0;
+	virtual const char *GetShortName (void) const = 0;
+
+	// Reloj del procesador (Hz) y ciclos de un cuadro: de ahí sale el ritmo
+	// de la emulación (50 Hz, 60 Hz...)
+	virtual unsigned GetClockFreq (void) const = 0;
+	virtual unsigned GetFrameTstates (void) const = 0;
+	u64 GetFrameNs (void) const
+		{ return (u64) GetFrameTstates () * 1000000000ULL / GetClockFreq (); }
+	unsigned GetFrameUs (void) const
+		{ return (unsigned) ((u64) GetFrameTstates () * 1000000 / GetClockFreq ()); }
+
+	// Está cargando de cinta o de disco en un modo rápido: el kernel emula
+	// sin esperar al reloj (y sin sonido)
+	virtual boolean IsAccelerating (void) const = 0;
 
 	// Emula un cuadro entero (imagen y sonido)
 	virtual void RunFrame (void) = 0;

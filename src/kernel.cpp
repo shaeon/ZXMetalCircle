@@ -1590,7 +1590,7 @@ void CKernel::UpdateStatusLines (void)
 		}
 	}
 
-	Line.Format (T ("Modelo: |%s%s|  Vel. |x%u|"), m_pSpectrum->GetTiming ()->pName,
+	Line.Format (T ("Modelo: |%s%s|  Vel. |x%u|"), m_pMachine->GetName (),
 		     (m_pSpectrum->IsIssue2 () && m_pSpectrum->GetTiming ()->CodeModel == CodeModel48K)
 		     ? (m_pSpectrum->IsLECConnected () ? " +LEC" : " (Issue 2)")
 		     : (m_pSpectrum->IsLECConnected () && m_pSpectrum->GetModel () == Model48K ? " +LEC" : ""),
@@ -4994,7 +4994,7 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 	}
 	else
 	{
-		Message.Format ("%s (%s)", pName, m_pSpectrum->GetTiming ()->pShortName);
+		Message.Format ("%s (%s)", pName, m_pMachine->GetShortName ());
 	}
 	ShowMessage (Message);
 
@@ -5297,9 +5297,9 @@ void CKernel::CheckTapeModel (void)
 		m_Keyboard.SetCaptured (TRUE);
 	}
 	CString Title, Change, Keep;
-	Title.Format (T ("Esta cinta no va en el %s"), m_pSpectrum->GetTiming ()->pName);
+	Title.Format (T ("Esta cinta no va en el %s"), m_pMachine->GetName ());
 	Change.Format (T ("Cambiar al %s"), MachineTiming[Suggested].pName);
-	Keep.Format (T ("Seguir con el %s"), m_pSpectrum->GetTiming ()->pName);
+	Keep.Format (T ("Seguir con el %s"), m_pMachine->GetName ());
 	m_Menu.OpenChoice (Title);
 	m_Menu.SetChoiceItem (0, Change);
 	m_Menu.SetChoiceItem (1, Keep);
@@ -5332,7 +5332,7 @@ void CKernel::SetModel (TModel Model)
 	m_nNextFrameTime = 0;
 
 	CString Message;
-	Message.Format (T ("Modelo: %s"), m_pSpectrum->GetTiming ()->pName);
+	Message.Format (T ("Modelo: %s"), m_pMachine->GetName ());
 	ShowMessage (Message);
 }
 
@@ -6495,8 +6495,7 @@ boolean CKernel::IsTyping (void) const
 // disquetera en uso; salvo mientras se escribe (ver IsTyping)
 boolean CKernel::IsAccelerating (void) const
 {
-	return    (m_pSpectrum->IsTapeAccelerating () || m_pSpectrum->IsDiskAccelerating ())
-	       && !IsTyping ();
+	return m_pMachine->IsAccelerating () && !IsTyping ();
 }
 
 unsigned CKernel::GetEffectiveSpeed (void) const
@@ -6506,8 +6505,7 @@ unsigned CKernel::GetEffectiveSpeed (void) const
 
 void CKernel::WaitFrame (void)
 {
-	const TMachineTiming *T = m_pSpectrum->GetTiming ();
-	u64 nFrameNs = (u64) T->nTstatesFrame * 1000000000ULL / T->nClockFreq;
+	u64 nFrameNs = m_pMachine->GetFrameNs ();
 
 	u64 nNowNs = CTimer::GetClockTicks64 () * 1000;
 	if (m_nNextFrameTime == 0 || nNowNs > m_nNextFrameTime + 100000000ULL)
@@ -6691,10 +6689,9 @@ TShutdownMode CKernel::Run (void)
 			{
 				if (nSpeed == 1 && !IsAccelerating ())
 				{
-					const TMachineTiming *T = m_pSpectrum->GetTiming ();
-					m_pEarSource->FillFrame (&m_EarInput,
-								 (u64) T->nTstatesFrame * 1000000000ULL / T->nClockFreq,
-								 T->nTstatesFrame, T->nClockFreq);
+					m_pEarSource->FillFrame (&m_EarInput, m_pMachine->GetFrameNs (),
+								 m_pMachine->GetFrameTstates (),
+								 m_pMachine->GetClockFreq ());
 				}
 				else
 				{
@@ -6704,43 +6701,9 @@ TShutdownMode CKernel::Run (void)
 
 			m_pMachine->RunFrame ();
 			m_Keyboard.TickHeld ();			// Alt+V: teclas mantenidas
-			ZX81Frame ();				// la carga de un .P, si hay una en marcha
+			MachineFrame ();			// lo propio de la máquina (kernelspectrum.cpp)
 
 			CheckPowerWarning ();			// bajo voltaje (cada pocos segundos)
-
-			// Reloj para esxDOS (RTC.SYS): la hora de la Pi, si ya la tiene (NTP)
-			if (m_pSpectrum->IsDivMMCActive ())
-			{
-				UpdateRTC ();
-			}
-
-			// Interface 1: RS232 y red ZX Net hacia la red de la Pi
-			if (m_pSpectrum->IsIF1Connected ())
-			{
-				m_IF1Link.Poll (m_pSpectrum->GetInterface1 ());
-			}
-
-			// Cinta con bloque de selección (0x28): se pregunta qué cargar
-			if (m_Tape.IsSelectPending () && !m_Menu.IsOpen ())
-			{
-				OpenTapeSelect ();
-			}
-
-			// Spectranet: atender sus sockets y guardar la flash cuando
-			// lleva 2 s sin cambios (la configuración, módulos nuevos...)
-			if (m_pSpectrum->IsSpectranetEnabled ())
-			{
-				CSpectranet *pSnet = m_pSpectrum->GetSpectranet ();
-				pSnet->Poll ();
-				if (pSnet->TakeFlashModified ())
-				{
-					m_nSnetSaveFrames = 100;
-				}
-				else if (m_nSnetSaveFrames > 0 && --m_nSnetSaveFrames == 0)
-				{
-					SaveSpectranetFlash ();
-				}
-			}
 			m_nFrames++;
 
 			if (nSpeed == 1)
@@ -6755,23 +6718,7 @@ TShutdownMode CKernel::Run (void)
 
 		boolean bAccelerating = IsAccelerating ();
 
-		// Los cartuchos modificados se graban cuando el motor lleva al menos
-		// 2 s parado, y como mucho una vez cada 3 s: grabar cuesta (convertir
-		// y escribir ~200 KB) y el CP/M arranca y para el motor muy a menudo
-		if (m_pSpectrum->IsIF1Connected ())
-		{
-			u64 nNow = CTimer::GetClockTicks64 ();
-			if (m_pSpectrum->GetInterface1 ()->GetRunningDrive () >= 0)
-			{
-				m_nMotorStop = nNow;
-			}
-			else if (   nNow - m_nMotorStop >= 2000000
-				 && nNow - m_nLastMDRSave >= 3000000)
-			{
-				m_nLastMDRSave = nNow;
-				SaveMicrodrives (FALSE);
-			}
-		}
+		MachineHousekeeping ();		// lo propio de la máquina, una vez por vuelta
 
 		// Al menos una vez por cuadro se cede el control a las tareas de red,
 		// aunque la emulación vaya justa y WaitFrame no llegue a esperar
@@ -6809,7 +6756,7 @@ TShutdownMode CKernel::Run (void)
 		{
 			CString Status;
 			Status.Format (T ("%s | Cinta: %s | %u.%02u c/s"),
-				       m_pSpectrum->GetTiming ()->pName,
+				       m_pMachine->GetName (),
 				       m_Tape.IsInserted () ? m_Tape.GetName () : T ("(ninguna)"),
 				       m_nFPSx100 / 100, m_nFPSx100 % 100);
 			m_Network.SetEmulatorStatus (Status);
@@ -6870,8 +6817,7 @@ TShutdownMode CKernel::Run (void)
 		// la Pi no da abasto con las scanlines), no se muestra este cuadro: así la
 		// velocidad del Spectrum, y la del teclado, se mantienen
 		u64 nNowNs = CTimer::GetClockTicks64 () * 1000;
-		const TMachineTiming *T = m_pSpectrum->GetTiming ();
-		u64 nFrameNs = (u64) T->nTstatesFrame * 1000000000ULL / T->nClockFreq;
+		u64 nFrameNs = m_pMachine->GetFrameNs ();
 		boolean bLate =    !bAccelerating && m_nNextFrameTime != 0
 				&& nNowNs > m_nNextFrameTime + nFrameNs;
 

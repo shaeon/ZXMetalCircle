@@ -50,6 +50,14 @@ public:
 	TModel GetModel (void) const		{ return m_Model; }
 	const TMachineTiming *GetTiming (void) const	{ return m_pTiming; }
 
+	// CMachine: nombre, tiempos y carga acelerada
+	const char *GetName (void) const override		{ return m_pTiming->pName; }
+	const char *GetShortName (void) const override		{ return m_pTiming->pShortName; }
+	unsigned GetClockFreq (void) const override		{ return m_pTiming->nClockFreq; }
+	unsigned GetFrameTstates (void) const override		{ return m_pTiming->nTstatesFrame; }
+	boolean IsAccelerating (void) const override
+		{ return IsTapeAccelerating () || IsDiskAccelerating (); }
+
 	void Reset (void) override;
 	// La NMI se lanza a mitad del próximo cuadro, lejos de la interrupción
 	// del comienzo del cuadro: con la divMMC, una NMI que llega mientras
