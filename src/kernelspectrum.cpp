@@ -6,7 +6,8 @@
 // máquina (emular un cuadro, esperar, sonido e imagen) y llama aquí para lo
 // demás: el reloj de esxDOS, la red del Interface 1 y sus cartuchos, la
 // Spectranet, la carga de un .P en el ZX81 y la elección de bloque de la
-// cinta.
+// cinta. Y, de los snapshots, lo que depende del Spectrum: la pregunta por la
+// paleta ULAplus al grabar y, al cargar, el .SP con ROM y el modelo sin ROM.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,6 +15,8 @@
 // (at your option) any later version.
 //
 #include "kernel.h"
+#include "i18n.h"
+#include <circle/string.h>
 #include <circle/timer.h>
 
 // Tras emular cada cuadro (también a velocidad xN)
@@ -76,4 +79,86 @@ void CKernel::MachineHousekeeping (void)
 			SaveMicrodrives (FALSE);
 		}
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Snapshots
+
+// F8 con el formato de snapformat: Z80 y SNA no guardan la paleta de la
+// ULAplus (al cargarlos, el juego saldría con otros colores). Si está en uso,
+// se pregunta (SZX, elegido al entrar) y se devuelve TRUE; la respuesta llega
+// a SnapMenuResult.
+boolean CKernel::MachineAskStateFormat (unsigned nFormat)
+{
+	if (nFormat == 2 || !m_pSpectrum->IsULAplusInUse ())
+	{
+		return FALSE;
+	}
+
+	if (!m_Menu.IsOpen ())
+	{
+		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
+		UpdateStatusLines ();
+		OpenMenu ();
+		m_Keyboard.SetCaptured (TRUE);
+	}
+	m_nSnapStage = 1;
+	m_Menu.OpenChoice (nFormat == 1 ? T ("SNA no guarda la paleta ULAplus")
+					: T ("Z80 no guarda la paleta ULAplus"));
+	m_Menu.SetChoiceItem (0, T ("Grabar en SZX (con la paleta)"));
+	m_Menu.SetChoiceItem (1, nFormat == 1 ? T ("Grabar en SNA igualmente")
+					      : T ("Grabar en Z80 igualmente"));
+	m_Menu.SetChoiceItem (2, T ("No grabar"));
+	m_Menu.SetChoiceSelected (0);
+	return TRUE;
+}
+
+boolean CKernel::SnapMenuResult (TMenuResult Result)
+{
+	if (m_nSnapStage == 0 || (Result != MenuResultChoice && Result != MenuResultChoiceCancel))
+	{
+		return FALSE;
+	}
+	m_nSnapStage = 0;
+	unsigned nChoice = Result == MenuResultChoice ? m_Menu.GetChoice () : 2;
+	if (m_Menu.IsOpen ())
+	{
+		m_Menu.Close ();
+	}
+	if (nChoice == 0)
+	{
+		SaveSnapshot (2);			// SZX
+	}
+	else if (nChoice == 1)
+	{
+		SaveSnapshot ((int) m_nSnapFormat);	// el elegido, sin la paleta
+	}
+	else
+	{
+		ShowMessage (T ("Snapshot no grabado"));
+	}
+	return TRUE;
+}
+
+// Tras cargar un snapshot: el nombre del cartucho (un .SP con su propia ROM)
+// y, si el snapshot pedía un modelo sin ROM (se ha cargado en el 128K), el
+// mensaje que lo dice
+boolean CKernel::MachineStateLoaded (CString *pMessage)
+{
+	if (m_pSpectrum->IsCartridgeInserted ())
+	{
+		strcpy (m_CartridgeName, ".SP (ROM)");
+	}
+	else
+	{
+		m_CartridgeName[0] = '\0';
+	}
+
+	TModel Missing = m_pSpectrum->TakeFallback ();
+	if (Missing != ModelCount)
+	{
+		pMessage->Format (T ("Falta la ROM de %s: cargado en 128K"), MachineTiming[Missing].pShortName);
+		return TRUE;
+	}
+	return FALSE;
 }

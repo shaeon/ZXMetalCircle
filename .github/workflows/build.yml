@@ -47,7 +47,7 @@ jobs:
           sed 's#"roms/#"../../roms/#' ../../src/roms.S > roms_host.S
           echo '.section .note.GNU-stack,"",@progbits' >> roms_host.S
           S=../../src; M=../../third_party/mame
-          CORE="$S/spectrum.cpp $S/ula.cpp $S/zxmemory.cpp $S/pagers.cpp $S/divmmc.cpp $S/tapedeck.cpp $S/ay8912.cpp $S/audiomixer.cpp $S/tape.cpp $S/zxkeyboard.cpp \
+          CORE="$S/spectrum.cpp $S/ula.cpp $S/zxmemory.cpp $S/pagers.cpp $S/divmmc.cpp $S/tapedeck.cpp $S/snapshot.cpp $S/ay8912.cpp $S/audiomixer.cpp $S/tape.cpp $S/zxkeyboard.cpp \
                 $S/interface1.cpp $S/plus3disk.cpp $S/sdcard.cpp $S/spectranet.cpp $S/earinput.cpp \
                 $S/zxnet.cpp $M/*.cpp $M/compat/*.cpp $S/inflate.cpp ../../third_party/z80cpp/z80.cpp"
           FLAGS="-O2 -std=c++17 -DWITH_BREAKPOINT_SUPPORT -I. -I$S -I../../third_party/z80cpp -I$M/compat -I$M"
@@ -87,15 +87,17 @@ jobs:
           ./tapedeck_test
           g++ $FLAGS -o filetypes_test filetypes_test.cpp $S/filetypes.cpp $CORE roms_host.S
           ./filetypes_test
-          g++ $FLAGS -o snapshot_snet_test snapshot_snet_test.cpp $S/snapshot.cpp $CORE roms_host.S
+          g++ $FLAGS -o state_test state_test.cpp $CORE roms_host.S
+          ./state_test
+          g++ $FLAGS -o snapshot_snet_test snapshot_snet_test.cpp $CORE roms_host.S
           ./snapshot_snet_test
           # Pruebas de referencia: la emulación de todos los modelos, igual que
           # en golden/huellas.txt (ver golden_test.cpp)
-          g++ $FLAGS -o golden_test golden_test.cpp $S/snapshot.cpp $CORE roms_host.S
+          g++ $FLAGS -o golden_test golden_test.cpp $CORE roms_host.S
           ./golden_test
           g++ $FLAGS -o z80_q_test z80_q_test.cpp ../../third_party/z80cpp/z80.cpp
           ./z80_q_test
-          g++ $FLAGS -o sp_test sp_test.cpp $S/snapshot.cpp $CORE roms_host.S
+          g++ $FLAGS -o sp_test sp_test.cpp $CORE roms_host.S
           ./sp_test
           g++ $FLAGS -o zx81_test zx81_test.cpp $S/zx81.cpp $CORE roms_host.S
           ./zx81_test

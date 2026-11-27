@@ -117,6 +117,8 @@ private:
 	// Lo propio de la máquina en el bucle principal (kernelspectrum.cpp)
 	void MachineFrame (void);			// tras emular cada cuadro
 	void MachineHousekeeping (void);		// una vez por vuelta del bucle
+	boolean MachineAskStateFormat (unsigned nFormat);	// F8: TRUE si pregunta antes
+	boolean MachineStateLoaded (CString *pMessage);	// TRUE si da otro mensaje
 	void StopZX81 (void);				// fuera el cartucho del ZX81
 	boolean IsZX81Active (void) const;
 	boolean IsZX81ROMPresent (void);

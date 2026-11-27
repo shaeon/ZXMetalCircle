@@ -58,6 +58,12 @@ public:
 	boolean IsAccelerating (void) const override
 		{ return IsTapeAccelerating () || IsDiskAccelerating (); }
 	const TFileType *GetFileTypes (void) const override;
+	// Estado: .Z80, .SNA y .SZX (y se cargan .SP); en snapshot.cpp
+	unsigned GetStateFormats (void) const override			{ return 3; }
+	const char *GetStateExt (unsigned nFormat) const override;
+	const char *LoadState (const u8 *pData, unsigned nSize, const char *pFileName) override;
+	const char *CanSaveState (void) const override;
+	unsigned SaveState (unsigned nFormat, u8 *pBuffer, unsigned nBufferSize) override;
 
 	void Reset (void) override;
 	// La NMI se lanza a mitad del próximo cuadro, lejos de la interrupción

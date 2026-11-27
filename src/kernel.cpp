@@ -9,7 +9,6 @@
 #include "kernel.h"
 #include "webserver.h"
 #include "webfiles.h"
-#include "snapshot.h"
 #include <circle/sound/pwmsoundbasedevice.h>
 #include <circle/sound/hdmisoundbasedevice.h>
 #include <circle/string.h>
@@ -4911,7 +4910,7 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 		return FALSE;
 	}
 
-	const char *pError = CSnapshot::Load (m_pSpectrum, Buffer, nSize, pPath);
+	const char *pError = m_pMachine->LoadState (Buffer, nSize, pPath);
 	if (pError != 0)
 	{
 		pError = T (pError);
@@ -4922,14 +4921,6 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 	ApplySpeaker ();		// el snapshot puede haber cambiado de máquina
 	PokeSetGame (pPath, PokeGameSnapshot);
 	m_nNextFrameTime = 0;
-	if (m_pSpectrum->IsCartridgeInserted ())
-	{
-		strcpy (m_CartridgeName, ".SP (ROM)");	// un .SP con su propia ROM
-	}
-	else
-	{
-		m_CartridgeName[0] = '\0';
-	}
 
 	const char *pName = pPath;
 	for (const char *p = pPath; *p != '\0'; p++)
@@ -4941,13 +4932,7 @@ boolean CKernel::LoadSnapshot (const char *pPath)
 	}
 
 	CString Message;
-	TModel Missing = m_pSpectrum->TakeFallback ();
-	if (Missing != ModelCount)
-	{
-		// el snapshot pedía una máquina sin ROM: se ha cargado en el 128K
-		Message.Format (T ("Falta la ROM de %s: cargado en 128K"), MachineTiming[Missing].pShortName);
-	}
-	else
+	if (!MachineStateLoaded (&Message))	// lo propio de la máquina (kernelspectrum.cpp)
 	{
 		Message.Format ("%s (%s)", pName, m_pMachine->GetShortName ());
 	}
@@ -4969,44 +4954,26 @@ boolean CKernel::SaveSnapshot (int nFormat)
 	if (nFormat < 0)
 	{
 		nFormat = m_nSnapFormat;
-		// Z80 y SNA no guardan la paleta de la ULAplus: al cargarlos, el juego
-		// saldría con otros colores. Se pregunta (SZX, elegido al entrar)
-		if (nFormat != 2 && m_pSpectrum->IsULAplusInUse ())
+		// el formato elegido pierde algo: se pregunta (kernelspectrum.cpp)
+		if (MachineAskStateFormat ((unsigned) nFormat))
 		{
-			if (!m_Menu.IsOpen ())
-			{
-				memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
-				UpdateStatusLines ();
-				OpenMenu ();
-				m_Keyboard.SetCaptured (TRUE);
-			}
-			m_nSnapStage = 1;
-			m_Menu.OpenChoice (nFormat == 1 ? T ("SNA no guarda la paleta ULAplus")
-							: T ("Z80 no guarda la paleta ULAplus"));
-			m_Menu.SetChoiceItem (0, T ("Grabar en SZX (con la paleta)"));
-			m_Menu.SetChoiceItem (1, nFormat == 1 ? T ("Grabar en SNA igualmente")
-							      : T ("Grabar en Z80 igualmente"));
-			m_Menu.SetChoiceItem (2, T ("No grabar"));
-			m_Menu.SetChoiceSelected (0);
 			return TRUE;
 		}
 	}
 
 	u8 *Buffer = m_pWork;	// SNAPSHOT_MAX_SIZE < WORK_BUFFER_SIZE
-	if (m_pSpectrum->IsLECPaged ())
+	const char *pWhyNot = m_pMachine->CanSaveState ();
+	if (pWhyNot != 0)
 	{
-		ShowMessage (T ("Con la memoria LEC en uso no se graban snapshots"));
+		ShowMessage (T (pWhyNot));
 		return FALSE;
 	}
 
-	static const char *SnapExt[3] = {"z80", "sna", "szx"};
-	unsigned nSize;
-	switch (nFormat)
+	if ((unsigned) nFormat >= m_pMachine->GetStateFormats ())
 	{
-	case 1:  nSize = CSnapshot::SaveSNA (m_pSpectrum, Buffer, SNAPSHOT_MAX_SIZE);	break;
-	case 2:  nSize = CSnapshot::SaveSZX (m_pSpectrum, Buffer, SNAPSHOT_MAX_SIZE);	break;
-	default: nSize = CSnapshot::SaveZ80 (m_pSpectrum, Buffer, SNAPSHOT_MAX_SIZE);	break;
+		nFormat = 0;
 	}
+	unsigned nSize = m_pMachine->SaveState ((unsigned) nFormat, Buffer, SNAPSHOT_MAX_SIZE);
 	if (nSize == 0)
 	{
 		ShowMessage (T ("Error al crear el snapshot"));
@@ -5043,7 +5010,7 @@ boolean CKernel::SaveSnapshot (int nFormat)
 	unsigned nNumber = 1;
 	do
 	{
-		Path.Format ("SD:/snaps/%s_%03u.%s", Base, nNumber++, SnapExt[nFormat]);
+		Path.Format ("SD:/snaps/%s_%03u.%s", Base, nNumber++, m_pMachine->GetStateExt ((unsigned) nFormat));
 	}
 	while (f_stat (Path, &Info) == FR_OK && nNumber < 1000);
 
@@ -5068,33 +5035,6 @@ boolean CKernel::SaveSnapshot (int nFormat)
 }
 
 // La pregunta de F8 con la ULAplus en uso
-boolean CKernel::SnapMenuResult (TMenuResult Result)
-{
-	if (m_nSnapStage == 0 || (Result != MenuResultChoice && Result != MenuResultChoiceCancel))
-	{
-		return FALSE;
-	}
-	m_nSnapStage = 0;
-	unsigned nChoice = Result == MenuResultChoice ? m_Menu.GetChoice () : 2;
-	if (m_Menu.IsOpen ())
-	{
-		m_Menu.Close ();
-	}
-	if (nChoice == 0)
-	{
-		SaveSnapshot (2);			// SZX
-	}
-	else if (nChoice == 1)
-	{
-		SaveSnapshot ((int) m_nSnapFormat);	// el elegido, sin la paleta
-	}
-	else
-	{
-		ShowMessage (T ("Snapshot no grabado"));
-	}
-	return TRUE;
-}
-
 boolean CKernel::LoadTape (const char *pPath)
 {
 	int nSourceSize = SourceSize (pPath);

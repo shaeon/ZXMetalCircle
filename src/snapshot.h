@@ -23,7 +23,7 @@
 #include "spectrum.h"
 #include <circle/types.h>
 
-#define SNAPSHOT_MAX_SIZE	(256 * 1024)	// .Z80 de 128K sin comprimir: ~131 KB
+// SNAPSHOT_MAX_SIZE: en machinebase.h
 
 class CSnapshot
 {

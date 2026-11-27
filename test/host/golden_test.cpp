@@ -14,7 +14,7 @@
 //                            cambio de la emulación es a propósito)
 //   ./golden_test --ppm      además, vuelca la pantalla final de cada prueba
 //
-// (se compila como snapshot_snet_test.cpp: el núcleo, más snapshot.cpp)
+// (se compila como las demás pruebas: el núcleo, con snapshot.cpp)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

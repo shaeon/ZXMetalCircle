@@ -26,6 +26,10 @@
 
 class CAudioMixer;
 
+// Lo más que ocupa el estado de una máquina (el búfer del kernel para F8 y
+// para cargar snapshots). Spectrum: un .Z80 de 128K sin comprimir, ~131 KB
+#define SNAPSHOT_MAX_SIZE	(256 * 1024)
+
 class CMachine
 {
 public:
@@ -50,6 +54,18 @@ public:
 
 	// Los ficheros que sabe cargar y qué es cada uno (filetypes.h)
 	virtual const TFileType *GetFileTypes (void) const = 0;
+
+	// Estado de la máquina (snapshots). Formatos 0..GetStateFormats () - 1;
+	// GetStateExt da su extensión, sin el punto ("z80"). Los textos de error
+	// van sin traducir (N_), para T () del kernel.
+	virtual unsigned GetStateFormats (void) const = 0;
+	virtual const char *GetStateExt (unsigned nFormat) const = 0;
+	// El formato va por la extensión de pFileName. Devuelve el error o 0.
+	virtual const char *LoadState (const u8 *pData, unsigned nSize, const char *pFileName) = 0;
+	// 0 si se puede grabar ahora; si no, por qué
+	virtual const char *CanSaveState (void) const = 0;
+	// Los bytes del fichero (0 = no se pudo)
+	virtual unsigned SaveState (unsigned nFormat, u8 *pBuffer, unsigned nBufferSize) = 0;
 
 	// Emula un cuadro entero (imagen y sonido)
 	virtual void RunFrame (void) = 0;

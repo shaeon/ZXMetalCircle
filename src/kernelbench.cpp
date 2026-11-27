@@ -74,7 +74,6 @@
 // (at your option) any later version.
 //
 #include "kernel.h"
-#include "snapshot.h"
 #include "benchprog.h"
 #include "version.h"
 #include "i18n.h"
@@ -162,7 +161,7 @@ void CKernel::RunBenchmark (void)
 			continue;
 		}
 		unsigned nSize = MakeSnapshot (pSnapshot, Tests[t].nHardware);
-		const char *pError = CSnapshot::Load (m_pSpectrum, pSnapshot, nSize, "bench.z80");
+		const char *pError = m_pMachine->LoadState (pSnapshot, nSize, "bench.z80");
 		if (pError != 0)
 		{
 			m_Logger.Write (FromBench, LogError, "%s: %s", Tests[t].pName, pError);

@@ -5,7 +5,7 @@
 // firma o un tamaño que no cuadran se rechazan.
 //
 //   (con las mismas FLAGS y CORE que las demás pruebas de la Action)
-//   g++ $FLAGS -o sp_test sp_test.cpp ../../src/snapshot.cpp $CORE roms_host.S
+//   g++ $FLAGS -o sp_test sp_test.cpp $CORE roms_host.S
 #define private public
 #define protected public
 #include "spectrum.h"

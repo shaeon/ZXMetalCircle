@@ -1068,3 +1068,36 @@ unsigned CSnapshot::SaveSZX (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 
 	return nPos;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// CSpectrum: el estado de la máquina (CMachine, ver machinebase.h)
+
+const char *CSpectrum::GetStateExt (unsigned nFormat) const
+{
+	static const char *Ext[3] = {"z80", "sna", "szx"};
+	return Ext[nFormat < 3 ? nFormat : 0];
+}
+
+const char *CSpectrum::LoadState (const u8 *pData, unsigned nSize, const char *pFileName)
+{
+	return CSnapshot::Load (this, pData, nSize, pFileName);
+}
+
+const char *CSpectrum::CanSaveState (void) const
+{
+	if (IsLECPaged ())
+	{
+		return N_("Con la memoria LEC en uso no se graban snapshots");
+	}
+	return 0;
+}
+
+unsigned CSpectrum::SaveState (unsigned nFormat, u8 *pBuffer, unsigned nBufferSize)
+{
+	switch (nFormat)
+	{
+	case 1:  return CSnapshot::SaveSNA (this, pBuffer, nBufferSize);
+	case 2:  return CSnapshot::SaveSZX (this, pBuffer, nBufferSize);
+	default: return CSnapshot::SaveZ80 (this, pBuffer, nBufferSize);
+	}
+}

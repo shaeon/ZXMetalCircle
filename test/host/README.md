@@ -50,5 +50,8 @@ teclado y su cinta, teclas, ROMs de `roms/` y lo que hay en la pantalla) y se ej
 - `filetypes_test.cpp`: la lista de ficheros del Spectrum (`filetypes.h`) da lo mismo que las
   listas que había antes en el navegador, la web, los ZIP, la pantalla de unidades y
   `LoadAnyFile`.
+- `state_test.cpp`: el estado a través de `CMachine` (F8 y cargar snapshots): en el 48K, el 128K
+  y el +3, con .Z80, .SNA y .SZX, grabar, cargar en otra máquina y seguir igual; con la LEC en
+  uso no se graba.
 - `cpm_test.cpp`: el CP/M de LEC (`boot/cpm/cpm22_lec.tzx`) arranca en el 48K y en el 128K
   en modo 48K, y responde a DIR.

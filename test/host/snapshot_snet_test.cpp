@@ -4,7 +4,7 @@
 // su bucle llama a KEY-SCAN (0x028E) y caía en la ROM de la Spectranet.
 //
 //   (con las mismas FLAGS y CORE que las demás pruebas de la Action)
-//   g++ $FLAGS -o snapshot_snet_test snapshot_snet_test.cpp ../../src/snapshot.cpp $CORE roms_host.S
+//   g++ $FLAGS -o snapshot_snet_test snapshot_snet_test.cpp $CORE roms_host.S
 #include "spectrum.h"
 #include "snapshot.h"
 #include <stdio.h>
