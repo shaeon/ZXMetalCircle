@@ -43,7 +43,7 @@ int main ()
 	for (int i = 0x1800; i < 0x1B00; i++) ((u8 *) s->m_ULA.m_pScreenPage)[i] = 0x80 | (i & 0x0E);
 	unsigned a0 = s->m_ULA.m_ScrAddr[0];
 	s->m_bBusValid = FALSE;
-	s->m_nPort7FFD &= ~0x20;
+	s->m_Mem.m_nPort7FFD &= ~0x20;
 
 	// valores en el instante exacto (Plus3FloatingBus; inPort suma el tiempo de la E/S)
 	s->m_nTstates = up * L + off + 0;
@@ -75,9 +75,9 @@ int main ()
 	chk ("puerto 0x0FFC (A0 = 0): también", (s->inPort (0x0FFC) & 1) == 1 && s->inPort (0x0FFC) != 0xFF);
 	chk ("puerto 0x1FFD (A12 = 1): 0xFF", s->inPort (0x1FFD) == 0xFF);
 	chk ("puerto 0x00FF (A1 = 1): 0xFF", s->inPort (0x00FF) == 0xFF);
-	s->m_nPort7FFD |= 0x20;
+	s->m_Mem.m_nPort7FFD |= 0x20;
 	chk ("con la paginación bloqueada: 0xFF", s->inPort (0x0FFD) == 0xFF);
-	s->m_nPort7FFD &= ~0x20;
+	s->m_Mem.m_nPort7FFD &= ~0x20;
 
 	s->SetModel (Model48K);
 	for (int i = 0; i < 0x1800; i++) ((u8 *) s->m_ULA.m_pScreenPage)[i] = 0x10 | (i & 0x0E);

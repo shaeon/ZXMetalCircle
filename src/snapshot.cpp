@@ -136,7 +136,7 @@ const char *CSnapshot::LoadSP (CSpectrum *p, const u8 *pData, unsigned nSize)
 	{
 		unsigned nAddress = nStart + i;		// 0x4000-0xFFFF
 		static const unsigned Banks[4] = {0, 5, 2, 0};
-		p->m_RAM[Banks[nAddress >> 14]][nAddress & 0x3FFF] = pMem[i];
+		p->m_Mem.m_RAM[Banks[nAddress >> 14]][nAddress & 0x3FFF] = pMem[i];
 	}
 
 	Z80 &CPU = p->m_CPU;
@@ -161,7 +161,7 @@ const char *CSnapshot::LoadSP (CSpectrum *p, const u8 *pData, unsigned nSize)
 	CPU.setIFF2 ((nStatus & 0x04) != 0);
 	CPU.setIM ((nStatus & 0x02) ? Z80::IM2 : Z80::IM1);
 
-	p->m_nPort7FFD = 0;
+	p->m_Mem.m_nPort7FFD = 0;
 	Finish (p);
 
 	return 0;
@@ -226,38 +226,38 @@ const char *CSnapshot::LoadSNA (CSpectrum *p, const u8 *pData, unsigned nSize)
 
 	if (!b128K)
 	{
-		memcpy (p->m_RAM[5], pRAM, 0x4000);
-		memcpy (p->m_RAM[2], pRAM + 0x4000, 0x4000);
-		memcpy (p->m_RAM[0], pRAM + 0x8000, 0x4000);
+		memcpy (p->m_Mem.m_RAM[5], pRAM, 0x4000);
+		memcpy (p->m_Mem.m_RAM[2], pRAM + 0x4000, 0x4000);
+		memcpy (p->m_Mem.m_RAM[0], pRAM + 0x8000, 0x4000);
 
 		// El PC está en la pila
 		u16 nSP = CPU.getRegSP ();
 		u8 nLow = 0, nHigh = 0;
 		if (nSP >= 0x4000)
 		{
-			nLow = p->m_RAM[nSP < 0x8000 ? 5 : (nSP < 0xC000 ? 2 : 0)][nSP & 0x3FFF];
+			nLow = p->m_Mem.m_RAM[nSP < 0x8000 ? 5 : (nSP < 0xC000 ? 2 : 0)][nSP & 0x3FFF];
 		}
 		u16 nSP1 = nSP + 1;
 		if (nSP1 >= 0x4000)
 		{
-			nHigh = p->m_RAM[nSP1 < 0x8000 ? 5 : (nSP1 < 0xC000 ? 2 : 0)][nSP1 & 0x3FFF];
+			nHigh = p->m_Mem.m_RAM[nSP1 < 0x8000 ? 5 : (nSP1 < 0xC000 ? 2 : 0)][nSP1 & 0x3FFF];
 		}
 		CPU.setRegPC (nLow | (nHigh << 8));
 		CPU.setRegSP (nSP + 2);
 
-		p->m_nPort7FFD = 0;
+		p->m_Mem.m_nPort7FFD = 0;
 	}
 	else
 	{
 		const u8 *pExtra = pData + 27 + 0xC000;
 		CPU.setRegPC (Word (pExtra));
-		p->m_nPort7FFD = pExtra[2];
+		p->m_Mem.m_nPort7FFD = pExtra[2];
 		// pExtra[3]: TR-DOS (se ignora)
 
-		unsigned nPaged = p->m_nPort7FFD & 0x07;
-		memcpy (p->m_RAM[5], pRAM, 0x4000);
-		memcpy (p->m_RAM[2], pRAM + 0x4000, 0x4000);
-		memcpy (p->m_RAM[nPaged], pRAM + 0x8000, 0x4000);
+		unsigned nPaged = p->m_Mem.m_nPort7FFD & 0x07;
+		memcpy (p->m_Mem.m_RAM[5], pRAM, 0x4000);
+		memcpy (p->m_Mem.m_RAM[2], pRAM + 0x4000, 0x4000);
+		memcpy (p->m_Mem.m_RAM[nPaged], pRAM + 0x8000, 0x4000);
 
 		const u8 *pBank = pExtra + 4;
 		for (unsigned nBank = 0; nBank < 8; nBank++)
@@ -266,7 +266,7 @@ const char *CSnapshot::LoadSNA (CSpectrum *p, const u8 *pData, unsigned nSize)
 			{
 				continue;
 			}
-			memcpy (p->m_RAM[nBank], pBank, 0x4000);
+			memcpy (p->m_Mem.m_RAM[nBank], pBank, 0x4000);
 			pBank += 0x4000;
 		}
 	}
@@ -492,9 +492,9 @@ const char *CSnapshot::LoadZ80 (CSpectrum *p, const u8 *pData, unsigned nSize)
 			memcpy (Buffer, pMem, sizeof Buffer);
 		}
 
-		memcpy (p->m_RAM[5], Buffer, 0x4000);
-		memcpy (p->m_RAM[2], Buffer + 0x4000, 0x4000);
-		memcpy (p->m_RAM[0], Buffer + 0x8000, 0x4000);
+		memcpy (p->m_Mem.m_RAM[5], Buffer, 0x4000);
+		memcpy (p->m_Mem.m_RAM[2], Buffer + 0x4000, 0x4000);
+		memcpy (p->m_Mem.m_RAM[0], Buffer + 0x8000, 0x4000);
 	}
 	else
 	{
@@ -531,14 +531,14 @@ const char *CSnapshot::LoadZ80 (CSpectrum *p, const u8 *pData, unsigned nSize)
 			{
 				if (bCompressed)
 				{
-					if (!DecompressZ80 (pData + nPos, nLen, p->m_RAM[nBank], 0x4000, FALSE))
+					if (!DecompressZ80 (pData + nPos, nLen, p->m_Mem.m_RAM[nBank], 0x4000, FALSE))
 					{
 						return N_("Datos del .Z80 corruptos");
 					}
 				}
 				else
 				{
-					memcpy (p->m_RAM[nBank], pData + nPos, 0x4000);
+					memcpy (p->m_Mem.m_RAM[nBank], pData + nPos, 0x4000);
 				}
 			}
 
@@ -547,8 +547,8 @@ const char *CSnapshot::LoadZ80 (CSpectrum *p, const u8 *pData, unsigned nSize)
 
 		if (!Is48 (Model))
 		{
-			p->m_nPort7FFD = n7FFD;
-			p->m_nPort1FFD = MachineTiming[Model].CodeModel == CodeModelPlus3 ? n1FFD : 0;
+			p->m_Mem.m_nPort7FFD = n7FFD;
+			p->m_Mem.m_nPort1FFD = MachineTiming[Model].CodeModel == CodeModelPlus3 ? n1FFD : 0;
 		}
 
 		if (bAY && nHeaderLen >= 55)
@@ -617,7 +617,7 @@ unsigned CSnapshot::SaveZ80 (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 	case ModelPlus3E:	pBuffer[34] = 7;	break;
 	default:					break;
 	}
-	pBuffer[35] = Is48 (p->m_Model) ? 0 : p->m_nPort7FFD;
+	pBuffer[35] = Is48 (p->m_Model) ? 0 : p->m_Mem.m_nPort7FFD;
 	pBuffer[37] = 0x03 | (p->m_pTiming->bHasAY ? 0x04 : 0)
 		      | (p->m_Model == Model16K ? 0x80 : 0);	// 16K: 48K con hardware modificado
 	pBuffer[38] = p->m_AY.GetAddressLatch ();
@@ -639,7 +639,7 @@ unsigned CSnapshot::SaveZ80 (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 	pBuffer[62] = 0xFF;	// 0x2000-0x3FFF es ROM
 	if (nExtra == 55)
 	{
-		pBuffer[86] = p->m_nPort1FFD;
+		pBuffer[86] = p->m_Mem.m_nPort1FFD;
 	}
 
 	unsigned nPos = nHeaderLen;
@@ -671,12 +671,12 @@ unsigned CSnapshot::SaveZ80 (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 			return 0;
 		}
 
-		unsigned nLen = CompressZ80 (p->m_RAM[nBank], 0x4000, pBuffer + nPos + 3, 0x4000 - 1);
+		unsigned nLen = CompressZ80 (p->m_Mem.m_RAM[nBank], 0x4000, pBuffer + nPos + 3, 0x4000 - 1);
 		if (nLen == 0)
 		{
 			// no merece la pena comprimir
 			PutWord (pBuffer + nPos, 0xFFFF);
-			memcpy (pBuffer + nPos + 3, p->m_RAM[nBank], 0x4000);
+			memcpy (pBuffer + nPos + 3, p->m_Mem.m_RAM[nBank], 0x4000);
 			nLen = 0x4000;
 		}
 		else
@@ -769,11 +769,11 @@ const char *CSnapshot::LoadSZX (CSpectrum *p, const u8 *pData, unsigned nSize)
 			p->m_nPortFE = (pBlock[3] & 0x18) | (pBlock[0] & 0x07);
 			if (!Is48 (Model))
 			{
-				p->m_nPort7FFD = pBlock[1];
+				p->m_Mem.m_nPort7FFD = pBlock[1];
 			}
 			if (MachineTiming[Model].CodeModel == CodeModelPlus3)
 			{
-				p->m_nPort1FFD = pBlock[2];
+				p->m_Mem.m_nPort1FFD = pBlock[2];
 			}
 		}
 		else if (memcmp (pID, "RAMP", 4) == 0 && nLen >= 3)
@@ -791,11 +791,11 @@ const char *CSnapshot::LoadSZX (CSpectrum *p, const u8 *pData, unsigned nSize)
 					{
 						return N_("Datos del .SZX corruptos");
 					}
-					memcpy (p->m_RAM[nPage], PageBuffer, 0x4000);
+					memcpy (p->m_Mem.m_RAM[nPage], PageBuffer, 0x4000);
 				}
 				else if (nDataLen >= 0x4000)
 				{
-					memcpy (p->m_RAM[nPage], pPageData, 0x4000);
+					memcpy (p->m_Mem.m_RAM[nPage], pPageData, 0x4000);
 				}
 			}
 		}
@@ -857,7 +857,7 @@ unsigned CSnapshot::SaveSNA (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 {
 	Z80 &CPU = p->m_CPU;
 	boolean b48 = Is48 (p->m_Model);
-	unsigned nPaged = p->m_nPort7FFD & 0x07;
+	unsigned nPaged = p->m_Mem.m_nPort7FFD & 0x07;
 
 	unsigned nSize = 27 + 0xC000;
 	if (!b48)
@@ -895,9 +895,9 @@ unsigned CSnapshot::SaveSNA (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 	pBuffer[26] = p->m_nPortFE & 0x07;
 
 	u8 *pRAM = pBuffer + 27;
-	memcpy (pRAM, p->m_RAM[5], 0x4000);
-	memcpy (pRAM + 0x4000, p->m_RAM[2], 0x4000);
-	memcpy (pRAM + 0x8000, p->m_RAM[b48 ? 0 : nPaged], 0x4000);
+	memcpy (pRAM, p->m_Mem.m_RAM[5], 0x4000);
+	memcpy (pRAM + 0x4000, p->m_Mem.m_RAM[2], 0x4000);
+	memcpy (pRAM + 0x8000, p->m_Mem.m_RAM[b48 ? 0 : nPaged], 0x4000);
 
 	if (b48)
 	{
@@ -920,7 +920,7 @@ unsigned CSnapshot::SaveSNA (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 
 		u8 *pExtra = pBuffer + 27 + 0xC000;
 		PutWord (pExtra, CPU.getRegPC ());
-		pExtra[2] = p->m_nPort7FFD;
+		pExtra[2] = p->m_Mem.m_nPort7FFD;
 		pExtra[3] = 0;			// TR-DOS no paginada
 
 		u8 *pBank = pExtra + 4;
@@ -928,7 +928,7 @@ unsigned CSnapshot::SaveSNA (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 		{
 			if (nBank != 2 && nBank != 5 && nBank != nPaged)
 			{
-				memcpy (pBank, p->m_RAM[nBank], 0x4000);
+				memcpy (pBank, p->m_Mem.m_RAM[nBank], 0x4000);
 				pBank += 0x4000;
 			}
 		}
@@ -1008,8 +1008,8 @@ unsigned CSnapshot::SaveSZX (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 	q = pBuffer + nPos + 8;
 	memset (q, 0, 8);
 	q[0] = p->m_nPortFE & 0x07;
-	q[1] = Is48 (p->m_Model) ? 0 : p->m_nPort7FFD;
-	q[2] = MachineTiming[p->m_Model].CodeModel == CodeModelPlus3 ? p->m_nPort1FFD : 0;
+	q[1] = Is48 (p->m_Model) ? 0 : p->m_Mem.m_nPort7FFD;
+	q[2] = MachineTiming[p->m_Model].CodeModel == CodeModelPlus3 ? p->m_Mem.m_nPort1FFD : 0;
 	q[3] = p->m_nPortFE;
 	nPos += 8 + 8;
 
@@ -1060,7 +1060,7 @@ unsigned CSnapshot::SaveSZX (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 		q = pBuffer + nPos + 8;
 		PutWord (q, 0);			// sin comprimir
 		q[2] = pPages[i];
-		memcpy (q + 3, p->m_RAM[pPages[i]], 0x4000);
+		memcpy (q + 3, p->m_Mem.m_RAM[pPages[i]], 0x4000);
 		nPos += 8 + 3 + 0x4000;
 	}
 

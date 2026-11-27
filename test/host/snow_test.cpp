@@ -126,12 +126,12 @@ int main (void)
 		FetchAt (s, nLine128 + 3 * 228 + 2);
 		unsigned nAddr = s->m_ULA.m_StepAddr[3 * 32];
 		snprintf (Text, sizeof Text, "%s: nieve con I = 0x40", pName);
-		chk (Text, s->m_ULA.m_nStep == 3 * 32 + 1 && s->m_ULA.m_nLastByte == s->m_RAM[5][(nAddr & ~0x7F) | 6]);
+		chk (Text, s->m_ULA.m_nStep == 3 * 32 + 1 && s->m_ULA.m_nLastByte == s->m_Mem.m_RAM[5][(nAddr & ~0x7F) | 6]);
 		delete s;
 
 		// I = 0xC0 con una página par arriba: nada
 		s = Prepare (Model, 0xC0, 5, true);
-		s->m_nPort7FFD = 0x02;
+		s->m_Mem.m_nPort7FFD = 0x02;
 		FetchAt (s, nLine128 + 2);
 		snprintf (Text, sizeof Text, "%s: I = 0xC0 con la página 2: nada", pName);
 		chk (Text, s->m_ULA.m_nStep == 0);
@@ -144,13 +144,13 @@ int main (void)
 		{
 			s = Prepare (Model, 0xC0, 5, true);
 			for (unsigned b = 0; b < 8; b++)
-				for (unsigned i = 0; i < 0x4000; i++) s->m_RAM[b][i] = (u8) (b * 37 + i);
-			s->m_nPort7FFD = p.n7FFD;
+				for (unsigned i = 0; i < 0x4000; i++) s->m_Mem.m_RAM[b][i] = (u8) (b * 37 + i);
+			s->m_Mem.m_nPort7FFD = p.n7FFD;
 			s->UpdatePaging ();
 			FetchAt (s, nLine128 + 2);
 			snprintf (Text, sizeof Text, "%s: I = 0xC0, 7FFD = %02X: del banco %u", pName, p.n7FFD, p.nBank);
-			chk (Text, s->m_ULA.m_nStep == 1 && s->m_ULA.m_nLastByte == s->m_RAM[p.nBank][6]
-				   && s->m_ULA.m_nLastAttr == s->m_RAM[p.nBank][0x1806]);
+			chk (Text, s->m_ULA.m_nStep == 1 && s->m_ULA.m_nLastByte == s->m_Mem.m_RAM[p.nBank][6]
+				   && s->m_ULA.m_nLastAttr == s->m_Mem.m_RAM[p.nBank][0x1806]);
 			delete s;
 		}
 

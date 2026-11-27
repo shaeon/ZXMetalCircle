@@ -80,7 +80,7 @@ static uint64_t StateHash (void)
 {
 	CHash H;
 	H.Add (S->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
-	H.Add (S->m_RAM, sizeof S->m_RAM);
+	H.Add (S->m_Mem.m_RAM, sizeof S->m_Mem.m_RAM);
 	H.Add (&s_Audio.h, sizeof s_Audio.h);
 	Z80 &C = S->m_CPU;
 	unsigned Regs[] = {C.getRegAF (), C.getRegBC (), C.getRegDE (), C.getRegHL (),
@@ -90,7 +90,7 @@ static uint64_t StateHash (void)
 	for (unsigned r : Regs) H.Add16 (r);
 	H.Add32 ((unsigned) S->m_nTstates);
 	H.Add32 (S->m_ULA.m_nFrames);	// (cuadros: los cuenta la ULA, para el parpadeo)
-	uint8_t Ports[] = {S->m_nPortFE, S->m_nPort7FFD, S->m_nPort1FFD};
+	uint8_t Ports[] = {S->m_nPortFE, S->m_Mem.m_nPort7FFD, S->m_Mem.m_nPort1FFD};
 	H.Add (Ports, sizeof Ports);
 	return H.h;
 }

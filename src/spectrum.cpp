@@ -103,7 +103,6 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_bLECUsed = FALSE;
 	m_nLECPage = 0;
 	memset (m_IF1Page, 0xFF, sizeof m_IF1Page);	// sin ROM hasta SetIF1ROM ()
-	memset (m_NoRAM, 0xFF, sizeof m_NoRAM);
 
 	m_bSnowEnabled = TRUE;
 	m_bSnow = m_bSnow128 = FALSE;
@@ -180,40 +179,7 @@ void CSpectrum::SetModel (TModel Model)
 		m_pTiming = &TKMicroTiming[Model == ModelTK95][m_nTKULA == TKULA60Hz];
 	}
 
-	const u8 *pROM = m_pModelROM[Model];
-	switch (m_pTiming->CodeModel)
-	{
-	case CodeModel48K:
-		if (pROM == 0)
-		{
-			pROM = rom_48;
-		}
-		m_ROM[0] = m_ROM[1] = m_ROM[2] = m_ROM[3] = pROM;
-		m_pBasicROM = pROM;
-		break;
-
-	case CodeModel128K:
-		if (pROM == 0)
-		{
-			m_ROM[0] = m_ROM[2] = rom_128_0;
-			m_ROM[1] = m_ROM[3] = rom_128_1;
-		}
-		else
-		{
-			m_ROM[0] = m_ROM[2] = pROM;
-			m_ROM[1] = m_ROM[3] = pROM + 0x4000;
-		}
-		m_pBasicROM = m_ROM[1];
-		break;
-
-	default:		// +2A, +3 y +3e: cuatro bancos de 16 KB
-		for (unsigned i = 0; i < 4; i++)
-		{
-			m_ROM[i] = pROM + i * 0x4000;
-		}
-		m_pBasicROM = m_ROM[3];
-		break;
-	}
+	m_Mem.SetModel (Model, m_pTiming, m_pModelROM[Model]);
 
 	UpdateDivActive ();
 
@@ -230,12 +196,10 @@ void CSpectrum::SetModel (TModel Model)
 
 void CSpectrum::Reset (void)
 {
-	memset (m_RAM, 0, sizeof m_RAM);
+	m_Mem.Reset ();
 	m_nResetCount++;
 
 	m_nPortFE = 0;
-	m_nPort7FFD = 0;
-	m_nPort1FFD = 0;
 	m_bEarOut = FALSE;
 	m_bMFPaged = FALSE;
 	m_bMFLocked = TRUE;
@@ -270,88 +234,8 @@ void CSpectrum::Reset (void)
 
 void CSpectrum::UpdatePaging (void)
 {
-	switch (m_pTiming->CodeModel)
-	{
-	case CodeModel48K:
-		m_pReadPage[0] = m_ROM[0];
-		m_pReadPage[1] = m_RAM[5];
-		m_pReadPage[2] = m_RAM[2];
-		m_pReadPage[3] = m_RAM[0];
-		if (m_Model == Model16K)
-		{
-			m_pReadPage[2] = m_pReadPage[3] = m_NoRAM;	// las escrituras se pierden
-		}
-		m_ULA.SetScreenPage (m_RAM[5]);
-		break;
-
-	case CodeModel128K:
-		m_pReadPage[0] = m_ROM[(m_nPort7FFD >> 4) & 1];
-		m_pReadPage[1] = m_RAM[5];
-		m_pReadPage[2] = m_RAM[2];
-		m_pReadPage[3] = m_RAM[m_nPort7FFD & 7];
-		m_ULA.SetScreenPage (m_RAM[(m_nPort7FFD & 0x08) ? 7 : 5]);
-		break;
-
-	case CodeModelPlus3:
-		if (m_nPort1FFD & 0x01)
-		{
-			// Modos especiales "all RAM"
-			static const u8 Special[4][4] =
-			{
-				{0, 1, 2, 3}, {4, 5, 6, 7}, {4, 5, 6, 3}, {4, 7, 6, 3}
-			};
-			const u8 *pBanks = Special[(m_nPort1FFD >> 1) & 3];
-			for (unsigned i = 0; i < 4; i++)
-			{
-				m_pReadPage[i] = m_RAM[pBanks[i]];
-			}
-		}
-		else
-		{
-			unsigned nROM = ((m_nPort1FFD >> 1) & 0x02) | ((m_nPort7FFD >> 4) & 0x01);
-			m_pReadPage[0] = m_ROM[nROM];
-			m_pReadPage[1] = m_RAM[5];
-			m_pReadPage[2] = m_RAM[2];
-			m_pReadPage[3] = m_RAM[m_nPort7FFD & 7];
-		}
-		m_ULA.SetScreenPage (m_RAM[(m_nPort7FFD & 0x08) ? 7 : 5]);
-		break;
-	}
-
-	for (unsigned nSlot = 0; nSlot < 4; nSlot++)
-	{
-		const u8 *pPage = m_pReadPage[nSlot];
-
-		int nBank = -1;
-		for (unsigned i = 0; i < 8; i++)
-		{
-			if (pPage == m_RAM[i])
-			{
-				nBank = i;
-				break;
-			}
-		}
-
-		m_pWritePage[nSlot] = nBank >= 0 ? m_RAM[nBank] : m_ROMSink;
-
-		switch (m_pTiming->CodeModel)
-		{
-		case CodeModel48K:
-			m_bContendedRAM[nSlot] = nSlot == 1;
-			m_bContendedIO[nSlot] = nSlot == 1;
-			break;
-
-		case CodeModel128K:
-			m_bContendedRAM[nSlot] = nBank >= 0 && (nBank & 1);
-			m_bContendedIO[nSlot] = m_bContendedRAM[nSlot];
-			break;
-
-		case CodeModelPlus3:
-			m_bContendedRAM[nSlot] = nBank >= 4;
-			m_bContendedIO[nSlot] = FALSE;
-			break;
-		}
-	}
+	m_Mem.UpdatePaging ();
+	m_ULA.SetScreenPage (m_Mem.GetScreenPage ());
 
 	// LEC paginada: sus 32 KB ocupan 0x0000-0x7FFF y no hay ROM ni periféricos
 	// que se superpongan (como en JSpeccy)
@@ -362,16 +246,13 @@ void CSpectrum::UpdatePaging (void)
 			u8 *pPage;
 			if (m_nLECPage == 15)
 			{
-				pPage = m_RAM[nSlot == 0 ? 2 : 0];	// la RAM alta del propio 48K
+				pPage = m_Mem.Bank (nSlot == 0 ? 2 : 0);	// la RAM alta del propio 48K
 			}
 			else
 			{
 				pPage = m_pLECRAM + m_nLECPage * 0x8000 + nSlot * 0x4000;
 			}
-			m_pReadPage[nSlot] = pPage;
-			m_pWritePage[nSlot] = pPage;
-			m_bContendedRAM[nSlot] = FALSE;
-			m_bContendedIO[nSlot] = FALSE;
+			m_Mem.MapSlot (nSlot, pPage, pPage);
 		}
 		return;
 	}
@@ -379,34 +260,25 @@ void CSpectrum::UpdatePaging (void)
 	// Cartucho del Interface 2 (no en el +2A/+3)
 	if (m_bIF2Inserted && m_pTiming->CodeModel != CodeModelPlus3)
 	{
-		m_pReadPage[0] = m_IF2ROM;
-		m_pWritePage[0] = m_ROMSink;
-		m_bContendedRAM[0] = FALSE;
-		m_bContendedIO[0] = FALSE;
+		m_Mem.MapSlot (0, m_IF2ROM, m_Mem.GetROMSink ());
 	}
 
 	// ROM del Interface 1 (8 KB, repetida en los 16 KB)
 	if (m_bIF1Paged && IF1Active ())
 	{
-		m_pReadPage[0] = m_IF1Page;
-		m_pWritePage[0] = m_ROMSink;
-		m_bContendedRAM[0] = FALSE;
-		m_bContendedIO[0] = FALSE;
+		m_Mem.MapSlot (0, m_IF1Page, m_Mem.GetROMSink ());
 	}
 
 	// Multiface paginado: su ROM y su RAM ocupan los primeros 16 KB
 	if (m_bMFPaged)
 	{
-		if (m_pTiming->CodeModel == CodeModelPlus3 && (m_nPort1FFD & 0x01))
+		if (m_Mem.IsSpecialPaging ())
 		{
 			m_bMFPaged = FALSE;	// modo "all RAM" del +2A: el MF se retira
 		}
 		else
 		{
-			m_pReadPage[0] = m_MFPage;
-			m_pWritePage[0] = m_MFPage;
-			m_bContendedRAM[0] = FALSE;
-			m_bContendedIO[0] = FALSE;
+			m_Mem.MapSlot (0, m_MFPage, m_MFPage);
 		}
 	}
 }
@@ -507,20 +379,19 @@ boolean CSpectrum::IsLECPort (u16 nPort, u8 nValue) const
 // 128K en modo 48K: paginación bloqueada y la ROM del BASIC de 48K
 boolean CSpectrum::LEC128Mode (void) const
 {
-	if (m_Model == Model48K || m_Model == Model16K || (m_nPort7FFD & 0x20) == 0)
+	if (m_Model == Model48K || m_Model == Model16K || !m_Mem.IsPagingLocked ())
 	{
 		return FALSE;
 	}
 	if (m_pTiming->CodeModel == CodeModelPlus3)
 	{
-		if (m_nPort1FFD & 0x01)
+		if (m_Mem.IsSpecialPaging ())
 		{
 			return FALSE;		// paginación especial (todo RAM)
 		}
-		unsigned nROM = ((m_nPort1FFD >> 1) & 0x02) | ((m_nPort7FFD >> 4) & 0x01);
-		return nROM == 3;
+		return m_Mem.GetROMNumber () == 3;
 	}
-	return (m_nPort7FFD & 0x10) != 0;
+	return m_Mem.GetROMNumber () == 1;
 }
 
 void CSpectrum::LECWrite (u8 nValue)
@@ -558,7 +429,7 @@ void CSpectrum::PageMultiface (void)
 {
 	if (   m_bMFPaged
 	    || !IsMultifaceAvailable ()
-	    || (m_pTiming->CodeModel == CodeModelPlus3 && (m_nPort1FFD & 0x01)))
+	    || m_Mem.IsSpecialPaging ())
 	{
 		return;
 	}
@@ -606,7 +477,7 @@ boolean CSpectrum::MultifaceIn (uint16_t nPort, u8 *pValue)
 		{
 			if (nPort == 0x01BF && m_bMFPaged)
 			{
-				*pValue = m_nPort7FFD;
+				*pValue = m_Mem.GetPort7FFD ();
 				return TRUE;
 			}
 			PageMultiface ();
@@ -628,12 +499,12 @@ boolean CSpectrum::MultifaceIn (uint16_t nPort, u8 *pValue)
 			{
 				if (nPort == 0x7F3F)
 				{
-					*pValue = m_nPort7FFD;
+					*pValue = m_Mem.GetPort7FFD ();
 					return TRUE;
 				}
 				if (nPort == 0x1F3F)
 				{
-					*pValue = m_nPort1FFD;
+					*pValue = m_Mem.GetPort1FFD ();
 					return TRUE;
 				}
 			}
@@ -672,7 +543,7 @@ void CSpectrum::MultifaceOut (uint16_t nPort)
 
 inline void CSpectrum::Contend (uint16_t nAddress, int nTstates)
 {
-	if (m_bContendedRAM[nAddress >> 14])
+	if (m_Mem.IsContended (nAddress >> 14))
 	{
 		m_nTstates += m_ULA.Delay (m_nTstates);
 	}
@@ -681,7 +552,7 @@ inline void CSpectrum::Contend (uint16_t nAddress, int nTstates)
 
 inline boolean CSpectrum::IsScreenWrite (uint16_t nAddress) const
 {
-	return    m_pWritePage[nAddress >> 14] == m_ULA.GetScreenPage ()
+	return    m_Mem.WritePage (nAddress >> 14) == m_ULA.GetScreenPage ()
 	       && (nAddress & 0x3FFF) < 0x1B00;
 }
 
@@ -713,7 +584,7 @@ inline void CSpectrum::WriteByte (uint16_t nAddress, uint8_t nValue)
 		m_ULA.UpdateScreen (m_nTstates);
 	}
 
-	m_pWritePage[nAddress >> 14][nAddress & 0x3FFF] = nValue;
+	m_Mem.WritePage (nAddress >> 14)[nAddress & 0x3FFF] = nValue;
 }
 
 uint8_t CSpectrum::fetchOpcode (uint16_t address)
@@ -726,13 +597,13 @@ uint8_t CSpectrum::fetchOpcode (uint16_t address)
 		{
 			Snow (m_ULA.GetScreenPage ());
 		}
-		else if (nI == 0xC0 && m_bSnow128 && (m_nPort7FFD & 0x01))
+		else if (nI == 0xC0 && m_bSnow128 && (m_Mem.GetPort7FFD () & 0x01))
 		{
 			// 128K y +2 con una página lenta (impar) arriba: la fila
 			// equivocada sale del banco 1 o 3 (si es la 1 o la 3) o del 5
 			// o 7 (si es la 5 o la 7), el de la pantalla que se ve (Weiv,
 			// como ESPectrum)
-			Snow (m_RAM[(m_nPort7FFD & 0x04) | ((m_nPort7FFD & 0x08) ? 2 : 0) | 1]);
+			Snow (m_Mem.Bank ((m_Mem.GetPort7FFD () & 0x04) | ((m_Mem.GetPort7FFD () & 0x08) ? 2 : 0) | 1));
 		}
 	}
 	if (m_bDivActive)
@@ -743,7 +614,7 @@ uint8_t CSpectrum::fetchOpcode (uint16_t address)
 	{
 		return SnetFetch (address);
 	}
-	return m_pReadPage[address >> 14][address & 0x3FFF];
+	return m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
 }
 
 // Spectranet: paginación en el ciclo M1, trampa programable y RETN
@@ -764,7 +635,7 @@ u8 CSpectrum::SnetFetch (u16 nAddress)
 	}
 
 	u8 nOpcode = (nAddress < 0x4000 && m_Snet.IsPaged ()) ? m_Snet.Read (nAddress)
-							      : m_pReadPage[nAddress >> 14][nAddress & 0x3FFF];
+							      : m_Mem.ReadPage (nAddress >> 14)[nAddress & 0x3FFF];
 
 	// RETN (ED 45, 55, 5D, 65, 6D, 75, 7D; ED 4D es RETI) borra el biestable de la NMI
 	if (m_bPrevED && (nOpcode & 0xC7) == 0x45 && nOpcode != 0x4D)
@@ -791,7 +662,7 @@ uint8_t CSpectrum::peek8 (uint16_t address)
 	Contend (address, 3);
 	if (m_bPlus3Bus && (address & 0xE000) == 0x4000)
 	{
-		NoteBus (m_pReadPage[1][address & 0x3FFF]);
+		NoteBus (m_Mem.ReadPage (1)[address & 0x3FFF]);
 	}
 	if (address < 0x4000 && DivPaged ())
 	{
@@ -801,7 +672,7 @@ uint8_t CSpectrum::peek8 (uint16_t address)
 	{
 		return m_Snet.Read (address);
 	}
-	return m_pReadPage[address >> 14][address & 0x3FFF];
+	return m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
 }
 
 // divMMC: memoria en 0x0000-0x3FFF cuando está paginada
@@ -846,7 +717,7 @@ u8 CSpectrum::DivFetch (u16 nAddress)
 	}
 
 	u8 nOpcode = (nAddress < 0x4000 && DivPaged ()) ? DivRead (nAddress)
-							: m_pReadPage[nAddress >> 14][nAddress & 0x3FFF];
+							: m_Mem.ReadPage (nAddress >> 14)[nAddress & 0x3FFF];
 
 	// los demás puntos de entrada paginan después de leer la instrucción, y
 	// 0x1FF8-0x1FFF despagina también después
@@ -898,13 +769,13 @@ uint16_t CSpectrum::peek16 (uint16_t address)
 	Contend (address, 3);
 	uint8_t nLSB = (address < 0x4000 && DivPaged ()) ? DivRead (address)
 		     : (address < 0x4000 && m_bSnet && m_Snet.IsPaged ()) ? m_Snet.Read (address)
-							: m_pReadPage[address >> 14][address & 0x3FFF];
+							: m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
 
 	address++;
 	Contend (address, 3);
 	uint8_t nMSB = (address < 0x4000 && DivPaged ()) ? DivRead (address)
 		     : (address < 0x4000 && m_bSnet && m_Snet.IsPaged ()) ? m_Snet.Read (address)
-							: m_pReadPage[address >> 14][address & 0x3FFF];
+							: m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
 
 	if (m_bPlus3Bus)
 	{
@@ -927,7 +798,7 @@ void CSpectrum::poke16 (uint16_t address, RegisterPair word)
 
 void CSpectrum::addressOnBus (uint16_t address, int32_t wstates)
 {
-	if (   m_bContendedRAM[address >> 14]
+	if (   m_Mem.IsContended (address >> 14)
 	    && m_pTiming->CodeModel != CodeModelPlus3)
 	{
 		for (int32_t i = 0; i < wstates; i++)
@@ -969,7 +840,7 @@ bool CSpectrum::isActiveINT (void)
 // Los de ULAplus, como los de la ULA (bit 0 = 0) aunque sean impares.
 void CSpectrum::PreIO (uint16_t nPort)
 {
-	if (m_bContendedIO[nPort >> 14])
+	if (m_Mem.IsContendedIO (nPort >> 14))
 	{
 		m_nTstates += m_ULA.Delay (m_nTstates);
 	}
@@ -996,7 +867,7 @@ void CSpectrum::PostIO (uint16_t nPort)
 
 	if (!bULAPort)
 	{
-		if (m_bContendedIO[nPort >> 14])
+		if (m_Mem.IsContendedIO (nPort >> 14))
 		{
 			for (unsigned i = 0; i < 3; i++)
 			{
@@ -1118,7 +989,7 @@ uint8_t CSpectrum::inPort (uint16_t port)
 	if (m_bSnet && m_Snet.IsPort (port))
 	{
 		return m_Snet.ReadPort (port, m_nPortFE,
-					m_pTiming->CodeModel != CodeModel48K && (m_nPort7FFD & 0x08));
+					m_pTiming->CodeModel != CodeModel48K && (m_Mem.GetPort7FFD () & 0x08));
 	}
 
 	// divMMC: 0xEB igual que el 0x3F de la ZXMMC
@@ -1293,7 +1164,7 @@ uint8_t CSpectrum::inPort (uint16_t port)
 		// (A15-A12 = 0, A1 = 0) y sin bloqueo de paginación, con el bit 0
 		// a 1; los demás puertos sin dueño dan 0xFF. Como el core zxp3 de
 		// Kyp (zxp3.v).
-		if ((port & 0xF002) == 0x0000 && !(m_nPort7FFD & 0x20))
+		if ((port & 0xF002) == 0x0000 && !m_Mem.IsPagingLocked ())
 		{
 			return Plus3FloatingBus () | 0x01;
 		}
@@ -1305,13 +1176,13 @@ uint8_t CSpectrum::inPort (uint16_t port)
 	// Solo en el 128K (no +2/+2A/+3): leer 0x7FFD escribe el valor leído en el puerto
 	if (   m_Model == Model128K
 	    && (port & 0x8002) == 0
-	    && (m_nPort7FFD & 0x20) == 0)
+	    && !m_Mem.IsPagingLocked ())
 	{
-		if ((m_nPort7FFD ^ nFloatBus) & 0x08)
+		if ((m_Mem.GetPort7FFD () ^ nFloatBus) & 0x08)
 		{
 			m_ULA.UpdateScreen (m_nTstates);
 		}
-		m_nPort7FFD = nFloatBus;
+		m_Mem.SetPort7FFD (nFloatBus);
 		UpdatePaging ();
 	}
 
@@ -1457,7 +1328,7 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 
 	PostIO (port);
 
-	if ((m_nPort7FFD & 0x20) != 0)		// paginación bloqueada
+	if (m_Mem.IsPagingLocked ())		// paginación bloqueada
 	{
 		return;
 	}
@@ -1473,7 +1344,7 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 
 		if ((port & 0xF002) == 0x1000)
 		{
-			m_nPort1FFD = value;
+			m_Mem.SetPort1FFD (value);
 			UpdatePaging ();
 
 			// bit 3: motor de la disquetera
@@ -1492,12 +1363,12 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 
 	if (bPage7FFD)
 	{
-		if ((m_nPort7FFD ^ value) & 0x08)
+		if ((m_Mem.GetPort7FFD () ^ value) & 0x08)
 		{
 			m_ULA.UpdateScreen (m_nTstates);
 		}
 
-		m_nPort7FFD = value;
+		m_Mem.SetPort7FFD (value);
 		UpdatePaging ();
 	}
 }
@@ -1697,7 +1568,7 @@ uint8_t CSpectrum::breakpoint (uint16_t address, uint8_t opcode)
 	if (   address == 0x04D0
 	    && m_pSaveHandler != 0
 	    && !m_bRecording
-	    && m_pReadPage[0] == m_pBasicROM
+	    && m_Mem.ReadPage (0) == m_Mem.GetBasicROM ()
 	    && FlashSave ())
 	{
 		return 0xC9;	// RET
@@ -1710,7 +1581,7 @@ uint8_t CSpectrum::breakpoint (uint16_t address, uint8_t opcode)
 	// usar otro flag con la rutina de la ROM (Cabal, de Ocean).
 	if (   address == 0x0562
 	    && m_TapeMode == TapeModeFlash
-	    && m_pReadPage[0] == m_pBasicROM
+	    && m_Mem.ReadPage (0) == m_Mem.GetBasicROM ()
 	    && m_pTape->IsInserted ()
 	    && !m_pTape->IsPlaying ()
 	    && FlashLoad ())
@@ -1730,7 +1601,7 @@ uint8_t CSpectrum::breakpoint (uint16_t address, uint8_t opcode)
 
 	// LD-BYTES de la ROM de BASIC
 	if (   address == 0x0556
-	    && m_pReadPage[0] == m_pBasicROM
+	    && m_Mem.ReadPage (0) == m_Mem.GetBasicROM ()
 	    && m_pTape->IsInserted ()
 	    && !m_pTape->IsPlaying ()
 	    && !m_pTape->IsAtEnd ())
@@ -1879,7 +1750,7 @@ boolean CSpectrum::FlashSave (void)
 	Block[0] = nParity;
 	for (unsigned i = 0; i < nBytes; i++, nAddr++)
 	{
-		u8 nByte = m_pReadPage[nAddr >> 14][nAddr & 0x3FFF];
+		u8 nByte = m_Mem.ReadPage (nAddr >> 14)[nAddr & 0x3FFF];
 		Block[i + 1] = nByte;
 		nParity ^= nByte;
 	}
@@ -2140,7 +2011,7 @@ u8 CSpectrum::PeekLoader (u16 nAddress) const
 	{
 		return DivRead (nAddress);
 	}
-	return m_pReadPage[nAddress >> 14][nAddress & 0x3FFF];
+	return m_Mem.ReadPage (nAddress >> 14)[nAddress & 0x3FFF];
 }
 
 boolean CSpectrum::LoaderPatternMatches (u16 nAddress, const TLoaderPatternByte *pPattern,

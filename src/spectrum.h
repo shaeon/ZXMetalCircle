@@ -16,6 +16,7 @@
 #include "machine.h"
 #include "machinebase.h"
 #include "ula.h"
+#include "zxmemory.h"
 #include "palette.h"
 #include "ay8912.h"
 #include "audiomixer.h"
@@ -163,12 +164,12 @@ public:
 	boolean IsIF1Connected (void) const	{ return m_bIF1Connected; }
 	CInterface1 *GetInterface1 (void)	{ return &m_IF1; }
 	// Lectura de la memoria tal como la ve ahora la CPU (sin contención; pruebas)
-	u8 ReadMemory (u16 nAddress) const override	{ return m_pReadPage[nAddress >> 14][nAddress & 0x3FFF]; }
+	u8 ReadMemory (u16 nAddress) const override	{ return m_Mem.ReadPage (nAddress >> 14)[nAddress & 0x3FFF]; }
 	// Escritura en la memoria tal como la ve ahora la CPU (la ROM no se escribe)
-	void WriteMemory (u16 nAddress, u8 nValue) override	{ m_pWritePage[nAddress >> 14][nAddress & 0x3FFF] = nValue; }
+	void WriteMemory (u16 nAddress, u8 nValue) override	{ m_Mem.WritePage (nAddress >> 14)[nAddress & 0x3FFF] = nValue; }
 	// Una página de RAM (0-7) directamente, esté paginada o no (pokes del 128K)
-	u8 ReadRAM (unsigned nBank, u16 nOffset) const	{ return m_RAM[nBank & 7][nOffset & 0x3FFF]; }
-	void WriteRAM (unsigned nBank, u16 nOffset, u8 nValue)	{ m_RAM[nBank & 7][nOffset & 0x3FFF] = nValue; }
+	u8 ReadRAM (unsigned nBank, u16 nOffset) const	{ return m_Mem.Bank (nBank & 7)[nOffset & 0x3FFF]; }
+	void WriteRAM (unsigned nBank, u16 nOffset, u8 nValue)	{ m_Mem.Bank (nBank & 7)[nOffset & 0x3FFF] = nValue; }
 	// Los reset que lleva: con uno, los pokes aplicados se pierden
 	unsigned GetResetCount (void) const override	{ return m_nResetCount; }
 
@@ -273,6 +274,7 @@ private:
 	CAY8912 m_AY;
 	CAudioMixer m_Audio;
 	CULA m_ULA;			// imagen, borde, colores y contención
+	CMemory m_Mem;			// RAM, ROMs y paginación
 
 	TModel m_Model;
 	const TMachineTiming *m_pTiming;
@@ -284,21 +286,8 @@ private:
 	u64 m_nBusTstates;		// último acceso de la CPU a 0x4000-0x5FFF
 	u8 m_nBusValue;
 
-	// memoria
-	u8 m_RAM[8][0x4000];
-	u8 m_ROMSink[0x4000];		// destino de las escrituras en ROM
-	u8 m_NoRAM[0x4000];		// memoria inexistente (16K): se lee 0xFF
-	const u8 *m_ROM[4];
-	const u8 *m_pReadPage[4];
-	u8 *m_pWritePage[4];
-	boolean m_bContendedRAM[4];
-	boolean m_bContendedIO[4];
-	const u8 *m_pBasicROM;		// ROM donde vive LD-BYTES (para el trap de carga)
-
 	u8 m_nPortFE;
-	u8 m_nPort7FFD;
 	unsigned m_nResetCount;
-	u8 m_nPort1FFD;
 	boolean m_bEarOut;
 	boolean m_bIssue2;
 
