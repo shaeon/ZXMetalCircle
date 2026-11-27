@@ -56,12 +56,12 @@ const char *JoystickNames[JoystickModeCount] =
 #define KEY_PAD_FILES	0xF4		// acción "ficheros" de un mando (Select por defecto)
 #define KEY_PAD_SETTINGS	0xF5		// acción "configuracion" de un mando (Start por defecto)
 
-static const char *AYStereoNames[AYStereoModeCount] =
+const char *AYStereoNames[AYStereoModeCount] =
 {
 	"ABC", "ACB", "BAC", "mono"
 };
 
-static const char *TapeModeNames[TapeModeCount] =
+const char *TapeModeNames[TapeModeCount] =
 {
 	N_("instantánea"), N_("rápida"), N_("real")
 };
@@ -240,26 +240,9 @@ static const struct { const char *pKey; const char *pDescription; } ShortHelp[] 
 	{N_("Pausa"), N_("Pausa")},
 };
 
-// ROMs de los modelos: opción de la configuración, fichero por defecto, tamaño
-// y modelo. Las del 48K y el 128K, si no están en roms/, van en el kernel.
-static const struct
-{
-	const char *pOption;
-	const char *pDefault;
-	unsigned nSize;
-	TModel Model;
-	const char *pShort;	// nombre para el aviso (0 = ROM opcional)
-}
-s_ModelROMs[] =
-{
-	{"rom48",     "48.rom",     0x4000,  Model48K,    0},
-	{"rom128",    "128.rom",    0x8000,  Model128K,   0},
-	{"romplus2",  "plus2.rom",  0x8000,  ModelPlus2,  "+2"},
-	{"romplus2a", "plus2a.rom", 0x10000, ModelPlus2A, "+2A"},
-	{"romplus3",  "plus3.rom",  0x10000, ModelPlus3,  "+3"},
-	{"romplus3e", 0,            0x10000, ModelPlus3E, "+3e"},
-};
-#define MODEL_ROMS	(sizeof s_ModelROMs / sizeof s_ModelROMs[0])
+// ROMs de los modelos: salen del registro (machine.h, GetModelROMInfo). Las
+// del 48K y el 128K, si no están en roms/, van en el kernel.
+static_assert (ModelROMCount + 3 == ROM_LISTS, "listas de ROMs: las de los modelos y IF1, esxDOS y Spectranet");
 
 CKernel *CKernel::s_pThis = 0;
 
@@ -1595,97 +1578,7 @@ void CKernel::UpdateStatusLines (void)
 		}
 	}
 
-	Line.Format (T ("Modelo: |%s%s|  Vel. |x%u|"), m_pMachine->GetName (),
-		     (m_pSpectrum->IsIssue2 () && m_pSpectrum->GetTiming ()->CodeModel == CodeModel48K)
-		     ? (m_pSpectrum->IsLECConnected () ? " +LEC" : " (Issue 2)")
-		     : (m_pSpectrum->IsLECConnected () && m_pSpectrum->GetModel () == Model48K ? " +LEC" : ""),
-		     m_nSpeed);
-	m_Menu.SetStatusLine (0, Line);
-
-	CString Joy (T (JoystickNames[m_Keyboard.GetJoystickMode ()]));
-	if (m_Keyboard.GetJoystickMode2 () != JoystickNone)
-	{
-		Joy.Append (" + ");			// el del jugador 2
-		Joy.Append (T (JoystickNames[m_Keyboard.GetJoystickMode2 ()]));
-	}
-	Line.Format (T ("Joystick: |%s%s|  |%u.%02u c/s|"), (const char *) Joy,
-		     m_Keyboard.IsMouseActive () ? T (" +ratón") : "", m_nFPSx100 / 100, m_nFPSx100 % 100);
-	m_Menu.SetStatusLine (1, Line);
-
-	if (m_pSpectrum->IsIF1Connected ())
-	{
-		Line.Format (T ("Carga: |%s|  Microdrives: |%u|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
-			     CountMicrodrives ());
-	}
-	else if (m_pSpectrum->HasDiskDrive ())
-	{
-		CPlus3Disk *pDisk = m_pSpectrum->GetDisk ();
-		Line.Format (T ("Carga: |%s|  Disq. A:|%s| B:|%s%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
-			     pDisk->HasDisk (0) ? T ("sí") : "-", pDisk->HasDisk (1) ? T ("sí") : "-",
-			     m_pSpectrum->HasZXMMC () && m_HardDisk.IsOpen () ? T (" HD:sí") : "");
-	}
-	else if (m_pEarSource != 0)
-	{
-		Line.Format (T ("Carga: |%s|  Casete: |%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
-			     m_pSpectrum->IsEarInputActive () ? T ("con señal") : T ("sin señal"));
-	}
-	else
-	{
-		Line.Format (T ("Carga: |%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]));
-	}
-	m_Menu.SetStatusLine (2, Line);
-
-	if (m_Tape.IsInserted ())
-	{
-		Line.Format (T ("Cinta: |%s|"), m_Tape.GetName ());
-		m_Menu.SetStatusLine (3, Line);
-		Line.Format (T ("|Bloque %u de %u%s|%s"), m_Tape.GetBlock () + 1 > m_Tape.GetBlockCount ()
-						? m_Tape.GetBlockCount () : m_Tape.GetBlock () + 1,
-			     m_Tape.GetBlockCount (), m_Tape.IsPlaying () ? T (" (en marcha)") : "",
-			     m_Tape.GetUnsupportedBlocks () > 0 ? T (" *no soportados") : "");
-		m_Menu.SetStatusLine (4, Line);
-	}
-	else
-	{
-		m_Menu.SetStatusLine (3, T ("Cinta: |(ninguna)|"));
-		m_Menu.SetStatusLine (4, "");
-	}
-
-	CString Volume;
-	if (m_bMute)
-	{
-		Volume = T ("silencio");
-	}
-	else
-	{
-		Volume.Format ("%u%%", m_nVolume);
-	}
-	Line.Format (T ("Sonido: |%s|, AY |%s|, vol. |%s|"), T (m_pSoundName),
-		     AYStereoNames[m_pSpectrum->GetAY ()->GetStereoMode ()], (const char *) Volume);
-	m_Menu.SetStatusLine (5, Line);
-
-	if (m_pSpectrum->IsCartridgeInserted ())
-	{
-		Line.Format (T ("Cartucho: |%s|"), m_CartridgeName[0] != '\0' ? m_CartridgeName : T ("(snapshot)"));
-	}
-	else
-	{
-		if (m_pSpectrum->IsSpectranetEnabled ())
-		{
-			Line.Format (T ("Spectranet: |sí|  ULAplus: |%s|"), m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
-		}
-		else if (m_pSpectrum->IsDivMMCActive ())
-		{
-			Line.Format (T ("divMMC: |esxDOS|  ULAplus: |%s|"), m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
-		}
-		else
-		{
-			Line.Format (T ("Multiface: |%s|  ULAplus: |%s|"),
-				     m_pSpectrum->IsMultifaceAvailable () ? T ("sí") : T ("no"),
-				     m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
-		}
-	}
-	m_Menu.SetStatusLine (6, Line);
+	MachineStatusLines ();		// líneas 0-6, lo de la máquina (kernelspectrum.cpp)
 
 	Line.Format (T ("Borde: |%s|, scanlines: |%s|"), T (CVideo::GetBorderName (m_BorderSize)),
 		     m_bScanlines ? T ("sí") : T ("no"));
@@ -2946,10 +2839,10 @@ void CKernel::ApplySetting (unsigned nIndex)
 		{
 			ReloadPeripheralROM (pKey);
 		}
-		for (unsigned i = 0; i < MODEL_ROMS; i++)
+		for (unsigned i = 0; i < ModelROMCount; i++)
 		{
-			if (   strcmp (pKey, s_ModelROMs[i].pOption) == 0
-			    || (strcmp (pKey, "p3elang") == 0 && s_ModelROMs[i].Model == ModelPlus3E))
+			if (   strcmp (pKey, GetModelROMInfo (i).pROMOption) == 0
+			    || (strcmp (pKey, "p3elang") == 0 && GetModelROMInfo (i).Model == ModelPlus3E))
 			{
 				ReloadModelROM (i);
 			}
@@ -3320,18 +3213,20 @@ static void SortValueList (CString &rValues, CString &rNames, unsigned nFirst, u
 
 void CKernel::SetupROMLists (void)
 {
-	static const struct { const char *pKey; unsigned nSize; const char *pDefaultName; } ROMs[] =
+	// las de los modelos (del registro: la incluida, según el idioma o su
+	// fichero) y las de los periféricos
+	struct TROMList { const char *pKey; unsigned nSize; const char *pDefaultName; };
+	static TROMList ROMs[ModelROMCount + 3];
+	for (unsigned i = 0; i < ModelROMCount; i++)
 	{
-		{"rom48",     0x4000,  N_("la incluida")},
-		{"rom128",    0x8000,  N_("la incluida")},
-		{"romplus2",  0x8000,  "plus2.rom"},
-		{"romplus2a", 0x10000, "plus2a.rom"},
-		{"romplus3",  0x10000, "plus3.rom"},
-		{"romplus3e", 0x10000, N_("según el idioma")},
-		{"romif1",    0x2000,  "if1.rom"},
-		{"romesx",    0x2000,  "esxmmc.bin"},
-		{"romsnet",   0x20000, "spectranet.rom"},
-	};
+		const TModelInfo &Info = GetModelROMInfo (i);
+		ROMs[i] = {Info.pROMOption, Info.nROMSize,
+			   Info.pROMShort == 0 ? N_("la incluida")
+			   : (Info.pROMFile == 0 ? N_("según el idioma") : Info.pROMFile)};
+	}
+	ROMs[ModelROMCount + 0] = {"romif1",  0x2000,  "if1.rom"};
+	ROMs[ModelROMCount + 1] = {"romesx",  0x2000,  "esxmmc.bin"};
+	ROMs[ModelROMCount + 2] = {"romsnet", 0x20000, "spectranet.rom"};
 	for (unsigned i = 0; i < sizeof ROMs / sizeof ROMs[0] && i < ROM_LISTS; i++)
 	{
 		m_ROMValues[i] = "default";
@@ -3990,33 +3885,34 @@ const u8 *CKernel::LoadROMFile (const char *pName, unsigned nSize)
 // para liberarla cuando el Spectrum ya no la use.
 const u8 *CKernel::LoadModelROM (unsigned nROM)
 {
-	const char *pName = CurrentOption (s_ModelROMs[nROM].pOption, s_ModelROMs[nROM].pDefault);
+	const TModelInfo &Info = GetModelROMInfo (nROM);
+	const char *pName = CurrentOption (Info.pROMOption, Info.pROMFile);
 	if (   pName != 0
 	    && (   strcasecmp (pName, "default") == 0
 		|| strcasecmp (pName, ZX81_ROM_NAME) == 0))	// (el ZX81 no es una ROM de Spectrum)
 	{
-		pName = s_ModelROMs[nROM].pDefault;	// "la incluida" en la configuración
+		pName = Info.pROMFile;			// "la incluida" en la configuración
 	}
 	const u8 *pROM = 0;
 
 	if (pName != 0)
 	{
-		pROM = LoadROMFile (pName, s_ModelROMs[nROM].nSize);
+		pROM = LoadROMFile (pName, Info.nROMSize);
 	}
 	else
 	{
 		// +3e: plus3e.rom si existe; si no, la del idioma elegido
-		pROM = LoadROMFile ("plus3e.rom", s_ModelROMs[nROM].nSize);
+		pROM = LoadROMFile ("plus3e.rom", Info.nROMSize);
 		if (pROM == 0)
 		{
 			boolean bEnglish = strcasecmp (CurrentOption ("p3elang", "es"), "en") == 0;
-			pROM = LoadROMFile (bEnglish ? "plus3e-en.rom" : "plus3e-es.rom", s_ModelROMs[nROM].nSize);
+			pROM = LoadROMFile (bEnglish ? "plus3e-en.rom" : "plus3e-es.rom", Info.nROMSize);
 		}
 	}
 
 	const u8 *pOld = m_pModelROMFile[nROM];
 	m_pModelROMFile[nROM] = pROM;
-	m_pSpectrum->SetModelROM (s_ModelROMs[nROM].Model, pROM);
+	m_pSpectrum->SetModelROM (Info.Model, pROM);
 	return pOld;
 }
 
@@ -4029,13 +3925,13 @@ void CKernel::LoadROMs (void)
 		return;
 	}
 
-	for (unsigned i = 0; i < MODEL_ROMS; i++)
+	for (unsigned i = 0; i < ModelROMCount; i++)
 	{
 		LoadModelROM (i);
-		if (m_pModelROMFile[i] == 0 && s_ModelROMs[i].pShort != 0)
+		if (m_pModelROMFile[i] == 0 && GetModelROMInfo (i).pROMShort != 0)
 		{
 			m_MissingROMs.Append (m_MissingROMs.GetLength () > 0 ? " " : "");
-			m_MissingROMs.Append (s_ModelROMs[i].pShort);
+			m_MissingROMs.Append (GetModelROMInfo (i).pROMShort);
 		}
 	}
 
@@ -4066,7 +3962,7 @@ void CKernel::ReloadModelROM (unsigned nROM)
 {
 	const u8 *pOld = LoadModelROM (nROM);
 
-	TModel Model = s_ModelROMs[nROM].Model;
+	TModel Model = GetModelROMInfo (nROM).Model;
 	TModel Current = m_pSpectrum->GetModel ();
 	boolean bInUse = Current == Model || (Model == Model48K && Current == Model16K);
 	if (bInUse)
@@ -4074,7 +3970,7 @@ void CKernel::ReloadModelROM (unsigned nROM)
 		if (m_pSpectrum->IsModelAvailable (Current))
 		{
 			SetModel (Current);		// con la ROM nueva
-			ShowROMChanged (s_ModelROMs[nROM].pOption, TRUE);
+			ShowROMChanged (GetModelROMInfo (nROM).pROMOption, TRUE);
 		}
 		else
 		{
@@ -4088,7 +3984,7 @@ void CKernel::ReloadModelROM (unsigned nROM)
 	}
 	else
 	{
-		ShowROMChanged (s_ModelROMs[nROM].pOption, FALSE);
+		ShowROMChanged (GetModelROMInfo (nROM).pROMOption, FALSE);
 	}
 
 	delete [] pOld;				// el Spectrum ya no la usa

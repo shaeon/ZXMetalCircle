@@ -63,6 +63,8 @@ enum TShutdownMode
 };
 
 extern const char *JoystickNames[JoystickModeCount];	// sus nombres (N_), en kernel.cpp
+extern const char *AYStereoNames[AYStereoModeCount];	// ídem
+extern const char *TapeModeNames[TapeModeCount];
 
 // Resultado de la búsqueda de al arrancar (la escribe una tarea aparte)
 struct TUpdateBootResult
@@ -119,6 +121,7 @@ private:
 	void MachineHousekeeping (void);		// una vez por vuelta del bucle
 	boolean MachineAskStateFormat (unsigned nFormat);	// F8: TRUE si pregunta antes
 	boolean MachineStateLoaded (CString *pMessage);	// TRUE si da otro mensaje
+	void MachineStatusLines (void);			// F1: las líneas 0-6 del estado
 	void StopZX81 (void);				// fuera el cartucho del ZX81
 	boolean IsZX81Active (void) const;
 	boolean IsZX81ROMPresent (void);
@@ -506,7 +509,7 @@ private:
 	unsigned		m_nZipChoices;
 	const u8		*m_pTKROM;		// ROMs del TK cargadas (LoadTKROMs)
 	const u8		*m_pTK95ROM;
-	const u8		*m_pModelROMFile[6];	// ROMs de modelo cargadas de roms/ (LoadModelROM)
+	const u8		*m_pModelROMFile[ModelROMCount];	// ROMs de modelo cargadas de roms/ (LoadModelROM)
 	boolean			m_bSettingsLoaded;	// desde entonces, las ROMs según la configuración
 	boolean			m_bModelList;		// pregunta: F7, lista de modelos
 	// ZX81 (kernelzx81.cpp)

@@ -8,6 +8,7 @@
 // Spectranet, la carga de un .P en el ZX81 y la elección de bloque de la
 // cinta. Y, de los snapshots, lo que depende del Spectrum: la pregunta por la
 // paleta ULAplus al grabar y, al cargar, el .SP con ROM y el modelo sin ROM.
+// Y las líneas del estado de F1 que hablan de la máquina.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -161,4 +162,104 @@ boolean CKernel::MachineStateLoaded (CString *pMessage)
 		return TRUE;
 	}
 	return FALSE;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// F1: las líneas 0-6 del estado (modelo, joystick, carga, cinta, sonido y
+// periféricos). Las de debajo (imagen, red y hora) son del kernel.
+void CKernel::MachineStatusLines (void)
+{
+	CString Line;
+
+	Line.Format (T ("Modelo: |%s%s|  Vel. |x%u|"), m_pMachine->GetName (),
+		     (m_pSpectrum->IsIssue2 () && m_pSpectrum->GetTiming ()->CodeModel == CodeModel48K)
+		     ? (m_pSpectrum->IsLECConnected () ? " +LEC" : " (Issue 2)")
+		     : (m_pSpectrum->IsLECConnected () && m_pSpectrum->GetModel () == Model48K ? " +LEC" : ""),
+		     m_nSpeed);
+	m_Menu.SetStatusLine (0, Line);
+
+	CString Joy (T (JoystickNames[m_Keyboard.GetJoystickMode ()]));
+	if (m_Keyboard.GetJoystickMode2 () != JoystickNone)
+	{
+		Joy.Append (" + ");			// el del jugador 2
+		Joy.Append (T (JoystickNames[m_Keyboard.GetJoystickMode2 ()]));
+	}
+	Line.Format (T ("Joystick: |%s%s|  |%u.%02u c/s|"), (const char *) Joy,
+		     m_Keyboard.IsMouseActive () ? T (" +ratón") : "", m_nFPSx100 / 100, m_nFPSx100 % 100);
+	m_Menu.SetStatusLine (1, Line);
+
+	if (m_pSpectrum->IsIF1Connected ())
+	{
+		Line.Format (T ("Carga: |%s|  Microdrives: |%u|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
+			     CountMicrodrives ());
+	}
+	else if (m_pSpectrum->HasDiskDrive ())
+	{
+		CPlus3Disk *pDisk = m_pSpectrum->GetDisk ();
+		Line.Format (T ("Carga: |%s|  Disq. A:|%s| B:|%s%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
+			     pDisk->HasDisk (0) ? T ("sí") : "-", pDisk->HasDisk (1) ? T ("sí") : "-",
+			     m_pSpectrum->HasZXMMC () && m_HardDisk.IsOpen () ? T (" HD:sí") : "");
+	}
+	else if (m_pEarSource != 0)
+	{
+		Line.Format (T ("Carga: |%s|  Casete: |%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]),
+			     m_pSpectrum->IsEarInputActive () ? T ("con señal") : T ("sin señal"));
+	}
+	else
+	{
+		Line.Format (T ("Carga: |%s|"), T (TapeModeNames[m_pSpectrum->GetTapeMode ()]));
+	}
+	m_Menu.SetStatusLine (2, Line);
+
+	if (m_Tape.IsInserted ())
+	{
+		Line.Format (T ("Cinta: |%s|"), m_Tape.GetName ());
+		m_Menu.SetStatusLine (3, Line);
+		Line.Format (T ("|Bloque %u de %u%s|%s"), m_Tape.GetBlock () + 1 > m_Tape.GetBlockCount ()
+						? m_Tape.GetBlockCount () : m_Tape.GetBlock () + 1,
+			     m_Tape.GetBlockCount (), m_Tape.IsPlaying () ? T (" (en marcha)") : "",
+			     m_Tape.GetUnsupportedBlocks () > 0 ? T (" *no soportados") : "");
+		m_Menu.SetStatusLine (4, Line);
+	}
+	else
+	{
+		m_Menu.SetStatusLine (3, T ("Cinta: |(ninguna)|"));
+		m_Menu.SetStatusLine (4, "");
+	}
+
+	CString Volume;
+	if (m_bMute)
+	{
+		Volume = T ("silencio");
+	}
+	else
+	{
+		Volume.Format ("%u%%", m_nVolume);
+	}
+	Line.Format (T ("Sonido: |%s|, AY |%s|, vol. |%s|"), T (m_pSoundName),
+		     AYStereoNames[m_pSpectrum->GetAY ()->GetStereoMode ()], (const char *) Volume);
+	m_Menu.SetStatusLine (5, Line);
+
+	if (m_pSpectrum->IsCartridgeInserted ())
+	{
+		Line.Format (T ("Cartucho: |%s|"), m_CartridgeName[0] != '\0' ? m_CartridgeName : T ("(snapshot)"));
+	}
+	else
+	{
+		if (m_pSpectrum->IsSpectranetEnabled ())
+		{
+			Line.Format (T ("Spectranet: |sí|  ULAplus: |%s|"), m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
+		}
+		else if (m_pSpectrum->IsDivMMCActive ())
+		{
+			Line.Format (T ("divMMC: |esxDOS|  ULAplus: |%s|"), m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
+		}
+		else
+		{
+			Line.Format (T ("Multiface: |%s|  ULAplus: |%s|"),
+				     m_pSpectrum->IsMultifaceAvailable () ? T ("sí") : T ("no"),
+				     m_pSpectrum->IsULAplusActive () ? T ("activo") : T ("no"));
+		}
+	}
+	m_Menu.SetStatusLine (6, Line);
 }

@@ -69,19 +69,38 @@ struct TModelInfo
 	const char *pAlias;		// otro nombre que se acepta en model= (0 si no hay)
 	TModelFamily Family;
 	unsigned nFlags;		// MODEL_*
+
+	// Su ROM en SD:/roms (fase 3e): la opción de la configuración que la
+	// elige, el fichero por defecto (0: según el idioma, el +3e), el tamaño y
+	// el nombre para el aviso de las que faltan (0: hay una incluida en el
+	// kernel, la del 48K y la del 128K). pROMOption = 0: no tiene una propia
+	// (el 16K usa la del 48K; los TK, las de tkrom= y tklang=)
+	const char *pROMOption;
+	const char *pROMFile;
+	unsigned nROMSize;
+	const char *pROMShort;
 };
 
 static constexpr TModelInfo ModelList[ModelCount] =
 {
-	{Model16K,    "16k",    0,     ModelFamilySinclair,     MODEL_48K | MODEL_SNOW},
-	{Model48K,    "48k",    0,     ModelFamilySinclair,     MODEL_48K | MODEL_SNOW},
-	{Model128K,   "128k",   0,     ModelFamilySinclair,     MODEL_SNOW},
-	{ModelPlus2,  "plus2",  "+2",  ModelFamilyAmstrad,      MODEL_SNOW},
-	{ModelPlus2A, "plus2a", "+2a", ModelFamilyAmstrad,      0},
-	{ModelPlus3,  "plus3",  "+3",  ModelFamilyAmstrad,      MODEL_DISK},
-	{ModelPlus3E, "plus3e", "+3e", ModelFamilyAmstrad,      MODEL_DISK | MODEL_ZXMMC},
-	{ModelTK90X,  "tk90x",  0,     ModelFamilyMicrodigital, MODEL_TK},
-	{ModelTK95,   "tk95",   0,     ModelFamilyMicrodigital, MODEL_TK}
+	{Model16K,    "16k",    0,     ModelFamilySinclair,     MODEL_48K | MODEL_SNOW,
+	 0,           0,            0,       0},
+	{Model48K,    "48k",    0,     ModelFamilySinclair,     MODEL_48K | MODEL_SNOW,
+	 "rom48",     "48.rom",     0x4000,  0},
+	{Model128K,   "128k",   0,     ModelFamilySinclair,     MODEL_SNOW,
+	 "rom128",    "128.rom",    0x8000,  0},
+	{ModelPlus2,  "plus2",  "+2",  ModelFamilyAmstrad,      MODEL_SNOW,
+	 "romplus2",  "plus2.rom",  0x8000,  "+2"},
+	{ModelPlus2A, "plus2a", "+2a", ModelFamilyAmstrad,      0,
+	 "romplus2a", "plus2a.rom", 0x10000, "+2A"},
+	{ModelPlus3,  "plus3",  "+3",  ModelFamilyAmstrad,      MODEL_DISK,
+	 "romplus3",  "plus3.rom",  0x10000, "+3"},
+	{ModelPlus3E, "plus3e", "+3e", ModelFamilyAmstrad,      MODEL_DISK | MODEL_ZXMMC,
+	 "romplus3e", 0,            0x10000, "+3e"},
+	{ModelTK90X,  "tk90x",  0,     ModelFamilyMicrodigital, MODEL_TK,
+	 0,           0,            0,       0},
+	{ModelTK95,   "tk95",   0,     ModelFamilyMicrodigital, MODEL_TK,
+	 0,           0,            0,       0}
 };
 
 // Fila de ModelList de cada TModel (el valor de TModel no es el orden de F7),
@@ -108,6 +127,27 @@ static_assert (ModelRowsMatch (), "ModelRow no lleva a la fila de cada modelo");
 static inline const TModelInfo &GetModelInfo (TModel Model)
 {
 	return ModelList[ModelRow[Model]];
+}
+
+// Los modelos con ROM propia en SD:/roms, en el orden de F7 (de ahí salen la
+// carga de ROMs y sus listas en la configuración)
+static constexpr unsigned CountModelROMs (unsigned i = 0)
+{
+	return i >= ModelCount ? 0 : (ModelList[i].pROMOption != 0 ? 1 : 0) + CountModelROMs (i + 1);
+}
+static constexpr unsigned ModelROMCount = CountModelROMs ();
+
+// El n-ésimo de ellos
+static inline const TModelInfo &GetModelROMInfo (unsigned nROM)
+{
+	for (unsigned i = 0; i < ModelCount; i++)
+	{
+		if (ModelList[i].pROMOption != 0 && nROM-- == 0)
+		{
+			return ModelList[i];
+		}
+	}
+	return ModelList[0];
 }
 
 static inline bool ModelHas (TModel Model, unsigned nFlag)

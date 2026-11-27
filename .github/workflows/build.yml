@@ -136,6 +136,8 @@ jobs:
           ./keyboard_hold_test
           g++ -O2 -std=c++17 -I. -I$S -o input_test input_test.cpp $S/hostinput.cpp $S/zxkeyboard.cpp
           ./input_test
+          g++ -O2 -std=c++17 -I. -I$S -o models_test models_test.cpp
+          ./models_test
           g++ -O2 -std=c++17 -I. -I$S -o gpio_keys_test gpio_keys_test.cpp $S/zxkeyboard.cpp
           ./gpio_keys_test
           g++ -O2 -std=c++17 -I. -I$S -o zip_test zip_test.cpp $S/zipfile.cpp $S/inflate.cpp

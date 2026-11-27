@@ -56,5 +56,7 @@ teclado y su cinta, teclas, ROMs de `roms/` y lo que hay en la pantalla) y se ej
 - `input_test.cpp`: la entrada (`hostinput.h` y `zxkeyboard.h`) con 20000 pasos fijos de teclados
   USB, errores, Alt, teclas de función, menús, joysticks y mandos; la huella de todo lo que sale
   es la del teclado de antes de separar la parte genérica (fase 3d).
+- `models_test.cpp`: el registro de modelos (`machine.h`): las ROMs de cada modelo salen como la
+  tabla que tenía el kernel, y `FindModel` y `ModelHas` siguen igual.
 - `cpm_test.cpp`: el CP/M de LEC (`boot/cpm/cpm22_lec.tzx`) arranca en el 48K y en el 128K
   en modo 48K, y responde a DIR.
