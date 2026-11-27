@@ -71,6 +71,14 @@ jobs:
           ./tzx_blocks_test
           g++ $FLAGS -o floatbus_test plus3/floatbus_test.cpp $CORE roms_host.S
           ./floatbus_test
+          g++ $FLAGS -o multiface_test multiface_test.cpp $CORE roms_host.S
+          ./multiface_test
+          g++ $FLAGS -o lec_test lec_test.cpp $CORE roms_host.S
+          ./lec_test
+          g++ $FLAGS -o cartridge_test cartridge_test.cpp $CORE roms_host.S
+          ./cartridge_test
+          g++ $FLAGS -o cpm_test cpm_test.cpp $CORE roms_host.S
+          ./cpm_test
           g++ $FLAGS -o snapshot_snet_test snapshot_snet_test.cpp $S/snapshot.cpp $CORE roms_host.S
           ./snapshot_snet_test
           # Pruebas de referencia: la emulación de todos los modelos, igual que

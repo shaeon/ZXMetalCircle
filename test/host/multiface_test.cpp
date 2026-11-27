@@ -1,20 +1,105 @@
-#include <string>
-#include "spectrum.h"
-#include <stdio.h>
-static const u32 pal[16]={0x060800,0x0D13A7,0xBD0707,0xC312AF,0x07BA0C,0x0DC6B4,0xBCB914,0xC2C4BC,0x060800,0x161CB0,0xCE1818,0xDC2CC8,0x28DC2D,0x36EFDE,0xEEEB46,0xFDFFF7};
-void dump(CSpectrum&s,const char*f){FILE*o=fopen(f,"wb");fprintf(o,"P6 %d %d 255\n",SCREEN_WIDTH,SCREEN_HEIGHT);u16*p=s.GetScreenBuffer();for(int i=0;i<SCREEN_WIDTH*SCREEN_HEIGHT;i++){u16 c=p[i];fputc(((c>>11)&31)*255/31,o);fputc(((c>>5)&63)*255/63,o);fputc((c&31)*255/31,o);}fclose(o);}
-CZXKeyboard kb; CTape tape;
-void run(CSpectrum&s,int n){for(int i=0;i<n;i++){s.RunFrame();s.GetAudio()->ClearBuffer();}}
-void key(CSpectrum&s,int k){u8 m[8]={0};m[k>>3]|=1<<(k&7);kb.SetGPIOMatrix(m);run(s,10);u8 z[8]={0};kb.SetGPIOMatrix(z);run(s,25);}
-u8 rom[3][8192];
-int main(int argc,char**argv){ const char*f[3]={"mf1.rom","mf128.rom","mfplus3.rom"};
- CSpectrum*s=new CSpectrum(&kb,&tape);
- for(int i=0;i<3;i++){FILE*r=fopen((std::string("/tmp/JSpeccy/src/main/resources/roms/")+f[i]).c_str(),"rb");fread(rom[i],1,8192,r);fclose(r);s->SetMultifaceROM((TCodeModel)i,rom[i]);}
- for(int m=0;m<3;m++){ s->SetModel((TModel)m); run(*s,150);
-   if(m>0){ u8 mm[8]={0};mm[6]=1;kb.SetGPIOMatrix(mm);run(*s,10);u8 z[8]={0};kb.SetGPIOMatrix(z);run(*s,100);} // enter 128 BASIC/ Loader? -> just Enter on menu
-   s->TriggerNMI(); run(*s,100); printf("modelo %d: MF paginado=%d\n",m,s->IsMultifacePaged());
-   char fn[32]; sprintf(fn,"mf_%d_a.ppm",m); dump(*s,fn);
-   // R = return (row2 bit3)
-   key(*s,(2<<3)|3); run(*s,50); printf("   tras R: paginado=%d\n",s->IsMultifacePaged());
-   sprintf(fn,"mf_%d_b.ppm",m); dump(*s,fn); }
+// El Multiface con sus ROMs de roms/: MF1 en el 48K, MF128 en el 128K y MF3
+// en el +2A. La NMI (botón rojo) tiene que sacar el menú (una línea
+// amarilla y otra roja abajo) y R (return) volver a lo que había, con el
+// Multiface fuera. Mientras espera una tecla, el MF no está paginado: copia
+// a la RAM una rutina que quita su ROM (IN 0x1F) para leer el teclado con
+// la del Spectrum y la vuelve a poner (IN 0x9F); por eso se mira si ha
+// entrado en algún momento, no si sigue dentro.
+//
+// También: sin ROM para el modelo no hay Multiface, y con multiface=0
+// tampoco.
+//
+//   (con las mismas FLAGS y CORE que las demás pruebas de la Action)
+//   g++ $FLAGS -o multiface_test multiface_test.cpp $CORE roms_host.S
+#include "testutil.h"
+
+static bool s_bEntered;
+
+static void RunWatching (int n)
+{
+	for (int i = 0; i < n; i++)
+	{
+		run (1);
+		s_bEntered = s_bEntered || S->IsMultifacePaged ();
+	}
+}
+
+int main (void)
+{
+	S = new CSpectrum (&kb, &tape);
+
+	static const char *ROMs[3] = {ROMDIR "mf1.rom", ROMDIR "mf128.rom", ROMDIR "mfplus3.rom"};
+	std::vector<u8> MF[3];
+	for (int i = 0; i < 3; i++)
+	{
+		MF[i] = ReadFile (ROMs[i]);
+		chk ("ROM del Multiface de 8 KB", MF[i].size () == 0x2000);
+		if (MF[i].size () != 0x2000) return 1;
+	}
+	const u8 *pPlus2A = LoadROM ("plus2a", 4);
+	chk ("ROM del +2A", pPlus2A != 0);
+	if (pPlus2A == 0) return 1;
+	S->SetModelROM (ModelPlus2A, pPlus2A);
+
+	// sin las ROMs del MF: la NMI no lo saca
+	S->SetModel (Model48K);
+	run (150);
+	chk ("48K sin ROM del MF: no disponible", !S->IsMultifaceAvailable ());
+
+	for (int i = 0; i < 3; i++)
+	{
+		S->SetMultifaceROM ((TCodeModel) i, MF[i].data ());
+	}
+
+	static const struct { TModel Model; const char *pName; } Models[] =
+	{
+		{Model48K,    "MF1 (48K)"},
+		{Model128K,   "MF128 (128K)"},
+		{ModelPlus2A, "MF3 (+2A)"}
+	};
+
+	for (auto &M : Models)
+	{
+		char Text[80];
+		S->SetModel (M.Model);
+		run (150);
+		if (M.Model != Model48K)
+		{
+			press ({ENTER});		// del menú de la ROM al BASIC
+			run (100);
+		}
+		chk ((snprintf (Text, sizeof Text, "%s: disponible", M.pName), Text), S->IsMultifaceAvailable ());
+
+		unsigned nInk = InkPixels (22, 23);
+		bool bBasic = PaperCells (22, 7) == 32 && PaperCells (23, 7) == 32;
+
+		s_bEntered = false;
+		S->TriggerNMI ();
+		RunWatching (100);
+		chk ((snprintf (Text, sizeof Text, "%s: la NMI lo pagina", M.pName), Text), s_bEntered);
+		chk ((snprintf (Text, sizeof Text, "%s: menú abajo (amarillo y rojo)", M.pName), Text),
+		     PaperCells (22, 6) == 32 && PaperCells (23, 2) == 32);
+
+		press ({key ('r')});
+		run (50);
+		chk ((snprintf (Text, sizeof Text, "%s: R vuelve a lo de antes", M.pName), Text),
+		     bBasic && PaperCells (22, 7) == 32 && PaperCells (23, 7) == 32 && InkPixels (22, 23) == nInk);
+		chk ((snprintf (Text, sizeof Text, "%s: y el MF queda fuera", M.pName), Text), !S->IsMultifacePaged ());
+		chk ((snprintf (Text, sizeof Text, "%s: con la ROM del Spectrum abajo", M.pName), Text),
+		     S->ReadMemory (0x0066) != MF[(int) MachineTiming[M.Model].CodeModel][0x0066]
+		     || S->ReadMemory (0x0067) != MF[(int) MachineTiming[M.Model].CodeModel][0x0067]);
+	}
+
+	// multiface=0
+	S->SetMultifaceEnabled (FALSE);
+	S->SetModel (Model48K);
+	run (150);
+	chk ("multiface=0: no disponible", !S->IsMultifaceAvailable ());
+	s_bEntered = false;
+	S->TriggerNMI ();
+	RunWatching (50);
+	chk ("multiface=0: la NMI no lo pagina", !s_bEntered);
+
+	printf (fails == 0 ? "todo OK\n" : "%d FALLOS\n", fails);
+	return fails != 0;
 }

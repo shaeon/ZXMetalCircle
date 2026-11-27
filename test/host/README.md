@@ -24,3 +24,17 @@ reestructuración en una capa de máquinas (la Action la pasa en cada subida).
 ./golden_test --ppm      # y vuelca la pantalla final de cada prueba (golden_*.ppm)
 ./golden_test --grabar   # rehace golden/huellas.txt: solo si el cambio es a propósito
 ```
+
+## Periféricos que tapan la memoria
+
+Con comprobaciones (`ok` / `FALLO`) y en la Action. Usan `testutil.h` (un Spectrum con su
+teclado y su cinta, teclas, ROMs de `roms/` y lo que hay en la pantalla) y se ejecutan desde
+`test/host`.
+
+- `multiface_test.cpp`: MF1, MF128 y MF3 con sus ROMs de `roms/`: la NMI saca el menú y R
+  vuelve a lo de antes; sin ROM o con `multiface=0` no hay Multiface.
+- `lec_test.cpp`: las páginas de la LEC, la 15 (la RAM alta), el reset y la desconexión.
+- `cartridge_test.cpp`: cartuchos del Interface 2 (`test_if2.rom`, y sus 8 KB) en el 48K, el
+  128K y el +2; el +2A los rechaza.
+- `cpm_test.cpp`: el CP/M de LEC (`boot/cpm/cpm22_lec.tzx`) arranca en el 48K y en el 128K
+  en modo 48K, y responde a DIR.
