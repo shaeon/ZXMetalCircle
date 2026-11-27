@@ -31,6 +31,8 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 :	m_pKeyboard (pKeyboard),
 	m_pTape (pTape),
 	m_CPU (this),
+	m_LEC (m_Mem),
+	m_MF (m_Mem),
 	m_Model (Model48K),
 	m_pTiming (&MachineTiming[Model48K]),
 	m_nTstates (0),
@@ -69,10 +71,8 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_nRecLastEdge = 0;
 	m_nRecRemainder = 0;
 	m_bIssue2 = FALSE;
-	m_bIF2Inserted = FALSE;
 	m_bIF1Connected = FALSE;
 	m_bIF1Paged = FALSE;
-	m_pLECRAM = 0;
 	m_pDisk = new CPlus3Disk;
 	m_bNMIPending = FALSE;
 	m_bSnet = FALSE;
@@ -99,21 +99,10 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	{
 		m_pModelROM[i] = 0;
 	}
-	m_bLECPaged = FALSE;
-	m_bLECUsed = FALSE;
-	m_nLECPage = 0;
 	memset (m_IF1Page, 0xFF, sizeof m_IF1Page);	// sin ROM hasta SetIF1ROM ()
 
 	m_bSnowEnabled = TRUE;
 	m_bSnow = m_bSnow128 = FALSE;
-	m_bMFEnabled = TRUE;
-	m_bMFPaged = FALSE;
-	m_bMFLocked = TRUE;
-	for (unsigned i = 0; i < 3; i++)
-	{
-		m_bMFHasROM[i] = FALSE;
-	}
-	memset (m_MFPage, 0, sizeof m_MFPage);
 
 	m_CPU.setBreakpoint (true);
 
@@ -125,7 +114,6 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 CSpectrum::~CSpectrum (void)
 {
 	FreeRecording ();
-	delete [] m_pLECRAM;
 	delete m_pDisk;
 	delete [] m_pDivRAM;
 	m_pKeyboard = 0;
@@ -201,13 +189,11 @@ void CSpectrum::Reset (void)
 
 	m_nPortFE = 0;
 	m_bEarOut = FALSE;
-	m_bMFPaged = FALSE;
-	m_bMFLocked = TRUE;
+	m_MF.Reset ();
 	m_ULA.Reset ();
 	m_bIF1Paged = FALSE;
 	m_IF1.Reset ();
-	m_bLECPaged = FALSE;
-	m_bLECUsed = FALSE;
+	m_LEC.Reset ();
 	m_pDisk->Reset ();
 	m_SDCard.Select (FALSE);
 	m_bDivAutomap = FALSE;
@@ -237,31 +223,14 @@ void CSpectrum::UpdatePaging (void)
 	m_Mem.UpdatePaging ();
 	m_ULA.SetScreenPage (m_Mem.GetScreenPage ());
 
-	// LEC paginada: sus 32 KB ocupan 0x0000-0x7FFF y no hay ROM ni periféricos
-	// que se superpongan (como en JSpeccy)
-	if (m_bLECPaged && LECActive ())
+	// LEC paginada: no hay ROM ni periféricos que se superpongan
+	if (m_LEC.Map (m_Mem))
 	{
-		for (unsigned nSlot = 0; nSlot < 2; nSlot++)
-		{
-			u8 *pPage;
-			if (m_nLECPage == 15)
-			{
-				pPage = m_Mem.Bank (nSlot == 0 ? 2 : 0);	// la RAM alta del propio 48K
-			}
-			else
-			{
-				pPage = m_pLECRAM + m_nLECPage * 0x8000 + nSlot * 0x4000;
-			}
-			m_Mem.MapSlot (nSlot, pPage, pPage);
-		}
 		return;
 	}
 
 	// Cartucho del Interface 2 (no en el +2A/+3)
-	if (m_bIF2Inserted && m_pTiming->CodeModel != CodeModelPlus3)
-	{
-		m_Mem.MapSlot (0, m_IF2ROM, m_Mem.GetROMSink ());
-	}
+	m_IF2.Map (m_Mem);
 
 	// ROM del Interface 1 (8 KB, repetida en los 16 KB)
 	if (m_bIF1Paged && IF1Active ())
@@ -270,17 +239,7 @@ void CSpectrum::UpdatePaging (void)
 	}
 
 	// Multiface paginado: su ROM y su RAM ocupan los primeros 16 KB
-	if (m_bMFPaged)
-	{
-		if (m_Mem.IsSpecialPaging ())
-		{
-			m_bMFPaged = FALSE;	// modo "all RAM" del +2A: el MF se retira
-		}
-		else
-		{
-			m_Mem.MapSlot (0, m_MFPage, m_MFPage);
-		}
-	}
+	m_MF.Map (m_Mem);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -295,36 +254,18 @@ void CSpectrum::UpdatePaging (void)
 //                 0x7FFD y 0x1FFD), IN 0xBF despagina.
 //  - MF128/MF3: con el MF paginado y PC < 0x4000, OUT 0x3F bloquea y OUT 0xBF desbloquea.
 
-void CSpectrum::SetMultifaceROM (TCodeModel CodeModel, const u8 *pROM)
-{
-	if (pROM != 0)
-	{
-		memcpy (m_MFROM[CodeModel], pROM, 0x2000);
-		m_bMFHasROM[CodeModel] = TRUE;
-	}
-	else
-	{
-		m_bMFHasROM[CodeModel] = FALSE;
-	}
-}
-
 boolean CSpectrum::IsMultifaceAvailable (void) const
 {
 	// con la divMMC, la NMI es suya (el navegador de esxDOS)
-	return m_bMFEnabled && m_bMFHasROM[m_pTiming->CodeModel] && !m_bDivActive && !m_bSnet;
+	return m_MF.IsReady () && !m_bDivActive && !m_bSnet;
 }
 
 boolean CSpectrum::InsertCartridge (const u8 *pROM, unsigned nSize)
 {
-	if (nSize == 0 || nSize > 0x4000 || m_pTiming->CodeModel == CodeModelPlus3)
+	if (!m_IF2.Insert (pROM, nSize, m_pTiming->CodeModel))
 	{
 		return FALSE;
 	}
-
-	// Las imágenes de menos de 16 KB se rellenan con 0xFF (bus sin datos)
-	memset (m_IF2ROM, 0xFF, sizeof m_IF2ROM);
-	memcpy (m_IF2ROM, pROM, nSize);
-	m_bIF2Inserted = TRUE;
 	Reset ();
 
 	return TRUE;
@@ -332,83 +273,25 @@ boolean CSpectrum::InsertCartridge (const u8 *pROM, unsigned nSize)
 
 void CSpectrum::EjectCartridge (void)
 {
-	if (m_bIF2Inserted)
+	if (m_IF2.Eject ())
 	{
-		m_bIF2Inserted = FALSE;
 		Reset ();
 	}
 }
 
 boolean CSpectrum::SetLECConnected (boolean bConnected)
 {
-	if (bConnected && m_pLECRAM == 0)
+	boolean bWasConnected = m_LEC.IsConnected ();
+	if (!m_LEC.SetConnected (bConnected))
 	{
-		m_pLECRAM = new u8[15 * 0x8000];	// 480 KB
-		if (m_pLECRAM == 0)
-		{
-			return FALSE;
-		}
-		memset (m_pLECRAM, 0, 15 * 0x8000);
+		return FALSE;
 	}
-	else if (!bConnected && m_pLECRAM != 0)
+	if (bWasConnected && !bConnected)
 	{
-		m_bLECPaged = FALSE;
-		m_bLECUsed = FALSE;
-		delete [] m_pLECRAM;
-		m_pLECRAM = 0;
 		UpdatePaging ();
 	}
 
 	return TRUE;
-}
-
-// En los 128K, el puerto de la LEC (0x??FD) es también el de la paginación
-// (0x7FFD) y el del chip AY (0xBFFD, 0xFFFD). En la máquina real chocarían; el
-// emulador solo toma para la LEC las escrituras con la forma del CP/M de LEC:
-// OUT (0xFD),A, en las que el byte alto del puerto es el propio valor. Así el
-// AY y el resto del Spectrum siguen funcionando.
-boolean CSpectrum::IsLECPort (u16 nPort, u8 nValue) const
-{
-	if (m_Model == Model48K)
-	{
-		return (nPort & 0x0002) == 0;
-	}
-	return (nPort & 0xFF) == 0xFD && (nPort >> 8) == nValue;
-}
-
-// 128K en modo 48K: paginación bloqueada y la ROM del BASIC de 48K
-boolean CSpectrum::LEC128Mode (void) const
-{
-	if (m_Model == Model48K || m_Model == Model16K || !m_Mem.IsPagingLocked ())
-	{
-		return FALSE;
-	}
-	if (m_pTiming->CodeModel == CodeModelPlus3)
-	{
-		if (m_Mem.IsSpecialPaging ())
-		{
-			return FALSE;		// paginación especial (todo RAM)
-		}
-		return m_Mem.GetROMNumber () == 3;
-	}
-	return m_Mem.GetROMNumber () == 1;
-}
-
-void CSpectrum::LECWrite (u8 nValue)
-{
-	if (nValue & 0x80)
-	{
-		// número de página en los bits b3 b6 b5 b4
-		m_nLECPage = ((nValue & 0x70) >> 4) | (nValue & 0x08);
-		m_bLECPaged = TRUE;
-		m_bLECUsed = TRUE;
-	}
-	else
-	{
-		m_bLECPaged = FALSE;
-	}
-
-	UpdatePaging ();
 }
 
 void CSpectrum::SetIF1Connected (boolean bConnected)
@@ -427,117 +310,17 @@ void CSpectrum::SetIF1Connected (boolean bConnected)
 
 void CSpectrum::PageMultiface (void)
 {
-	if (   m_bMFPaged
-	    || !IsMultifaceAvailable ()
-	    || m_Mem.IsSpecialPaging ())
+	if (IsMultifaceAvailable () && m_MF.Page ())
 	{
-		return;
+		UpdatePaging ();
 	}
-
-	memcpy (m_MFPage, m_MFROM[m_pTiming->CodeModel], 0x2000);
-	m_bMFPaged = TRUE;
-	UpdatePaging ();
 }
 
 void CSpectrum::UnpageMultiface (void)
 {
-	if (!m_bMFPaged)
+	if (m_MF.Unpage ())
 	{
-		return;
-	}
-
-	m_bMFPaged = FALSE;
-	UpdatePaging ();
-}
-
-boolean CSpectrum::MultifaceIn (uint16_t nPort, u8 *pValue)
-{
-	if (!IsMultifaceAvailable ())
-	{
-		return FALSE;
-	}
-
-	u8 nLow = nPort & 0xFF;
-
-	switch (m_pTiming->CodeModel)
-	{
-	case CodeModel48K:
-		if (nLow == 0x9F)
-		{
-			PageMultiface ();
-		}
-		else if (nLow == 0x1F && m_bMFPaged)
-		{
-			UnpageMultiface ();		// el MF1 también tenía un puerto Kempston
-		}
-		break;
-
-	case CodeModel128K:
-		if (nLow == 0xBF && !m_bMFLocked)
-		{
-			if (nPort == 0x01BF && m_bMFPaged)
-			{
-				*pValue = m_Mem.GetPort7FFD ();
-				return TRUE;
-			}
-			PageMultiface ();
-		}
-		else if (nLow == 0x3F && m_bMFPaged)
-		{
-			UnpageMultiface ();
-		}
-		break;
-
-	case CodeModelPlus3:
-		if (nLow == 0xBF && m_bMFPaged)
-		{
-			UnpageMultiface ();
-		}
-		else if (nLow == 0x3F)
-		{
-			if (!m_bMFLocked && m_bMFPaged)
-			{
-				if (nPort == 0x7F3F)
-				{
-					*pValue = m_Mem.GetPort7FFD ();
-					return TRUE;
-				}
-				if (nPort == 0x1F3F)
-				{
-					*pValue = m_Mem.GetPort1FFD ();
-					return TRUE;
-				}
-			}
-
-			if (!m_bMFLocked)
-			{
-				PageMultiface ();
-			}
-		}
-		break;
-	}
-
-	return FALSE;
-}
-
-void CSpectrum::MultifaceOut (uint16_t nPort)
-{
-	if (   !IsMultifaceAvailable ()
-	    || !m_bMFPaged
-	    || m_pTiming->CodeModel == CodeModel48K
-	    || m_CPU.getRegPC () >= 0x4000)
-	{
-		return;
-	}
-
-	u8 nLow = nPort & 0xFF;
-	if (nLow == 0x3F)
-	{
-		m_bMFLocked = TRUE;
-	}
-	else if (nLow == 0xBF)
-	{
-		m_bMFLocked = FALSE;
+		UpdatePaging ();
 	}
 }
 
@@ -574,7 +357,7 @@ inline void CSpectrum::WriteByte (uint16_t nAddress, uint8_t nValue)
 		return;
 	}
 
-	if (nAddress < 0x2000 && m_bMFPaged)
+	if (m_MF.IsROM (nAddress))
 	{
 		return;		// ROM del Multiface
 	}
@@ -973,10 +756,19 @@ uint8_t CSpectrum::inPort (uint16_t port)
 	PreIO (port);
 	PostIO (port);
 
-	u8 nMFValue;
-	if (MultifaceIn (port, &nMFValue))
+	if (IsMultifaceAvailable ())
 	{
-		return nMFValue;
+		u8 nMFValue;
+		boolean bPaging = FALSE;
+		boolean bValue = m_MF.In (port, &nMFValue, &bPaging);
+		if (bPaging)
+		{
+			UpdatePaging ();
+		}
+		if (bValue)
+		{
+			return nMFValue;
+		}
 	}
 
 	// Reloj de esxDOS (RTC.SYS de ZXMetalCircle)
@@ -1194,15 +986,19 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 	PreIO (port);
 
 	// LEC: en el 48K, cualquier puerto con A1 = 0 (tiene preferencia, como en
-	// JSpeccy); en los 128K, solo el OUT (0xFD),A del CP/M (ver IsLECPort)
-	if (LECActive () && IsLECPort (port, value))
+	// JSpeccy); en los 128K, solo el OUT (0xFD),A del CP/M (ver CLEC::IsPort)
+	if (m_LEC.IsActive () && m_LEC.IsPort (port, value))
 	{
-		LECWrite (value);
+		m_LEC.Write (value);
+		UpdatePaging ();
 		PostIO (port);
 		return;
 	}
 
-	MultifaceOut (port);
+	if (IsMultifaceAvailable ())
+	{
+		m_MF.Out (port, m_CPU.getRegPC ());
+	}
 
 	if (m_bSnet && m_Snet.IsPort (port))
 	{
@@ -1527,7 +1323,7 @@ void CSpectrum::TapeFrameHousekeeping (void)
 
 uint8_t CSpectrum::breakpoint (uint16_t address, uint8_t opcode)
 {
-	if (m_bLECPaged)
+	if (m_LEC.IsPaged ())
 	{
 		return opcode;		// con la LEC paginada no hay ROM: ningún trap
 	}
@@ -1536,7 +1332,7 @@ uint8_t CSpectrum::breakpoint (uint16_t address, uint8_t opcode)
 	// sale al leer 0x0700
 	if (IF1Active ())
 	{
-		if ((address == 0x0008 || address == 0x1708) && !m_bIF1Paged && !m_bMFPaged)
+		if ((address == 0x0008 || address == 0x1708) && !m_bIF1Paged && !m_MF.IsPaged ())
 		{
 			m_bIF1Paged = TRUE;
 			UpdatePaging ();
@@ -1552,13 +1348,13 @@ uint8_t CSpectrum::breakpoint (uint16_t address, uint8_t opcode)
 	}
 
 	// NMI con Multiface: al leer la instrucción en 0x0066 entra la ROM del MF
-	if (address == 0x0066 && !m_bMFPaged && IsMultifaceAvailable ())
+	if (address == 0x0066 && !m_MF.IsPaged () && IsMultifaceAvailable ())
 	{
 		PageMultiface ();
-		if (m_bMFPaged)
+		if (m_MF.IsPaged ())
 		{
-			m_bMFLocked = FALSE;
-			return m_MFPage[0x0066];
+			m_MF.Unlock ();
+			return m_MF.Read (0x0066);
 		}
 	}
 

@@ -17,6 +17,7 @@
 #include "machinebase.h"
 #include "ula.h"
 #include "zxmemory.h"
+#include "pagers.h"
 #include "palette.h"
 #include "ay8912.h"
 #include "audiomixer.h"
@@ -105,16 +106,16 @@ public:
 
 	// Multiface (MF1 en 48K, MF128 en 128K, MF3 en +2A). Las ROMs (8 KB) se
 	// cargan desde la SD; sin ROM no hay Multiface para ese modelo.
-	void SetMultifaceROM (TCodeModel CodeModel, const u8 *pROM);
-	void SetMultifaceEnabled (boolean bEnabled)	{ m_bMFEnabled = bEnabled; }
+	void SetMultifaceROM (TCodeModel CodeModel, const u8 *pROM)	{ m_MF.SetROM (CodeModel, pROM); }
+	void SetMultifaceEnabled (boolean bEnabled)	{ m_MF.SetEnabled (bEnabled); }
 	boolean IsMultifaceAvailable (void) const;
-	boolean IsMultifacePaged (void) const		{ return m_bMFPaged; }
+	boolean IsMultifacePaged (void) const		{ return m_MF.IsPaged (); }
 
 	// Interface 2: cartucho ROM de 16 KB que sustituye a la ROM del Spectrum
 	// (16K/48K, 128K y +2; el +2A no lo admite). Incluye reset.
 	boolean InsertCartridge (const u8 *pROM, unsigned nSize);
 	void EjectCartridge (void);
-	boolean IsCartridgeInserted (void) const	{ return m_bIF2Inserted; }
+	boolean IsCartridgeInserted (void) const	{ return m_IF2.IsInserted (); }
 
 	// Disquetera del +3 (solo con el modelo +3)
 	CPlus3Disk *GetDisk (void)		{ return m_pDisk; }
@@ -178,11 +179,11 @@ public:
 	// +2, +2A, +3, +3e) funciona en modo 48K: con la paginación bloqueada y la
 	// ROM del BASIC de 48K (opción "48 BASIC" o USR 0).
 	boolean SetLECConnected (boolean bConnected);
-	boolean IsLECConnected (void) const	{ return m_pLECRAM != 0; }
-	boolean IsLECPaged (void) const		{ return m_bLECPaged; }
+	boolean IsLECConnected (void) const	{ return m_LEC.IsConnected (); }
+	boolean IsLECPaged (void) const		{ return m_LEC.IsPaged (); }
 	// La LEC se ha paginado desde el último reset (el CP/M está en marcha; en
 	// el prompt la LEC puede estar despaginada mientras el BIOS lee el teclado)
-	boolean IsLECInUse (void) const		{ return m_bLECUsed; }
+	boolean IsLECInUse (void) const		{ return m_LEC.IsUsed (); }
 
 	// Teclado Issue 2 (16K/48K antiguos): el bit EAR leído depende también del bit MIC
 	void SetIssue2 (boolean bIssue2)	{ m_bIssue2 = bIssue2; }
@@ -260,8 +261,6 @@ private:
 
 	void PageMultiface (void);
 	void UnpageMultiface (void);
-	boolean MultifaceIn (uint16_t nPort, u8 *pValue);	// TRUE si el MF da el valor
-	void MultifaceOut (uint16_t nPort);
 	boolean FlashLoad (void);		// carga instantánea en 0x0562 (como Fuse)
 	boolean FlashSave (void);
 	u64 GetAbsoluteTstates (void) const	{ return m_nFrameStart + (u64) m_nTstates; }
@@ -275,6 +274,9 @@ private:
 	CAudioMixer m_Audio;
 	CULA m_ULA;			// imagen, borde, colores y contención
 	CMemory m_Mem;			// RAM, ROMs y paginación
+	CInterface2 m_IF2;		// periféricos que tapan la memoria (después de m_Mem)
+	CLEC m_LEC;
+	CMultiface m_MF;
 
 	TModel m_Model;
 	const TMachineTiming *m_pTiming;
@@ -345,29 +347,6 @@ private:
 	boolean m_bIF1Connected;
 	boolean m_bIF1Paged;
 	u8 m_IF1Page[0x4000];		// ROM de 8 KB repetida
-
-	// LEC
-	boolean LECActive (void) const
-		{ return m_pLECRAM != 0 && (m_Model == Model48K || LEC128Mode ()); }
-	boolean LEC128Mode (void) const;	// 128K en modo 48K (ver arriba)
-	boolean IsLECPort (u16 nPort, u8 nValue) const;
-	void LECWrite (u8 nValue);
-	u8 *m_pLECRAM;			// páginas 0-14 (la 15 es la RAM alta del propio 48K)
-	boolean m_bLECPaged;
-	boolean m_bLECUsed;
-	unsigned m_nLECPage;
-
-	// Interface 2
-	boolean m_bIF2Inserted;
-	u8 m_IF2ROM[0x4000];
-
-	// Multiface
-	boolean m_bMFEnabled;
-	boolean m_bMFPaged;
-	boolean m_bMFLocked;
-	boolean m_bMFHasROM[3];
-	u8 m_MFROM[3][0x2000];
-	u8 m_MFPage[0x4000];		// 0x0000-0x1FFF ROM, 0x2000-0x3FFF RAM
 
 	// grabación por pulsos
 	void RecordEdge (u64 nTime);

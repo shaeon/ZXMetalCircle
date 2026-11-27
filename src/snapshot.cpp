@@ -47,7 +47,7 @@ void CSnapshot::SetModel (CSpectrum *pSpectrum, TModel Model)
 		Model = ModelPlus3E;
 	}
 
-	pSpectrum->m_bIF2Inserted = FALSE;	// el snapshot trae su propia memoria
+	pSpectrum->m_IF2.m_bInserted = FALSE;	// el snapshot trae su propia memoria
 	pSpectrum->SetModel (Model);		// incluye reset
 	pSpectrum->UnpageMultiface ();
 
@@ -128,8 +128,8 @@ const char *CSnapshot::LoadSP (CSpectrum *p, const u8 *pData, unsigned nSize)
 	const u8 *pMem = pData + SP_HEADER_SIZE;
 	if (bROM)
 	{
-		memcpy (p->m_IF2ROM, pMem, 0x4000);	// (SetModel ha quitado el cartucho)
-		p->m_bIF2Inserted = TRUE;
+		memcpy (p->m_IF2.m_ROM, pMem, 0x4000);	// (SetModel ha quitado el cartucho)
+		p->m_IF2.m_bInserted = TRUE;
 		pMem += 0x4000;
 	}
 	for (unsigned i = 0; i < nLength; i++)
@@ -831,8 +831,8 @@ const char *CSnapshot::LoadSZX (CSpectrum *p, const u8 *pData, unsigned nSize)
 			if (   nCompressed <= nLen - 4
 			    && ZlibInflate (pBlock + 4, nCompressed, CartBuffer, sizeof CartBuffer) == 0x4000)
 			{
-				memcpy (p->m_IF2ROM, CartBuffer, 0x4000);
-				p->m_bIF2Inserted = MachineTiming[Model].CodeModel != CodeModelPlus3;
+				memcpy (p->m_IF2.m_ROM, CartBuffer, 0x4000);
+				p->m_IF2.m_bInserted = MachineTiming[Model].CodeModel != CodeModelPlus3;
 			}
 		}
 		// el resto de bloques (teclado, joystick, etc.) se ignoran

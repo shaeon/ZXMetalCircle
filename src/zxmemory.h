@@ -72,6 +72,9 @@ public:
 	// +2A/+3 en los modos "todo RAM" (0x1FFD bit 0)
 	boolean IsSpecialPaging (void) const
 		{ return m_pTiming->CodeModel == CodeModelPlus3 && (m_nPort1FFD & 0x01); }
+	TModel GetModel (void) const			{ return m_Model; }
+	TCodeModel GetCodeModel (void) const		{ return m_pTiming->CodeModel; }
+
 	// La ROM que se ve abajo (0-1 en el 128K, 0-3 en el +2A/+3; 0 en el 48K)
 	unsigned GetROMNumber (void) const;
 
