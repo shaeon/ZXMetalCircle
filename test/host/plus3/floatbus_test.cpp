@@ -39,31 +39,31 @@ int main ()
 	int L = T->nTstatesLine, up = T->nUpBorderWidth, off = T->nOutOffset;
 
 	// pantalla con valores reconocibles: bitmap y atributo distintos
-	for (int i = 0; i < 0x1800; i++) s->m_pScreenPage[i] = 0x10 | (i & 0x0E);
-	for (int i = 0x1800; i < 0x1B00; i++) s->m_pScreenPage[i] = 0x80 | (i & 0x0E);
-	unsigned a0 = s->m_ScrAddr[0];
+	for (int i = 0; i < 0x1800; i++) ((u8 *) s->m_ULA.m_pScreenPage)[i] = 0x10 | (i & 0x0E);
+	for (int i = 0x1800; i < 0x1B00; i++) ((u8 *) s->m_ULA.m_pScreenPage)[i] = 0x80 | (i & 0x0E);
+	unsigned a0 = s->m_ULA.m_ScrAddr[0];
 	s->m_bBusValid = FALSE;
 	s->m_nPort7FFD &= ~0x20;
 
 	// valores en el instante exacto (Plus3FloatingBus; inPort suma el tiempo de la E/S)
 	s->m_nTstates = up * L + off + 0;
-	chk ("fila 0, col 0: bitmap del primer byte", s->Plus3FloatingBus () == s->m_pScreenPage[a0]);
+	chk ("fila 0, col 0: bitmap del primer byte", s->Plus3FloatingBus () == ((u8 *) s->m_ULA.m_pScreenPage)[a0]);
 	s->m_nTstates = up * L + off + 1;
-	chk ("fila 0, col 1: su atributo", s->Plus3FloatingBus () == s->m_pScreenPage[s->m_Scr2Attr[a0]]);
+	chk ("fila 0, col 1: su atributo", s->Plus3FloatingBus () == ((u8 *) s->m_ULA.m_pScreenPage)[s->m_ULA.m_Scr2Attr[a0]]);
 	s->m_nTstates = up * L + off + 6;
-	chk ("fila 0, col 6 (sin lectura): se mantiene la de la col 3", s->Plus3FloatingBus () == s->m_pScreenPage[s->m_Scr2Attr[a0 + 1]]);
+	chk ("fila 0, col 6 (sin lectura): se mantiene la de la col 3", s->Plus3FloatingBus () == ((u8 *) s->m_ULA.m_pScreenPage)[s->m_ULA.m_Scr2Attr[a0 + 1]]);
 	s->m_nTstates = 10;
-	unsigned a191 = s->m_ScrAddr[191] + 123 / 4 + 1;
-	chk ("borde superior: la última lectura del cuadro anterior", s->Plus3FloatingBus () == s->m_pScreenPage[s->m_Scr2Attr[a191]]);
+	unsigned a191 = s->m_ULA.m_ScrAddr[191] + 123 / 4 + 1;
+	chk ("borde superior: la última lectura del cuadro anterior", s->Plus3FloatingBus () == ((u8 *) s->m_ULA.m_pScreenPage)[s->m_ULA.m_Scr2Attr[a191]]);
 	s->m_nTstates = (up + 5) * L + off + 200;
-	chk ("borde derecho: la última lectura de esa línea (col 123)", s->Plus3FloatingBus () == s->m_pScreenPage[s->m_Scr2Attr[s->m_ScrAddr[5] + 123 / 4 + 1]]);
+	chk ("borde derecho: la última lectura de esa línea (col 123)", s->Plus3FloatingBus () == ((u8 *) s->m_ULA.m_pScreenPage)[s->m_ULA.m_Scr2Attr[s->m_ULA.m_ScrAddr[5] + 123 / 4 + 1]]);
 
 	s->m_nTstates = (up + 10) * L + off + 5;
 	s->NoteBus (0x24);
 	s->m_nTstates += 2;
 	chk ("acceso de la CPU después de la Gate Array: su valor", s->Plus3FloatingBus () == 0x24);
 	s->m_nTstates = (up + 10) * L + off + 9;
-	chk ("la Gate Array lee después: vuelve a mandar ella", s->Plus3FloatingBus () == s->m_pScreenPage[s->m_Scr2Attr[s->m_ScrAddr[10] + 2]]);
+	chk ("la Gate Array lee después: vuelve a mandar ella", s->Plus3FloatingBus () == ((u8 *) s->m_ULA.m_pScreenPage)[s->m_ULA.m_Scr2Attr[s->m_ULA.m_ScrAddr[10] + 2]]);
 	s->m_nTstates = (up + 10) * L + off + 5;
 	s->NoteBus (0x24);
 	s->m_nTstates = 0;
@@ -80,10 +80,10 @@ int main ()
 	s->m_nPort7FFD &= ~0x20;
 
 	s->SetModel (Model48K);
-	for (int i = 0; i < 0x1800; i++) s->m_pScreenPage[i] = 0x10 | (i & 0x0E);
+	for (int i = 0; i < 0x1800; i++) ((u8 *) s->m_ULA.m_pScreenPage)[i] = 0x10 | (i & 0x0E);
 	s->m_nTstates = s->m_pTiming->nUpBorderWidth * s->m_pTiming->nTstatesLine + s->m_pTiming->nOutOffset;
-	u8 v = s->FloatingBus ();
-	chk ("48K: sigue el bus flotante de siempre", v == s->m_pScreenPage[s->m_ScrAddr[0]]);
+	u8 v = s->m_ULA.FloatingBus (s->m_nTstates);
+	chk ("48K: sigue el bus flotante de siempre", v == ((u8 *) s->m_ULA.m_pScreenPage)[s->m_ULA.m_ScrAddr[0]]);
 	s->m_nTstates = 10;
 	chk ("48K: en el borde, 0xFF (no se mantiene el último valor)", s->inPort (0x0FFD) == 0xFF);
 
@@ -94,18 +94,18 @@ int main ()
 		s->SetTKDiode (FALSE);
 		s->SetModel (ModelTK90X);
 		const TMachineTiming *K = s->m_pTiming;
-		for (int i = 0; i < 0x1800; i++) s->m_pScreenPage[i] = 0xFF;
-		for (int i = 0x1800; i < 0x1B00; i++) s->m_pScreenPage[i] = 0x18;	// bits 5 y 7 a 0
+		for (int i = 0; i < 0x1800; i++) ((u8 *) s->m_ULA.m_pScreenPage)[i] = 0xFF;
+		for (int i = 0x1800; i < 0x1B00; i++) ((u8 *) s->m_ULA.m_pScreenPage)[i] = 0x18;	// bits 5 y 7 a 0
 		s->m_nTstates = 10;
-		u8 b = s->FloatingBus ();
+		u8 b = s->m_ULA.FloatingBus (s->m_nTstates);
 		chk ("TK90X, borde: el bus da 0xFF", b == 0xFF);
 		int tAttr = K->nUpBorderWidth * K->nTstatesLine + K->nPaperCol + K->nOutOffset + 1;
 		s->m_nTstates = tAttr;
-		b = s->FloatingBus ();
+		b = s->m_ULA.FloatingBus (s->m_nTstates);
 		chk ("TK90X, leyendo un atributo 0x18: el bus da 0x18", b == 0x18);
 		s->m_nTstates = tAttr - 4;	// inPort suma el tiempo de la E/S
 		u8 v = s->inPort (0xFFFE);
-		chk ("TK90X sin diodo: bits 5 y 7 del puerto 254 = los del bus", (v & 0xA0) == (s->FloatingBus () & 0xA0));
+		chk ("TK90X sin diodo: bits 5 y 7 del puerto 254 = los del bus", (v & 0xA0) == (s->m_ULA.FloatingBus (s->m_nTstates) & 0xA0));
 		s->SetTKDiode (TRUE);
 		s->m_nTstates = 10;
 		v = s->inPort (0xFFFE);

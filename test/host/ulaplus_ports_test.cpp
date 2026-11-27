@@ -64,7 +64,7 @@ int main (void)
 	bool bAll = true;
 	for (unsigned i = 0; i < 64; i++)
 	{
-		bAll = bAll && s->m_ULAplusPalette[i] == (u8) (i * 3 + 1);
+		bAll = bAll && s->m_ULA.m_ULAplusPalette[i] == (u8) (i * 3 + 1);
 	}
 	chk ("las 64 entradas de la paleta, con la parte alta del puerto bajando (OTIR)", bAll);
 	s->outPort (0xA03B, 5);					// registro por un espejo (A15=1, A14=0)

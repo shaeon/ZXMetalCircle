@@ -15,6 +15,7 @@
 
 #include "machine.h"
 #include "machinebase.h"
+#include "ula.h"
 #include "palette.h"
 #include "ay8912.h"
 #include "audiomixer.h"
@@ -74,7 +75,7 @@ public:
 	void RunFrame (void) override;
 
 	// Imagen: SCREEN_WIDTH x SCREEN_HEIGHT píxeles RGB565
-	TPixel *GetScreenBuffer (void) override	{ return m_Screen; }
+	TPixel *GetScreenBuffer (void) override	{ return m_ULA.GetScreen (); }
 	CAudioMixer *GetAudio (void) override	{ return &m_Audio; }
 	CAY8912 *GetAY (void)			{ return &m_AY; }
 
@@ -187,19 +188,19 @@ public:
 	boolean IsIssue2 (void) const		{ return m_bIssue2; }
 
 	// ULAplus (64 colores, puertos 0xBF3B/0xFF3B)
-	void SetULAplusEnabled (boolean bEnabled)	{ m_bULAplusEnabled = bEnabled; }
+	void SetULAplusEnabled (boolean bEnabled)	{ m_ULA.SetULAplusEnabled (bEnabled); }
 	// Efecto nieve del 16K, 48K, 128K y +2 (snow=1): si I apunta a memoria
 	// lenta, el refresco de la memoria choca con la lectura de la pantalla de
 	// la ULA
 	void SetSnowEnabled (boolean bEnabled)	{ m_bSnowEnabled = bEnabled; UpdateSnow (); }
 	// negro puro (#000000) también en la paleta del 16K/48K (pureblack=1)
-	void SetPureBlack (boolean bPureBlack);
-	boolean IsPureBlack (void) const	{ return m_bPureBlack; }
-	TPixel GetStdColor (unsigned nIndex) const	{ return m_StdColor[nIndex & 15]; }
-	boolean IsULAplusActive (void) const		{ return m_bULAplusActive; }
+	void SetPureBlack (boolean bPureBlack)	{ m_ULA.SetPureBlack (bPureBlack); }
+	boolean IsPureBlack (void) const	{ return m_ULA.IsPureBlack (); }
+	TPixel GetStdColor (unsigned nIndex) const	{ return m_ULA.GetStdColor (nIndex); }
+	boolean IsULAplusActive (void) const		{ return m_ULA.IsULAplusActive (); }
 	// el programa usa la ULAplus desde el último reset: modo de 64 colores
 	// activo o una paleta cargada (aunque ahora tenga el modo apagado)
-	boolean IsULAplusInUse (void) const	{ return m_bULAplusActive || m_bULAplusUsed; }
+	boolean IsULAplusInUse (void) const	{ return m_ULA.IsULAplusInUse (); }
 
 	// Grabación por pulsos de la salida MIC (cualquier rutina de grabación,
 	// incluidas las turbo). Durante la grabación no se usa el trap de SAVE.
@@ -238,18 +239,13 @@ public:
 
 private:
 	void UpdatePaging (void);
-	void BuildTables (void);
-	int TstatesToBorderPix (int nTstates);
-
-	void UpdateScreen (int nTstates);
-	inline void DrawCell (unsigned nAddr, u8 nByte, u8 nAttr);
-	void Snow (const u8 *pPage);	// en cada M1, si I apunta a memoria lenta
+	void Snow (const u8 *pPage)	// en cada M1, si I apunta a memoria lenta
+		{ m_ULA.Snow (pPage, m_nTstates, m_CPU.getRegR ()); }
 	void UpdateSnow (void)
 	{
 		m_bSnow = m_bSnowEnabled && (m_Model == Model48K || m_Model == Model16K);
 		m_bSnow128 = m_bSnowEnabled && (m_Model == Model128K || m_Model == ModelPlus2);
 	}
-	void UpdateBorder (int nTstates);
 
 	void PreIO (uint16_t nPort);
 	void PostIO (uint16_t nPort);
@@ -261,7 +257,6 @@ private:
 	void NoteBus (u8 nValue)	{ m_nBusTstates = GetAbsoluteTstates (); m_nBusValue = nValue; m_bBusValid = TRUE; }
 	inline boolean IsScreenWrite (uint16_t nAddress) const;
 
-	u8 FloatingBus (void);
 	void PageMultiface (void);
 	void UnpageMultiface (void);
 	boolean MultifaceIn (uint16_t nPort, u8 *pValue);	// TRUE si el MF da el valor
@@ -277,6 +272,7 @@ private:
 	Z80 m_CPU;
 	CAY8912 m_AY;
 	CAudioMixer m_Audio;
+	CULA m_ULA;			// imagen, borde, colores y contención
 
 	TModel m_Model;
 	const TMachineTiming *m_pTiming;
@@ -287,7 +283,6 @@ private:
 	boolean m_bBusValid;
 	u64 m_nBusTstates;		// último acceso de la CPU a 0x4000-0x5FFF
 	u8 m_nBusValue;
-	unsigned m_nFrames;
 
 	// memoria
 	u8 m_RAM[8][0x4000];
@@ -296,7 +291,6 @@ private:
 	const u8 *m_ROM[4];
 	const u8 *m_pReadPage[4];
 	u8 *m_pWritePage[4];
-	u8 *m_pScreenPage;
 	boolean m_bContendedRAM[4];
 	boolean m_bContendedIO[4];
 	const u8 *m_pBasicROM;		// ROM donde vive LD-BYTES (para el trap de carga)
@@ -308,36 +302,10 @@ private:
 	boolean m_bEarOut;
 	boolean m_bIssue2;
 
-	// pantalla
-	TPixel m_Screen[SCREEN_WIDTH * SCREEN_HEIGHT];
-	TPixel m_StdColor[16];		// colores normales del Spectrum en RGB565
-	boolean m_bPureBlack;
-	void UpdatePalette (void);
-	u8 m_Delay[MAX_TSTATES_FRAME + 128];		// contención
-	int m_States2Border[MAX_TSTATES_FRAME + 128];
-	int m_StepStates[6144];
-	u16 m_StepAddr[6144];
-	unsigned m_nSteps, m_nStep;
-	int m_nFirstBorderUpdate, m_nLastBorderUpdate, m_nLastChgBorder;
-	u16 m_ScrAddr[192];		// offset (0-0x17FF) del primer byte de cada línea
-	u16 m_Scr2Attr[6144];
-	u32 m_BufAddr[6144];
-	u8 m_Ink[256], m_Paper[256];
-	boolean m_bFlash;
-	u8 m_nLastByte, m_nLastAttr;	// lo último que leyó la ULA (para el doble efecto)
+	// efecto nieve (lo pinta la ULA; aquí, si el modelo lo tiene)
 	boolean m_bSnowEnabled;		// snow=1
 	boolean m_bSnow;		// y el modelo la tiene: 16K y 48K...
 	boolean m_bSnow128;		// ... o 128K y +2 (no los +2A/+3 ni los clónicos)
-
-	// ULAplus
-	void ULAplusWrite (uint16_t nPort, u8 nValue);
-	void SetULAplusColor (unsigned nIndex, u8 nColor);
-	boolean m_bULAplusEnabled;
-	boolean m_bULAplusActive;
-	boolean m_bULAplusUsed;		// se ha escrito en ella desde el reset
-	u8 m_nULAplusRegister;		// 0-63 = entrada de la paleta, 0x40 = modo
-	u8 m_ULAplusPalette[64];	// GGGRRRBB
-	TPixel m_ULAplusColor[64];
 
 	// Disquetera del +3
 	CPlus3Disk *m_pDisk;

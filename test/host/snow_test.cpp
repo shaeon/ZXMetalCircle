@@ -32,9 +32,9 @@ static CSpectrum *Prepare (TModel Model, u8 nI, u8 nR, bool bSnow)
 	s->SetSnowEnabled (bSnow);
 	for (unsigned i = 0; i < 0x1B00; i++)
 	{
-		s->m_pScreenPage[i] = (u8) (i * 7 + (i >> 8));
+		((u8 *) s->m_ULA.m_pScreenPage)[i] = (u8) (i * 7 + (i >> 8));
 	}
-	s->m_nStep = 0;
+	s->m_ULA.m_nStep = 0;
 	s->m_CPU.setRegI (nI);
 	s->m_CPU.setRegR (nR);
 	return s;
@@ -49,8 +49,8 @@ static void FetchAt (CSpectrum *s, int nT4)
 
 static bool SameCell (CSpectrum *s, unsigned nA, unsigned nB)
 {
-	TPixel *p = s->m_Screen;
-	return memcmp (&p[s->m_BufAddr[s->m_StepAddr[nA]]], &p[s->m_BufAddr[s->m_StepAddr[nB]]], 8 * sizeof (TPixel)) == 0;
+	TPixel *p = s->m_ULA.m_Screen;
+	return memcmp (&p[s->m_ULA.m_BufAddr[s->m_ULA.m_StepAddr[nA]]], &p[s->m_ULA.m_BufAddr[s->m_ULA.m_StepAddr[nB]]], 8 * sizeof (TPixel)) == 0;
 }
 
 int main (void)
@@ -61,24 +61,24 @@ int main (void)
 	// de (0 & ~0x7F) | R+1 y su atributo de (0x1800 & ~0x7F) | R+1
 	CSpectrum *s = Prepare (Model48K, 0x40, 5, true);
 	FetchAt (s, nLine0 + 2);
-	chk ("nieve: la celda 0 ya dibujada", s->m_nStep == 1);
-	chk ("nieve: el byte de la fila R+1", s->m_nLastByte == s->m_pScreenPage[6]);
-	chk ("nieve: el atributo de la fila R+1", s->m_nLastAttr == s->m_pScreenPage[0x1806]);
+	chk ("nieve: la celda 0 ya dibujada", s->m_ULA.m_nStep == 1);
+	chk ("nieve: el byte de la fila R+1", s->m_ULA.m_nLastByte == ((u8 *) s->m_ULA.m_pScreenPage)[6]);
+	chk ("nieve: el atributo de la fila R+1", s->m_ULA.m_nLastAttr == ((u8 *) s->m_ULA.m_pScreenPage)[0x1806]);
 	delete s;
 
 	// la línea 5, segundo grupo de 16 píxeles (celdas 2 y 3), R = 0x7F: la fila
 	// es R+1 = 0x00 (7 bits)
 	s = Prepare (Model48K, 0x7F, 0x7F, true);
 	FetchAt (s, nLine0 + 5 * 224 + 8 + 2);
-	unsigned nAddr = s->m_StepAddr[5 * 32 + 2];
-	chk ("nieve: otra línea y otro par", s->m_nStep == 5 * 32 + 3
-					 && s->m_nLastByte == s->m_pScreenPage[nAddr & ~0x7F]);
+	unsigned nAddr = s->m_ULA.m_StepAddr[5 * 32 + 2];
+	chk ("nieve: otra línea y otro par", s->m_ULA.m_nStep == 5 * 32 + 3
+					 && s->m_ULA.m_nLastByte == ((u8 *) s->m_ULA.m_pScreenPage)[nAddr & ~0x7F]);
 	delete s;
 
 	// doble: T4 en la fase 4 → la celda 3 repite la 2
 	s = Prepare (Model48K, 0x40, 5, true);
 	FetchAt (s, nLine0 + 8 + 4);
-	chk ("doble: la celda 3 repite la 2", s->m_nStep == 4 && SameCell (s, 2, 3));
+	chk ("doble: la celda 3 repite la 2", s->m_ULA.m_nStep == 4 && SameCell (s, 2, 3));
 	delete s;
 
 	// las demás fases, nada
@@ -89,14 +89,14 @@ int main (void)
 		FetchAt (s, nLine0 + nPhase);
 		char Text[64];
 		snprintf (Text, sizeof Text, "fase %d: sin nieve", nPhase);
-		chk (Text, s->m_nStep == 0);
+		chk (Text, s->m_ULA.m_nStep == 0);
 		delete s;
 	}
 
 	// fuera del papel (borde derecho: columna 130 de la línea) nada
 	s = Prepare (Model48K, 0x40, 5, true);
 	FetchAt (s, nLine0 + 128 + 2);
-	chk ("borde: sin nieve", s->m_nStep == 0);
+	chk ("borde: sin nieve", s->m_ULA.m_nStep == 0);
 	delete s;
 
 	// sin nieve: I fuera de 0x40-0x7F, snow=0, otros modelos
@@ -110,7 +110,7 @@ int main (void)
 		s = Prepare (n.Model, n.nI, 5, n.bSnow);
 		int nStart = s->m_pTiming->nFirstScrByte - 1;
 		FetchAt (s, nStart + 2);
-		chk (n.pName, s->m_nStep == 0);
+		chk (n.pName, s->m_ULA.m_nStep == 0);
 		delete s;
 	}
 
@@ -124,9 +124,9 @@ int main (void)
 		// I = 0x40: de la pantalla que se ve (banco 5)
 		s = Prepare (Model, 0x40, 5, true);
 		FetchAt (s, nLine128 + 3 * 228 + 2);
-		unsigned nAddr = s->m_StepAddr[3 * 32];
+		unsigned nAddr = s->m_ULA.m_StepAddr[3 * 32];
 		snprintf (Text, sizeof Text, "%s: nieve con I = 0x40", pName);
-		chk (Text, s->m_nStep == 3 * 32 + 1 && s->m_nLastByte == s->m_RAM[5][(nAddr & ~0x7F) | 6]);
+		chk (Text, s->m_ULA.m_nStep == 3 * 32 + 1 && s->m_ULA.m_nLastByte == s->m_RAM[5][(nAddr & ~0x7F) | 6]);
 		delete s;
 
 		// I = 0xC0 con una página par arriba: nada
@@ -134,7 +134,7 @@ int main (void)
 		s->m_nPort7FFD = 0x02;
 		FetchAt (s, nLine128 + 2);
 		snprintf (Text, sizeof Text, "%s: I = 0xC0 con la página 2: nada", pName);
-		chk (Text, s->m_nStep == 0);
+		chk (Text, s->m_ULA.m_nStep == 0);
 		delete s;
 
 		// I = 0xC0 con la página 1 (pantalla 5): de banco 1; con la 3 y la
@@ -149,8 +149,8 @@ int main (void)
 			s->UpdatePaging ();
 			FetchAt (s, nLine128 + 2);
 			snprintf (Text, sizeof Text, "%s: I = 0xC0, 7FFD = %02X: del banco %u", pName, p.n7FFD, p.nBank);
-			chk (Text, s->m_nStep == 1 && s->m_nLastByte == s->m_RAM[p.nBank][6]
-				   && s->m_nLastAttr == s->m_RAM[p.nBank][0x1806]);
+			chk (Text, s->m_ULA.m_nStep == 1 && s->m_ULA.m_nLastByte == s->m_RAM[p.nBank][6]
+				   && s->m_ULA.m_nLastAttr == s->m_RAM[p.nBank][0x1806]);
 			delete s;
 		}
 
@@ -158,14 +158,14 @@ int main (void)
 		s = Prepare (Model, 0x40, 5, true);
 		FetchAt (s, nLine128 + 8 + 4);
 		snprintf (Text, sizeof Text, "%s: doble", pName);
-		chk (Text, s->m_nStep == 4 && SameCell (s, 2, 3));
+		chk (Text, s->m_ULA.m_nStep == 4 && SameCell (s, 2, 3));
 		delete s;
 	}
 
 	// el 16K también
 	s = Prepare (Model16K, 0x40, 5, true);
 	FetchAt (s, nLine0 + 2);
-	chk ("16K: nieve", s->m_nStep == 1 && s->m_nLastByte == s->m_pScreenPage[6]);
+	chk ("16K: nieve", s->m_ULA.m_nStep == 1 && s->m_ULA.m_nLastByte == ((u8 *) s->m_ULA.m_pScreenPage)[6]);
 	delete s;
 
 	printf (fails ? "%d FALLOS\n" : "todo bien\n", fails);

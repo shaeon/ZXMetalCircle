@@ -89,7 +89,7 @@ static uint64_t StateHash (void)
 			   C.getRegI (), C.getRegR ()};
 	for (unsigned r : Regs) H.Add16 (r);
 	H.Add32 ((unsigned) S->m_nTstates);
-	H.Add32 (S->m_nFrames);
+	H.Add32 (S->m_ULA.m_nFrames);	// (cuadros: los cuenta la ULA, para el parpadeo)
 	uint8_t Ports[] = {S->m_nPortFE, S->m_nPort7FFD, S->m_nPort1FFD};
 	H.Add (Ports, sizeof Ports);
 	return H.h;

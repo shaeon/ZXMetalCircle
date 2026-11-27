@@ -808,19 +808,19 @@ const char *CSnapshot::LoadSZX (CSpectrum *p, const u8 *pData, unsigned nSize)
 			}
 			p->m_AY.SetAddressLatch (pBlock[1]);
 		}
-		else if (memcmp (pID, "PLTT", 4) == 0 && nLen >= 66 && p->m_bULAplusEnabled)
+		else if (memcmp (pID, "PLTT", 4) == 0 && nLen >= 66 && p->m_ULA.m_bULAplusEnabled)
 		{
 			// ULAplus: flags (bit 0 = activa), registro actual y 64 colores
 			for (unsigned i = 0; i < 64; i++)
 			{
-				p->SetULAplusColor (i, pBlock[2 + i]);
+				p->m_ULA.SetULAplusColor (i, pBlock[2 + i]);
 			}
-			p->m_bULAplusActive = (pBlock[0] & 0x01) != 0;
-			p->m_bULAplusUsed = TRUE;
-			p->m_nULAplusRegister = pBlock[1] & 0x7F;
-			if (p->m_nULAplusRegister > 0x40)
+			p->m_ULA.m_bULAplusActive = (pBlock[0] & 0x01) != 0;
+			p->m_ULA.m_bULAplusUsed = TRUE;
+			p->m_ULA.m_nULAplusRegister = pBlock[1] & 0x7F;
+			if (p->m_ULA.m_nULAplusRegister > 0x40)
 			{
-				p->m_nULAplusRegister = 0x40;
+				p->m_ULA.m_nULAplusRegister = 0x40;
 			}
 		}
 		else if (memcmp (pID, "IF2R", 4) == 0 && nLen >= 4)
@@ -1030,15 +1030,15 @@ unsigned CSnapshot::SaveSZX (CSpectrum *p, u8 *pBuffer, unsigned nBufferSize)
 	}
 
 	// ULAplus
-	if (p->m_bULAplusEnabled)
+	if (p->m_ULA.m_bULAplusEnabled)
 	{
 		NEED (8 + 66);
 		memcpy (pBuffer + nPos, "PLTT", 4);
 		PutDWord (pBuffer + nPos + 4, 66);
 		q = pBuffer + nPos + 8;
-		q[0] = p->m_bULAplusActive ? 1 : 0;
-		q[1] = p->m_nULAplusRegister;
-		memcpy (q + 2, p->m_ULAplusPalette, 64);
+		q[0] = p->m_ULA.m_bULAplusActive ? 1 : 0;
+		q[1] = p->m_ULA.m_nULAplusRegister;
+		memcpy (q + 2, p->m_ULA.m_ULAplusPalette, 64);
 		nPos += 8 + 66;
 	}
 

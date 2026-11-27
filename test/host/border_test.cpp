@@ -34,9 +34,9 @@ int main (void)
 
 		static bool Painted[SCREEN_WIDTH * SCREEN_HEIGHT];
 		memset (Painted, 0, sizeof Painted);
-		for (int t = s->m_nFirstBorderUpdate & ~3; t < s->m_nLastBorderUpdate; t += 4)
+		for (int t = s->m_ULA.m_nFirstBorderUpdate & ~3; t < s->m_ULA.m_nLastBorderUpdate; t += 4)
 		{
-			int p = s->m_States2Border[t];
+			int p = s->m_ULA.m_States2Border[t];
 			if (p >= 0)
 			{
 				for (int i = 0; i < 8; i++) Painted[p + i] = true;

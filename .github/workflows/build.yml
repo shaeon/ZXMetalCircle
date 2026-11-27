@@ -47,7 +47,7 @@ jobs:
           sed 's#"roms/#"../../roms/#' ../../src/roms.S > roms_host.S
           echo '.section .note.GNU-stack,"",@progbits' >> roms_host.S
           S=../../src; M=../../third_party/mame
-          CORE="$S/spectrum.cpp $S/ay8912.cpp $S/audiomixer.cpp $S/tape.cpp $S/zxkeyboard.cpp \
+          CORE="$S/spectrum.cpp $S/ula.cpp $S/ay8912.cpp $S/audiomixer.cpp $S/tape.cpp $S/zxkeyboard.cpp \
                 $S/interface1.cpp $S/plus3disk.cpp $S/sdcard.cpp $S/spectranet.cpp $S/earinput.cpp \
                 $S/zxnet.cpp $M/*.cpp $M/compat/*.cpp $S/inflate.cpp ../../third_party/z80cpp/z80.cpp"
           FLAGS="-O2 -std=c++17 -DWITH_BREAKPOINT_SUPPORT -I. -I$S -I../../third_party/z80cpp -I$M/compat -I$M"

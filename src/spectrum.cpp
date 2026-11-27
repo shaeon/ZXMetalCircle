@@ -27,8 +27,6 @@ static const int BeeperLevel[4] = {0, 1500, 9000, 10500};
 #define LOADER_READS_PLAY	500	// lecturas de cargador por cuadro para arrancar la cinta
 #define LOADER_READS_ACTIVE	20	// por debajo, durante 2 s, se para
 
-#define NO_PIXEL		(-1)
-
 CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 :	m_pKeyboard (pKeyboard),
 	m_pTape (pTape),
@@ -41,8 +39,6 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_bBusValid (FALSE),
 	m_nBusTstates (0),
 	m_nBusValue (0xFF),
-	m_nFrames (0),
-	m_bFlash (FALSE),
 	m_TapeMode (TapeModeFast),
 	m_nFEReads (0),
 	m_nIdleFrames (0),
@@ -109,19 +105,8 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	memset (m_IF1Page, 0xFF, sizeof m_IF1Page);	// sin ROM hasta SetIF1ROM ()
 	memset (m_NoRAM, 0xFF, sizeof m_NoRAM);
 
-	m_bPureBlack = FALSE;
-	UpdatePalette ();
-	m_bULAplusEnabled = TRUE;
 	m_bSnowEnabled = TRUE;
 	m_bSnow = m_bSnow128 = FALSE;
-	m_nLastByte = m_nLastAttr = 0;
-	m_bULAplusActive = FALSE;
-	m_bULAplusUsed = FALSE;
-	m_nULAplusRegister = 0;
-	for (unsigned i = 0; i < 64; i++)
-	{
-		SetULAplusColor (i, 0);
-	}
 	m_bMFEnabled = TRUE;
 	m_bMFPaged = FALSE;
 	m_bMFLocked = TRUE;
@@ -130,30 +115,6 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 		m_bMFHasROM[i] = FALSE;
 	}
 	memset (m_MFPage, 0, sizeof m_MFPage);
-
-	for (unsigned nAttr = 0; nAttr < 256; nAttr++)
-	{
-		u8 nBright = (nAttr & 0x40) >> 3;
-		m_Ink[nAttr]   = (nAttr & 0x07) | nBright;
-		m_Paper[nAttr] = ((nAttr >> 3) & 0x07) | nBright;
-	}
-
-	// Tabla con el offset del primer byte de cada línea de pantalla
-	for (unsigned nLine = 0; nLine < 192; nLine++)
-	{
-		m_ScrAddr[nLine] = ((nLine & 0xC0) << 5) | ((nLine & 0x07) << 8) | ((nLine & 0x38) << 2);
-	}
-
-	for (unsigned nAddr = 0; nAddr < 0x1800; nAddr++)
-	{
-		unsigned nRow  = ((nAddr & 0xE0) >> 5) | ((nAddr & 0x1800) >> 8);
-		unsigned nCol  = nAddr & 0x1F;
-		unsigned nScan = (nAddr & 0x700) >> 8;
-		m_BufAddr[nAddr] = (nRow * 8 + nScan + BORDER_TOP) * SCREEN_WIDTH + nCol * 8 + BORDER_LEFT;
-		m_Scr2Attr[nAddr] = 0x1800 + nRow * 32 + nCol;
-	}
-
-	memset (m_Screen, 0, sizeof m_Screen);
 
 	m_CPU.setBreakpoint (true);
 
@@ -198,28 +159,6 @@ void CSpectrum::SetIF1ROM (const u8 *pROM)
 	memcpy (m_IF1Page, pROM, 0x2000);
 	memcpy (m_IF1Page + 0x2000, pROM, 0x2000);
 	m_bIF1ROM = TRUE;
-}
-
-// Paleta según el modelo, como JSpeccy: la del 48K (medida) en el 16K y el
-// 48K, la de siempre en los demás. pureblack: negro puro también en la del 48K.
-void CSpectrum::UpdatePalette (void)
-{
-	boolean b48 = m_pTiming->CodeModel == CodeModel48K;	// también los TK
-	for (unsigned i = 0; i < 16; i++)
-	{
-		u32 nRGB = b48 ? SpectrumPaletteRGB[i] : SpectrumPalette128RGB[i];
-		if (m_bPureBlack && (i & 7) == 0)
-		{
-			nRGB = 0x000000;
-		}
-		m_StdColor[i] = RGB565 (nRGB);
-	}
-}
-
-void CSpectrum::SetPureBlack (boolean bPureBlack)
-{
-	m_bPureBlack = bPureBlack;
-	UpdatePalette ();
 }
 
 void CSpectrum::SetModel (TModel Model)
@@ -278,14 +217,12 @@ void CSpectrum::SetModel (TModel Model)
 
 	UpdateDivActive ();
 
-	BuildTables ();
+	m_ULA.SetTiming (m_pTiming);
 
 	m_Audio.Configure (m_pTiming->nClockFreq, m_pTiming->bHasAY ? &m_AY : 0);
 	m_pTape->SetMachine (m_pTiming->nClockFreq, m_pTiming->CodeModel == CodeModel48K);
 
 	Reset ();
-
-	UpdatePalette ();			// la del 48K o la del 128K
 
 	m_bPlus3Bus = m_pTiming->CodeModel == CodeModelPlus3;	// bus flotante del +2A/+3
 	m_bBusValid = FALSE;
@@ -302,9 +239,7 @@ void CSpectrum::Reset (void)
 	m_bEarOut = FALSE;
 	m_bMFPaged = FALSE;
 	m_bMFLocked = TRUE;
-	m_bULAplusActive = FALSE;
-	m_bULAplusUsed = FALSE;
-	m_nULAplusRegister = 0;
+	m_ULA.Reset ();
 	m_bIF1Paged = FALSE;
 	m_IF1.Reset ();
 	m_bLECPaged = FALSE;
@@ -346,7 +281,7 @@ void CSpectrum::UpdatePaging (void)
 		{
 			m_pReadPage[2] = m_pReadPage[3] = m_NoRAM;	// las escrituras se pierden
 		}
-		m_pScreenPage = m_RAM[5];
+		m_ULA.SetScreenPage (m_RAM[5]);
 		break;
 
 	case CodeModel128K:
@@ -354,7 +289,7 @@ void CSpectrum::UpdatePaging (void)
 		m_pReadPage[1] = m_RAM[5];
 		m_pReadPage[2] = m_RAM[2];
 		m_pReadPage[3] = m_RAM[m_nPort7FFD & 7];
-		m_pScreenPage = m_RAM[(m_nPort7FFD & 0x08) ? 7 : 5];
+		m_ULA.SetScreenPage (m_RAM[(m_nPort7FFD & 0x08) ? 7 : 5]);
 		break;
 
 	case CodeModelPlus3:
@@ -379,7 +314,7 @@ void CSpectrum::UpdatePaging (void)
 			m_pReadPage[2] = m_RAM[2];
 			m_pReadPage[3] = m_RAM[m_nPort7FFD & 7];
 		}
-		m_pScreenPage = m_RAM[(m_nPort7FFD & 0x08) ? 7 : 5];
+		m_ULA.SetScreenPage (m_RAM[(m_nPort7FFD & 0x08) ? 7 : 5]);
 		break;
 	}
 
@@ -619,47 +554,6 @@ void CSpectrum::SetIF1Connected (boolean bConnected)
 	}
 }
 
-void CSpectrum::SetULAplusColor (unsigned nIndex, u8 nColor)
-{
-	m_ULAplusPalette[nIndex] = nColor;
-	m_ULAplusColor[nIndex] = RGB565 (ULAplusToRGB (nColor));
-}
-
-// Los puertos de ULAplus: A7-A0 = 0x3B, A15 = 1 y A14 = 0 (registro, 0xBF3B)
-// o 1 (datos, 0xFF3B). A13-A8 no se miran, como en el núcleo ToK'ra de Rodolfo
-// Guerra: los programas cargan la paleta con OTIR, que va bajando la parte alta
-// del puerto (0xFF3B, 0xFE3B, 0xFD3B...). Los del reloj de esxDOS (0x7C3B,
-// 0x7D3B) tienen A15 = 0: no son de ULAplus.
-static inline boolean IsULAplusPort (uint16_t nPort)
-{
-	u16 nMasked = nPort & 0xC0FF;
-	return nMasked == 0x803B || nMasked == 0xC03B;
-}
-
-void CSpectrum::ULAplusWrite (uint16_t nPort, u8 nValue)
-{
-	if ((nPort & 0x4000) == 0)
-	{
-		// registro: grupo 00 = paleta (entrada 0-63), grupo 01 = modo
-		m_nULAplusRegister = (nValue & 0xC0) == 0x40 ? 0x40 : (nValue & 0x3F);
-		return;
-	}
-
-	// Antes de cambiar colores o modo se dibuja todo lo anterior con los actuales
-	UpdateScreen (m_nTstates);
-	UpdateBorder (m_nTstates);
-	m_bULAplusUsed = TRUE;
-
-	if (m_nULAplusRegister == 0x40)
-	{
-		m_bULAplusActive = (nValue & 0x01) != 0;
-	}
-	else
-	{
-		SetULAplusColor (m_nULAplusRegister, nValue);
-	}
-}
-
 void CSpectrum::PageMultiface (void)
 {
 	if (   m_bMFPaged
@@ -780,14 +674,14 @@ inline void CSpectrum::Contend (uint16_t nAddress, int nTstates)
 {
 	if (m_bContendedRAM[nAddress >> 14])
 	{
-		m_nTstates += m_Delay[m_nTstates];
+		m_nTstates += m_ULA.Delay (m_nTstates);
 	}
 	m_nTstates += nTstates;
 }
 
 inline boolean CSpectrum::IsScreenWrite (uint16_t nAddress) const
 {
-	return    m_pWritePage[nAddress >> 14] == m_pScreenPage
+	return    m_pWritePage[nAddress >> 14] == m_ULA.GetScreenPage ()
 	       && (nAddress & 0x3FFF) < 0x1B00;
 }
 
@@ -816,7 +710,7 @@ inline void CSpectrum::WriteByte (uint16_t nAddress, uint8_t nValue)
 
 	if (IsScreenWrite (nAddress))
 	{
-		UpdateScreen (m_nTstates);
+		m_ULA.UpdateScreen (m_nTstates);
 	}
 
 	m_pWritePage[nAddress >> 14][nAddress & 0x3FFF] = nValue;
@@ -830,7 +724,7 @@ uint8_t CSpectrum::fetchOpcode (uint16_t address)
 		u8 nI = m_CPU.getRegI () & 0xC0;
 		if (nI == 0x40)
 		{
-			Snow (m_pScreenPage);
+			Snow (m_ULA.GetScreenPage ());
 		}
 		else if (nI == 0xC0 && m_bSnow128 && (m_nPort7FFD & 0x01))
 		{
@@ -1038,7 +932,7 @@ void CSpectrum::addressOnBus (uint16_t address, int32_t wstates)
 	{
 		for (int32_t i = 0; i < wstates; i++)
 		{
-			m_nTstates += m_Delay[m_nTstates] + 1;
+			m_nTstates += m_ULA.Delay (m_nTstates) + 1;
 		}
 	}
 	else
@@ -1077,7 +971,7 @@ void CSpectrum::PreIO (uint16_t nPort)
 {
 	if (m_bContendedIO[nPort >> 14])
 	{
-		m_nTstates += m_Delay[m_nTstates];
+		m_nTstates += m_ULA.Delay (m_nTstates);
 	}
 	m_nTstates++;
 }
@@ -1098,7 +992,7 @@ void CSpectrum::PostIO (uint16_t nPort)
 
 	// Los puertos de ULAplus los atiende la propia ULA: tienen su contención
 	// aunque sean impares (José Luis Sánchez, JSpeccy)
-	boolean bULAPort = !(nPort & 0x0001) || (m_bULAplusEnabled && IsULAplusPort (nPort));
+	boolean bULAPort = !(nPort & 0x0001) || m_ULA.IsULAplusPort (nPort);
 
 	if (!bULAPort)
 	{
@@ -1106,7 +1000,7 @@ void CSpectrum::PostIO (uint16_t nPort)
 		{
 			for (unsigned i = 0; i < 3; i++)
 			{
-				m_nTstates += m_Delay[m_nTstates] + 1;
+				m_nTstates += m_ULA.Delay (m_nTstates) + 1;
 			}
 		}
 		else
@@ -1116,7 +1010,7 @@ void CSpectrum::PostIO (uint16_t nPort)
 	}
 	else
 	{
-		m_nTstates += m_Delay[m_nTstates] + 3;
+		m_nTstates += m_ULA.Delay (m_nTstates) + 3;
 	}
 }
 
@@ -1156,49 +1050,6 @@ unsigned CSpectrum::TKIOContention (u16 nPort) const
 		return 0;
 	}
 	return nT < 128 ? TKContention2[nT & 7] : 0;
-}
-
-u8 CSpectrum::FloatingBus (void)
-{
-	const TMachineTiming *T = m_pTiming;
-
-	if (m_nTstates < T->nFirstScrByte || m_nTstates > T->nLastScrUpdate)
-	{
-		return 0xFF;
-	}
-
-	int nCol = ((m_nTstates - T->nPaperCol) % T->nTstatesLine) - T->nOutOffset;
-	if (nCol < 0 || nCol > 124)
-	{
-		return 0xFF;
-	}
-
-	int nRow = (m_nTstates - T->nPaperCol) / T->nTstatesLine - T->nUpBorderWidth;
-	if (nRow < 0 || nRow > 191)
-	{
-		return 0xFF;
-	}
-
-	unsigned nAddr = m_ScrAddr[nRow] + nCol / 4;
-	switch (nCol % 8)
-	{
-	case 0:
-		return m_pScreenPage[nAddr];
-
-	case 1:
-		return m_pScreenPage[m_Scr2Attr[nAddr]];
-
-	case 2:
-		nAddr++;
-		return nAddr < 0x1800 ? m_pScreenPage[nAddr] : 0xFF;
-
-	case 3:
-		nAddr++;
-		return nAddr < 0x1800 ? m_pScreenPage[m_Scr2Attr[nAddr]] : 0xFF;
-
-	default:
-		return 0xFF;
-	}
 }
 
 // +2A/+3: el último valor que pasó por el bus de datos. Lo dejan la Gate Array
@@ -1243,14 +1094,7 @@ u8 CSpectrum::Plus3FloatingBus (void)
 		return m_nBusValue;			// la CPU tocó el bus después
 	}
 
-	unsigned nAddr = m_ScrAddr[nRow] + nCol / 4;
-	switch (nCol % 8)
-	{
-	case 0:	return m_pScreenPage[nAddr];
-	case 1:	return m_pScreenPage[m_Scr2Attr[nAddr]];
-	case 2:	nAddr++; return nAddr < 0x1800 ? m_pScreenPage[nAddr] : 0xFF;
-	default: nAddr++; return nAddr < 0x1800 ? m_pScreenPage[m_Scr2Attr[nAddr]] : 0xFF;
-	}
+	return m_ULA.VideoFetch (nRow, nCol);
 }
 
 uint8_t CSpectrum::inPort (uint16_t port)
@@ -1412,7 +1256,7 @@ uint8_t CSpectrum::inPort (uint16_t port)
 			// no lee (Cantinho do TK90X, "ROM e Porta 254"). En los TK90X
 			// vendidos en Brasil el diodo D1 pone el bit 7 a 0, y la ROM v1
 			// sale en portugués; sin él, en español.
-			u8 nBus = FloatingBus ();
+			u8 nBus = m_ULA.FloatingBus (m_nTstates);
 			nValue = (nValue & 0x5F) | (nBus & 0xA0);
 			if (m_Model == ModelTK90X && m_bTKDiode)
 			{
@@ -1423,10 +1267,9 @@ uint8_t CSpectrum::inPort (uint16_t port)
 		return nValue;
 	}
 
-	if (m_bULAplusEnabled && IsULAplusPort (port) && (port & 0x4000))	// datos (0xFF3B)
+	if (m_ULA.IsULAplusPort (port) && (port & 0x4000))	// datos (0xFF3B)
 	{
-		return m_nULAplusRegister == 0x40 ? (m_bULAplusActive ? 0x01 : 0x00)
-						  : m_ULAplusPalette[m_nULAplusRegister];
+		return m_ULA.ULAplusRead ();
 	}
 
 	if (m_pTiming->bHasAY)
@@ -1457,7 +1300,7 @@ uint8_t CSpectrum::inPort (uint16_t port)
 		return 0xFF;
 	}
 
-	u8 nFloatBus = FloatingBus ();
+	u8 nFloatBus = m_ULA.FloatingBus (m_nTstates);
 
 	// Solo en el 128K (no +2/+2A/+3): leer 0x7FFD escribe el valor leído en el puerto
 	if (   m_Model == Model128K
@@ -1466,7 +1309,7 @@ uint8_t CSpectrum::inPort (uint16_t port)
 	{
 		if ((m_nPort7FFD ^ nFloatBus) & 0x08)
 		{
-			UpdateScreen (m_nTstates);
+			m_ULA.UpdateScreen (m_nTstates);
 		}
 		m_nPort7FFD = nFloatBus;
 		UpdatePaging ();
@@ -1566,7 +1409,7 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 	{
 		if ((m_nPortFE ^ value) & 0x07)
 		{
-			UpdateBorder (m_nTstates);
+			m_ULA.UpdateBorder (m_nTstates, m_nPortFE);
 		}
 
 		if ((m_nPortFE ^ value) & 0x18)
@@ -1594,9 +1437,9 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 	// IsULAplusPort). Antes respondía a cualquier puerto con A2 = 0 (como
 	// JSpeccy), también a los de la divMMC (0xE3, 0xEB) y a los del reloj de
 	// esxDOS (0x7C3B, 0x7D3B), que dejaban ULAplus encendido al salir de la NMI
-	if (m_bULAplusEnabled && IsULAplusPort (port))
+	if (m_ULA.IsULAplusPort (port))
 	{
-		ULAplusWrite (port, value);
+		m_ULA.ULAplusWrite (port, value, m_nTstates, m_nPortFE);
 	}
 
 	if (m_pTiming->bHasAY && (port & 0x8002) == 0x8000)
@@ -1651,334 +1494,12 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 	{
 		if ((m_nPort7FFD ^ value) & 0x08)
 		{
-			UpdateScreen (m_nTstates);
+			m_ULA.UpdateScreen (m_nTstates);
 		}
 
 		m_nPort7FFD = value;
 		UpdatePaging ();
 	}
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Vídeo
-
-int CSpectrum::TstatesToBorderPix (int nTstates)
-{
-	const TMachineTiming *T = m_pTiming;
-
-	// relativo al principio del papel en su línea (nPaperCol: 0 salvo en
-	// la ULA de Microdigital de los TK). Un tiempo negativo es el final de
-	// la línea anterior a la primera (el borde izquierdo de la línea 0 en el
-	// TK a 60 Hz), no el final del cuadro. Y uno posterior al final del cuadro
-	// sigue en la última línea: en los TK, con el papel desplazado, el borde
-	// derecho de la última línea cae ahí (antes se le daba la vuelta al cuadro
-	// y esa esquina, abajo a la derecha, no se pintaba nunca: una raya negra)
-	nTstates -= T->nPaperCol;
-	int nRow = nTstates >= 0 ? nTstates / T->nTstatesLine : -1;
-	int nCol = nTstates - nRow * T->nTstatesLine;
-
-	// Primera línea visible y primera columna del borde izquierdo
-	int nFirstRow, nLeftStart;
-	if (T->CodeModel == CodeModel48K)
-	{
-		nFirstRow = T->nUpBorderWidth;			// 64 (38 en el TK a 60 Hz)
-		nLeftStart = (T->nTstatesLine - 24) + (24 - BORDER_LEFT / 2);	// 200 en el 48K
-	}
-	else
-	{
-		nFirstRow = 63;
-		nLeftStart = 204 + (24 - BORDER_LEFT / 2);
-	}
-	int nLastRow = nFirstRow + 192;
-
-	if (nRow < nFirstRow - BORDER_TOP - 1 || nRow > nLastRow + BORDER_BOTTOM - 1)
-	{
-		return NO_PIXEL;
-	}
-
-	if (nRow == nFirstRow - BORDER_TOP - 1 && nCol < nLeftStart)
-	{
-		return NO_PIXEL;
-	}
-
-	if (nRow == nLastRow + BORDER_BOTTOM - 1 && nCol > 127 + BORDER_RIGHT / 2)
-	{
-		return NO_PIXEL;
-	}
-
-	// Zona de retrazo horizontal (invisible)
-	if (nCol > 127 + BORDER_RIGHT / 2 && nCol < nLeftStart)
-	{
-		return NO_PIXEL;
-	}
-
-	// Zona de pantalla (no es borde)
-	if (nRow > nFirstRow - 1 && nRow < nLastRow && nCol < 128)
-	{
-		return NO_PIXEL;
-	}
-
-	if (nCol > 176)
-	{
-		nRow++;
-		nCol -= nLeftStart;
-	}
-	else
-	{
-		nCol += BORDER_RIGHT / 2 - (BORDER_RIGHT - BORDER_LEFT) / 2;
-	}
-
-	nRow -= nFirstRow - BORDER_TOP;
-
-	return nRow * SCREEN_WIDTH + nCol * 2;
-}
-
-void CSpectrum::BuildTables (void)
-{
-	const TMachineTiming *T = m_pTiming;
-
-	// Momentos en que la ULA lee cada byte de la pantalla
-	int nStart, nEnd, nOffset;
-	switch (T->CodeModel)
-	{
-	case CodeModel48K:
-	default:
-		nStart = T->nFirstScrByte; nEnd = T->nLastScrUpdate + 2; nOffset = 2;	// 57248 en el 48K
-		break;
-
-	case CodeModel128K:
-		nStart = 14364; nEnd = T->nLastScrUpdate; nOffset = 0;
-		break;
-
-	case CodeModelPlus3:
-		nStart = T->nFirstScrByte; nEnd = T->nLastScrUpdate; nOffset = 2;
-		break;
-	}
-
-	m_nSteps = 0;
-	for (int t = nStart; t < nEnd && m_nSteps < 6144; t += 4)
-	{
-		int nCol = ((t - T->nPaperCol) % T->nTstatesLine) / 4;
-		if (nCol > 31)
-		{
-			continue;
-		}
-
-		int nScan = (t - T->nPaperCol) / T->nTstatesLine - T->nUpBorderWidth;
-		if (nScan < 0 || nScan > 191)
-		{
-			continue;
-		}
-
-		m_StepStates[m_nSteps] = t + nOffset;
-		m_StepAddr[m_nSteps] = m_ScrAddr[nScan] + nCol;
-		m_nSteps++;
-	}
-
-	// Borde
-	if (T->CodeModel == CodeModel48K)
-	{
-		m_nFirstBorderUpdate = (T->nUpBorderWidth - BORDER_TOP) * T->nTstatesLine - BORDER_LEFT / 2 + T->nPaperCol;
-		m_nLastBorderUpdate = (T->nUpBorderWidth + 191 + BORDER_BOTTOM) * T->nTstatesLine + 128 + BORDER_RIGHT
-				      + T->nPaperCol;
-		if (m_nFirstBorderUpdate < 0)
-		{
-			m_nFirstBorderUpdate = 0;	// TK a 60 Hz: menos líneas por encima del papel
-		}
-		if (m_nLastBorderUpdate > MAX_TSTATES_FRAME)
-		{
-			m_nLastBorderUpdate = MAX_TSTATES_FRAME;
-		}
-	}
-	else
-	{
-		m_nFirstBorderUpdate = (63 - BORDER_TOP) * T->nTstatesLine - BORDER_RIGHT / 2;
-		m_nLastBorderUpdate = (254 + BORDER_BOTTOM) * T->nTstatesLine + 128 + BORDER_RIGHT;
-	}
-
-	for (unsigned i = 0; i < sizeof m_States2Border / sizeof m_States2Border[0]; i++)
-	{
-		m_States2Border[i] = NO_PIXEL;
-	}
-
-	for (int t = m_nFirstBorderUpdate; t < m_nLastBorderUpdate; t += 4)
-	{
-		int nPix = TstatesToBorderPix (t);
-		m_States2Border[t] = m_States2Border[t + 1] =
-		m_States2Border[t + 2] = m_States2Border[t + 3] = nPix;
-	}
-
-	// Contención
-	memset (m_Delay, 0, sizeof m_Delay);
-	switch (T->CodeModel)
-	{
-	case CodeModel48K:
-	default:
-		// 14335 a 57247 en el 48K; desde el primer byte de pantalla en los TK
-		for (int nIdx = T->nFirstScrByte - 1; nIdx < T->nLastScrUpdate + 1; nIdx += T->nTstatesLine)
-		{
-			for (int n = 0; n < 128; n += 8)
-			{
-				static const u8 Pattern[8] = {6, 5, 4, 3, 2, 1, 0, 0};
-				memcpy (&m_Delay[nIdx + n], Pattern, 8);
-			}
-		}
-		break;
-
-	case CodeModel128K:
-		for (int nIdx = 14361; nIdx < 58037; nIdx += T->nTstatesLine)
-		{
-			for (int n = 0; n < 128; n += 8)
-			{
-				static const u8 Pattern[8] = {6, 5, 4, 3, 2, 1, 0, 0};
-				memcpy (&m_Delay[nIdx + n], Pattern, 8);
-			}
-		}
-		break;
-
-	case CodeModelPlus3:
-		for (int nIdx = 14361; nIdx < 58036; nIdx += T->nTstatesLine)
-		{
-			for (int n = 0; n < 128; n += 8)
-			{
-				static const u8 Pattern[8] = {1, 0, 7, 6, 5, 4, 3, 2};
-				memcpy (&m_Delay[nIdx + n], Pattern, 8);
-			}
-			m_Delay[nIdx + 128] = 1;	// las líneas tienen 129 t-states de contención
-		}
-		break;
-	}
-
-	m_nStep = 0;
-	m_nLastChgBorder = m_nFirstBorderUpdate;
-}
-
-void CSpectrum::UpdateScreen (int nTstates)
-{
-	while (m_nStep < m_nSteps && m_StepStates[m_nStep] <= nTstates)
-	{
-		unsigned nAddr = m_StepAddr[m_nStep++];
-		DrawCell (nAddr, m_pScreenPage[nAddr], m_pScreenPage[m_Scr2Attr[nAddr]]);
-	}
-}
-
-// Efecto nieve (16K, 48K, 128K y +2). En los T3 y T4 de cada M1 el Z80
-// refresca la memoria con I:R en el bus; si I apunta a memoria lenta (0x40-
-// 0x7F, o en el 128K 0xC0-0xFF con una página impar arriba), ese refresco
-// choca con la lectura de la ULA, que lee 16 píxeles cada 8 t-states: imagen
-// y atributo del primer par en las fases 2 y 3, y del segundo en las 4 y 5
-// (la fase 0 es el primer t-state de contención de la línea: 14335 en el
-// 48K y 14361 en el 128K, como en Spectramine de Weiv y en ESPectrum). Según en qué fase cae el T4 de la lectura de la instrucción:
-//   - fase 2 (nieve): la fila de la memoria (A0-A6) del primer par sale de R
-//     y no de la ULA: se leen la imagen y el atributo de (dirección & ~0x7F)
-//     | R, del mismo bloque de 128 bytes (por eso el dibujo se reconoce)
-//   - fase 4 (doble): el segundo par no se lee y se repite el primero
-// R es el de después de sumarle 1 en este M1, como dice Weiv (ESPectrum usa
-// el de antes).
-void CSpectrum::Snow (const u8 *pPage)
-{
-	const TMachineTiming *T = m_pTiming;
-	int nRel = m_nTstates - 1 - (T->nFirstScrByte - 1);	// el T4, desde 14335
-	if (nRel < 0)
-	{
-		return;
-	}
-	unsigned nLine = nRel / T->nTstatesLine;
-	unsigned nCol = nRel % T->nTstatesLine;
-	if (nLine > 191 || nCol > 127)
-	{
-		return;
-	}
-	unsigned nPhase = nCol & 7;
-	if (nPhase != 2 && nPhase != 4)
-	{
-		return;
-	}
-
-	unsigned nCell = nLine * 32 + (nCol >> 3) * 2 + (nPhase == 4);	// la celda de 8 píxeles
-	UpdateScreen (m_StepStates[nCell] - 1);		// todo lo de antes, normal
-	if (m_nStep != nCell)
-	{
-		return;
-	}
-	m_nStep++;
-
-	unsigned nAddr = m_StepAddr[nCell];
-	if (nPhase == 2)
-	{
-		unsigned nRow = (m_CPU.getRegR () + 1) & 0x7F;	// ya sumado (Weiv); z80cpp lo suma al volver
-		DrawCell (nAddr, pPage[(nAddr & ~0x7F) | nRow],
-			  pPage[(m_Scr2Attr[nAddr] & ~0x7F) | nRow]);
-	}
-	else
-	{
-		DrawCell (nAddr, m_nLastByte, m_nLastAttr);
-	}
-}
-
-inline void CSpectrum::DrawCell (unsigned nAddr, u8 nByte, u8 nAttr)
-{
-	m_nLastByte = nByte;
-	m_nLastAttr = nAttr;
-	{
-		TPixel nInk, nPaper;
-		if (m_bULAplusActive)
-		{
-			// FLASH y BRIGHT eligen una de las 4 subpaletas de 16 colores
-			unsigned nCLUT = (nAttr & 0xC0) >> 2;
-			nInk = m_ULAplusColor[nCLUT | (nAttr & 0x07)];
-			nPaper = m_ULAplusColor[nCLUT | 0x08 | ((nAttr >> 3) & 0x07)];
-		}
-		else
-		{
-			nInk = m_StdColor[m_Ink[nAttr]];
-			nPaper = m_StdColor[m_Paper[nAttr]];
-			if ((nAttr & 0x80) && m_bFlash)
-			{
-				TPixel nTemp = nInk; nInk = nPaper; nPaper = nTemp;
-			}
-		}
-
-		TPixel *pPixel = &m_Screen[m_BufAddr[nAddr]];
-		for (unsigned nMask = 0x80; nMask != 0; nMask >>= 1)
-		{
-			*pPixel++ = (nByte & nMask) ? nInk : nPaper;
-		}
-	}
-}
-
-void CSpectrum::UpdateBorder (int nTstates)
-{
-	if (nTstates < m_nLastChgBorder || m_nLastChgBorder > m_nLastBorderUpdate)
-	{
-		return;
-	}
-
-	// con ULAplus, el borde usa los colores de papel de la subpaleta 0
-	TPixel nColor = m_bULAplusActive ? m_ULAplusColor[8 + (m_nPortFE & 0x07)]
-					 : m_StdColor[m_nPortFE & 0x07];
-
-	nTstates += m_pTiming->nOutBorderOffset;
-	nTstates &= ~3;
-
-	while (m_nLastChgBorder < nTstates && m_nLastChgBorder < m_nLastBorderUpdate)
-	{
-		int nPix = m_States2Border[m_nLastChgBorder];
-		m_nLastChgBorder += 4;
-
-		if (nPix == NO_PIXEL)
-		{
-			continue;
-		}
-
-		TPixel *pPixel = &m_Screen[nPix];
-		for (unsigned i = 0; i < 8; i++)
-		{
-			pPixel[i] = nColor;
-		}
-	}
-
-	m_nLastChgBorder = nTstates;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1988,8 +1509,7 @@ void CSpectrum::RunFrame (void)
 {
 	const int nTstatesFrame = m_pTiming->nTstatesFrame;
 
-	m_nStep = 0;
-	m_nLastChgBorder = m_nFirstBorderUpdate;
+	m_ULA.StartFrame ();
 	m_Audio.SetFrameStart (m_nFrameStart);
 
 	while (m_nTstates < nTstatesFrame)
@@ -2007,34 +1527,7 @@ void CSpectrum::RunFrame (void)
 		}
 	}
 
-	UpdateScreen (0x7FFFFFFF);
-	UpdateBorder (m_nLastBorderUpdate + 4);
-
-	// Cuadros con menos líneas de borde de las que tiene la imagen (TK a
-	// 60 Hz: 38 por encima del papel y 32 por debajo): esas líneas no
-	// existen y se pintan del color del borde, en vez de quedarse como
-	// estuvieran. En los demás modelos sobran líneas y no se hace nada.
-	{
-		const TMachineTiming *T = m_pTiming;
-		int nTop = BORDER_TOP - T->nUpBorderWidth;
-		int nBottom = BORDER_BOTTOM - (T->nScanLines - T->nUpBorderWidth - 192);
-		if (nTop > 0 || nBottom > 0)
-		{
-			TPixel nColor = m_bULAplusActive ? m_ULAplusColor[8 + (m_nPortFE & 0x07)]
-							 : m_StdColor[m_nPortFE & 0x07];
-			for (int y = 0; y < SCREEN_HEIGHT; y++)
-			{
-				if ((nTop > 0 && y < nTop) || (nBottom > 0 && y >= SCREEN_HEIGHT - nBottom))
-				{
-					TPixel *pRow = &m_Screen[y * SCREEN_WIDTH];
-					for (int x = 0; x < SCREEN_WIDTH; x++)
-					{
-						pRow[x] = nColor;
-					}
-				}
-			}
-		}
-	}
+	m_ULA.EndFrame (m_nPortFE);
 
 	// grabación de la entrada EAR externa: sus cambios de este cuadro
 	if (m_bRecording && m_bRecordEar && m_pEarInput != 0)
@@ -2053,13 +1546,6 @@ void CSpectrum::RunFrame (void)
 
 	m_nTstates -= nTstatesFrame;
 	m_nFrameStart += nTstatesFrame;
-	// (con ULAplus activo no hay parpadeo: FLASH elige subpaleta)
-
-	if ((++m_nFrames & 0x0F) == 0)
-	{
-		m_bFlash = !m_bFlash;
-	}
-
 	TapeFrameHousekeeping ();
 }
 
