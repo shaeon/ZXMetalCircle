@@ -73,20 +73,13 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_nRecLastEdge = 0;
 	m_nRecRemainder = 0;
 	m_bIssue2 = FALSE;
-	m_bIF1Connected = FALSE;
-	m_bIF1Paged = FALSE;
 	m_pDisk = new CPlus3Disk;
 	m_bNMIPending = FALSE;
-	m_bSnet = FALSE;
-	m_bSnetNMIPending = FALSE;
-	m_bPrevED = FALSE;
-	m_bIF1ROM = FALSE;
 	m_FallbackFrom = ModelCount;
 	for (unsigned i = 0; i < ModelCount; i++)
 	{
 		m_pModelROM[i] = 0;
 	}
-	memset (m_IF1Page, 0xFF, sizeof m_IF1Page);	// sin ROM hasta SetIF1ROM ()
 
 	m_bSnowEnabled = TRUE;
 	m_bSnow = m_bSnow128 = FALSE;
@@ -125,13 +118,6 @@ void CSpectrum::SetModelROM (TModel Model, const u8 *pROM)
 	{
 		m_pModelROM[Model16K] = pROM;
 	}
-}
-
-void CSpectrum::SetIF1ROM (const u8 *pROM)
-{
-	memcpy (m_IF1Page, pROM, 0x2000);
-	memcpy (m_IF1Page + 0x2000, pROM, 0x2000);
-	m_bIF1ROM = TRUE;
 }
 
 void CSpectrum::SetModel (TModel Model)
@@ -177,18 +163,13 @@ void CSpectrum::Reset (void)
 	m_bEarOut = FALSE;
 	m_MF.Reset ();
 	m_ULA.Reset ();
-	m_bIF1Paged = FALSE;
+	m_IF1ROM.Reset ();
 	m_IF1.Reset ();
 	m_LEC.Reset ();
 	m_pDisk->Reset ();
 	m_SDCard.Select (FALSE);
 	m_Div.Reset ();			// CONMEM y MAPRAM se borran con el reset
-	m_bPrevED = FALSE;
-	m_bSnetNMIPending = FALSE;
-	if (m_bSnet)
-	{
-		m_Snet.Reset ();
-	}
+	m_Snet.MachineReset ();
 	UpdateDivActive ();
 	UpdatePaging ();
 
@@ -217,10 +198,7 @@ void CSpectrum::UpdatePaging (void)
 	m_IF2.Map (m_Mem);
 
 	// ROM del Interface 1 (8 KB, repetida en los 16 KB)
-	if (m_bIF1Paged && IF1Active ())
-	{
-		m_Mem.MapSlot (0, m_IF1Page, m_Mem.GetROMSink ());
-	}
+	m_IF1ROM.Map (m_Mem);
 
 	// Multiface paginado: su ROM y su RAM ocupan los primeros 16 KB
 	m_MF.Map (m_Mem);
@@ -241,7 +219,7 @@ void CSpectrum::UpdatePaging (void)
 boolean CSpectrum::IsMultifaceAvailable (void) const
 {
 	// con la divMMC, la NMI es suya (el navegador de esxDOS)
-	return m_MF.IsReady () && !m_Div.IsActive () && !m_bSnet;
+	return m_MF.IsReady () && !m_Div.IsActive () && !m_Snet.IsEnabled ();
 }
 
 boolean CSpectrum::InsertCartridge (const u8 *pROM, unsigned nSize)
@@ -280,14 +258,12 @@ boolean CSpectrum::SetLECConnected (boolean bConnected)
 
 void CSpectrum::SetIF1Connected (boolean bConnected)
 {
-	if (!m_bIF1ROM || m_Div.IsActive () || m_bSnet)
+	if (!m_IF1ROM.HasROM () || m_Div.IsActive () || m_Snet.IsEnabled ())
 	{
 		bConnected = FALSE;		// sin roms/if1.rom, o con la divMMC (puertos 0xE7/0xEB), no hay IF1
 	}
-	m_bIF1Connected = bConnected;
-	if (!bConnected && m_bIF1Paged)
+	if (m_IF1ROM.SetConnected (bConnected))
 	{
-		m_bIF1Paged = FALSE;
 		UpdatePaging ();
 	}
 }
@@ -335,7 +311,7 @@ inline void CSpectrum::WriteByte (uint16_t nAddress, uint8_t nValue)
 		return;
 	}
 
-	if (nAddress < 0x4000 && m_bSnet && m_Snet.IsPaged ())
+	if (nAddress < 0x4000 && m_Snet.IsEnabled () && m_Snet.IsPaged ())
 	{
 		m_Snet.Write (nAddress, nValue);
 		return;
@@ -377,51 +353,22 @@ uint8_t CSpectrum::fetchOpcode (uint16_t address)
 	{
 		return m_Div.Fetch (address, m_Mem);
 	}
-	if (m_bSnet)
+	if (m_Snet.IsEnabled ())
 	{
-		return SnetFetch (address);
+		boolean bNMI;
+		u8 nOpcode = m_Snet.Fetch (address, m_Mem, &bNMI);
+		if (bNMI)
+		{
+			m_CPU.triggerNMI ();
+		}
+		return nOpcode;
 	}
 	return m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
 }
 
-// Spectranet: paginación en el ciclo M1, trampa programable y RETN
-u8 CSpectrum::SnetFetch (u16 nAddress)
-{
-	if (m_Snet.M1Early (nAddress))
-	{
-		// La trampa programable lanza una NMI: la instrucción de esta dirección
-		// se ejecuta todavía de la memoria normal, y la tarjeta se pagina al
-		// aceptarse la NMI (al leer 0x0066), como hace Fuse
-		m_bSnetNMIPending = TRUE;
-		m_CPU.triggerNMI ();
-	}
-	if (m_bSnetNMIPending && nAddress == 0x0066)
-	{
-		m_bSnetNMIPending = FALSE;
-		m_Snet.NMI ();
-	}
-
-	u8 nOpcode = (nAddress < 0x4000 && m_Snet.IsPaged ()) ? m_Snet.Read (nAddress)
-							      : m_Mem.ReadPage (nAddress >> 14)[nAddress & 0x3FFF];
-
-	// RETN (ED 45, 55, 5D, 65, 6D, 75, 7D; ED 4D es RETI) borra el biestable de la NMI
-	if (m_bPrevED && (nOpcode & 0xC7) == 0x45 && nOpcode != 0x4D)
-	{
-		m_Snet.RETN ();
-	}
-	m_bPrevED = nOpcode == 0xED && !m_bPrevED;
-
-	m_Snet.M1Late (nAddress);
-	return nOpcode;
-}
-
 void CSpectrum::SetSpectranetEnabled (boolean bOn)
 {
-	m_bSnet = bOn;
-	if (bOn)
-	{
-		m_Snet.Reset ();
-	}
+	m_Snet.SetEnabled (bOn);
 }
 
 uint8_t CSpectrum::peek8 (uint16_t address)
@@ -435,7 +382,7 @@ uint8_t CSpectrum::peek8 (uint16_t address)
 	{
 		return m_Div.Read (address);
 	}
-	if (address < 0x4000 && m_bSnet && m_Snet.IsPaged ())
+	if (address < 0x4000 && m_Snet.IsEnabled () && m_Snet.IsPaged ())
 	{
 		return m_Snet.Read (address);
 	}
@@ -452,13 +399,13 @@ uint16_t CSpectrum::peek16 (uint16_t address)
 {
 	Contend (address, 3);
 	uint8_t nLSB = (address < 0x4000 && m_Div.IsPaged ()) ? m_Div.Read (address)
-		     : (address < 0x4000 && m_bSnet && m_Snet.IsPaged ()) ? m_Snet.Read (address)
+		     : (address < 0x4000 && m_Snet.IsEnabled () && m_Snet.IsPaged ()) ? m_Snet.Read (address)
 							: m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
 
 	address++;
 	Contend (address, 3);
 	uint8_t nMSB = (address < 0x4000 && m_Div.IsPaged ()) ? m_Div.Read (address)
-		     : (address < 0x4000 && m_bSnet && m_Snet.IsPaged ()) ? m_Snet.Read (address)
+		     : (address < 0x4000 && m_Snet.IsEnabled () && m_Snet.IsPaged ()) ? m_Snet.Read (address)
 							: m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
 
 	if (m_bPlus3Bus)
@@ -679,7 +626,7 @@ uint8_t CSpectrum::inPort (uint16_t port)
 	}
 
 	// Spectranet: 0x003B, 0x013B, 0x023B y 0x033B (dirección completa)
-	if (m_bSnet && m_Snet.IsPort (port))
+	if (m_Snet.IsEnabled () && m_Snet.IsPort (port))
 	{
 		return m_Snet.ReadPort (port, m_nPortFE,
 					m_pTiming->CodeModel != CodeModel48K && (m_Mem.GetPort7FFD () & 0x08));
@@ -897,7 +844,7 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 		m_MF.Out (port, m_CPU.getRegPC ());
 	}
 
-	if (m_bSnet && m_Snet.IsPort (port))
+	if (m_Snet.IsEnabled () && m_Snet.IsPort (port))
 	{
 		m_Snet.WritePort (port, value);
 	}
@@ -1055,9 +1002,9 @@ void CSpectrum::RunFrame (void)
 		if (m_bNMIPending && m_nTstates >= nTstatesFrame / 2)
 		{
 			m_bNMIPending = FALSE;
-			if (m_bSnet)
+			if (m_Snet.IsEnabled ())
 			{
-				m_bSnetNMIPending = TRUE;	// la NMI la atiende la Spectranet (su menú)
+				m_Snet.TakeNMI ();		// la NMI la atiende la Spectranet (su menú)
 			}
 			m_CPU.triggerNMI ();
 		}
@@ -1201,16 +1148,16 @@ uint8_t CSpectrum::breakpoint (uint16_t address, uint8_t opcode)
 	// sale al leer 0x0700
 	if (IF1Active ())
 	{
-		if ((address == 0x0008 || address == 0x1708) && !m_bIF1Paged && !m_MF.IsPaged ())
+		if ((address == 0x0008 || address == 0x1708) && !m_IF1ROM.IsPaged () && !m_MF.IsPaged ())
 		{
-			m_bIF1Paged = TRUE;
+			m_IF1ROM.Page ();
 			UpdatePaging ();
-			return m_IF1Page[address];
+			return m_IF1ROM.Read (address);
 		}
 
-		if (address == 0x0700 && m_bIF1Paged)
+		if (address == 0x0700 && m_IF1ROM.IsPaged ())
 		{
-			m_bIF1Paged = FALSE;
+			m_IF1ROM.Unpage ();
 			UpdatePaging ();
 			return opcode;		// esta instrucción aún es de la ROM del IF1
 		}

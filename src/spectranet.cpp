@@ -38,7 +38,10 @@
 #define IR_SEND_OK		0x10
 
 CSpectranet::CSpectranet (void)
-:	m_bFlashModified (FALSE),
+:	m_bEnabled (FALSE),
+	m_bNMIPending (FALSE),
+	m_bPrevED (FALSE),
+	m_bFlashModified (FALSE),
 	m_FlashState (FlashReset),
 	m_bTrapsDisabled (FALSE),
 	m_pNet (0),
@@ -62,6 +65,38 @@ CSpectranet::~CSpectranet (void)
 	W5100Reset ();
 	delete [] m_pFlash;
 	delete [] m_pRAM;
+}
+
+// Paginación en el ciclo M1, trampa programable y RETN
+u8 CSpectranet::Fetch (u16 nAddress, const CMemory &rMem, boolean *pbNMI)
+{
+	*pbNMI = FALSE;
+	if (M1Early (nAddress))
+	{
+		// La trampa programable lanza una NMI: la instrucción de esta dirección
+		// se ejecuta todavía de la memoria normal, y la tarjeta se pagina al
+		// aceptarse la NMI (al leer 0x0066), como hace Fuse
+		m_bNMIPending = TRUE;
+		*pbNMI = TRUE;
+	}
+	if (m_bNMIPending && nAddress == 0x0066)
+	{
+		m_bNMIPending = FALSE;
+		NMI ();
+	}
+
+	u8 nOpcode = (nAddress < 0x4000 && m_bPaged) ? Read (nAddress)
+						     : rMem.ReadPage (nAddress >> 14)[nAddress & 0x3FFF];
+
+	// RETN (ED 45, 55, 5D, 65, 6D, 75, 7D; ED 4D es RETI) borra el biestable de la NMI
+	if (m_bPrevED && (nOpcode & 0xC7) == 0x45 && nOpcode != 0x4D)
+	{
+		RETN ();
+	}
+	m_bPrevED = nOpcode == 0xED && !m_bPrevED;
+
+	M1Late (nAddress);
+	return nOpcode;
 }
 
 void CSpectranet::LoadFlash (const u8 *pData, unsigned nSize)

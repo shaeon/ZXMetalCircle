@@ -137,7 +137,7 @@ public:
 	// Spectranet (tarjeta de red): ver spectranet.h
 	CSpectranet *GetSpectranet (void)	{ return &m_Snet; }
 	void SetSpectranetEnabled (boolean bOn);
-	boolean IsSpectranetEnabled (void) const	{ return m_bSnet; }
+	boolean IsSpectranetEnabled (void) const	{ return m_Snet.IsEnabled (); }
 
 	// ZXMMC (tarjeta SD del +3e): puertos 0x1F (CS) y 0x3F (datos SPI)
 	CSDCard *GetSDCard (void)		{ return &m_SDCard; }
@@ -151,13 +151,13 @@ public:
 	TModel TakeFallback (void)	{ TModel M = m_FallbackFrom; m_FallbackFrom = ModelCount; return M; }
 
 	// ROM del Interface 1 (8 KB): sin ella no se puede conectar
-	void SetIF1ROM (const u8 *pROM);
+	void SetIF1ROM (const u8 *pROM)		{ m_IF1ROM.SetROM (pROM); }
 	CInterface1 *GetIF1 (void)		{ return &m_IF1; }
-	boolean HasIF1ROM (void) const	{ return m_bIF1ROM; }
+	boolean HasIF1ROM (void) const	{ return m_IF1ROM.HasROM (); }
 
 	// Interface 1 con microdrives (no en el +2A)
 	void SetIF1Connected (boolean bConnected);
-	boolean IsIF1Connected (void) const	{ return m_bIF1Connected; }
+	boolean IsIF1Connected (void) const	{ return m_IF1ROM.IsConnected (); }
 	CInterface1 *GetInterface1 (void)	{ return &m_IF1; }
 	// Lectura de la memoria tal como la ve ahora la CPU (sin contención; pruebas)
 	u8 ReadMemory (u16 nAddress) const override	{ return m_Mem.ReadPage (nAddress >> 14)[nAddress & 0x3FFF]; }
@@ -296,16 +296,12 @@ private:
 	// Disquetera del +3
 	CPlus3Disk *m_pDisk;
 
-	u8 SnetFetch (u16 nAddress);
 	void UpdateDivActive (void)	{ m_Div.SetActive (IsDivMMCActive ()); }
 
 	boolean m_bNMIPending;
 
 	// Spectranet
 	CSpectranet m_Snet;
-	boolean m_bSnet;
-	boolean m_bPrevED;		// el último código leído en un M1 fue el prefijo ED
-	boolean m_bSnetNMIPending;	// paginar la Spectranet al aceptarse la NMI
 
 	// tarjeta SD, con sus dos interfaces
 	CSDCard m_SDCard;
@@ -314,15 +310,12 @@ private:
 
 	const u8 *m_pModelROM[ModelCount];
 	TModel m_FallbackFrom;		// modelo pedido sin ROM (ModelCount = ninguno)
-	boolean m_bIF1ROM;
 
 	// Interface 1
 	boolean IF1Active (void) const
-		{ return m_bIF1Connected && m_pTiming->CodeModel != CodeModelPlus3; }
-	CInterface1 m_IF1;
-	boolean m_bIF1Connected;
-	boolean m_bIF1Paged;
-	u8 m_IF1Page[0x4000];		// ROM de 8 KB repetida
+		{ return m_IF1ROM.IsConnected () && m_pTiming->CodeModel != CodeModelPlus3; }
+	CInterface1 m_IF1;		// microdrives, red y RS232
+	CInterface1ROM m_IF1ROM;	// su ROM y cuándo se ve (pagers.h)
 
 	// grabación por pulsos
 	void RecordEdge (u64 nTime);

@@ -1,5 +1,5 @@
 //
-// pagers.h - Periféricos que tapan la memoria: Interface 2, LEC y Multiface
+// pagers.h - Periféricos que tapan la memoria: Interface 1 y 2, LEC y Multiface
 //
 // Fase 2c de la capa de máquinas: los periféricos salen de CSpectrum. Todos
 // siguen la misma forma, sin funciones virtuales:
@@ -24,6 +24,7 @@
 
 #include "zxmemory.h"
 #include <circle/types.h>
+#include <circle/util.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Interface 2: un cartucho de 16 KB en lugar de la ROM (no en el +2A/+3)
@@ -51,6 +52,60 @@ public:
 private:
 	boolean m_bInserted;
 	u8 m_ROM[0x4000];
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// ROM del Interface 1 (8 KB, repetida en los 16 KB de abajo): entra al leer
+// la instrucción de 0x0008 (errores y extensiones del BASIC) o de 0x1708
+// (CLOSE#) y sale al leer la de 0x0700. No en el +2A/+3. Sus microdrives,
+// su red y su RS232 son CInterface1 (interface1.h).
+
+class CInterface1ROM
+{
+public:
+	CInterface1ROM (void) : m_bROM (FALSE), m_bConnected (FALSE), m_bPaged (FALSE)
+		{ memset (m_Page, 0xFF, sizeof m_Page); }	// sin ROM hasta SetROM
+
+	void SetROM (const u8 *pROM)
+	{
+		memcpy (m_Page, pROM, 0x2000);
+		memcpy (m_Page + 0x2000, pROM, 0x2000);
+		m_bROM = TRUE;
+	}
+	boolean HasROM (void) const		{ return m_bROM; }
+
+	// TRUE si deja de estar paginada (hay que recalcular las páginas)
+	boolean SetConnected (boolean bConnected)
+	{
+		m_bConnected = bConnected;
+		if (!bConnected && m_bPaged)
+		{
+			m_bPaged = FALSE;
+			return TRUE;
+		}
+		return FALSE;
+	}
+	boolean IsConnected (void) const	{ return m_bConnected; }
+
+	void Reset (void)			{ m_bPaged = FALSE; }
+	boolean IsPaged (void) const		{ return m_bPaged; }
+	void Page (void)			{ m_bPaged = TRUE; }	// falta UpdatePaging
+	void Unpage (void)			{ m_bPaged = FALSE; }	// ídem
+	u8 Read (u16 nAddress) const		{ return m_Page[nAddress & 0x3FFF]; }
+
+	void Map (CMemory &rMem) const
+	{
+		if (m_bPaged && m_bConnected && rMem.GetCodeModel () != CodeModelPlus3)
+		{
+			rMem.MapSlot (0, m_Page, rMem.GetROMSink ());
+		}
+	}
+
+private:
+	boolean m_bROM;
+	boolean m_bConnected;
+	boolean m_bPaged;
+	u8 m_Page[0x4000];
 };
 
 ////////////////////////////////////////////////////////////////////////////////

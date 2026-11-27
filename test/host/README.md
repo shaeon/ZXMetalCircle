@@ -41,5 +41,8 @@ teclado y su cinta, teclas, ROMs de `roms/` y lo que hay en la pantalla) y se ej
   memoria: CMD0, ACMD41, leer y escribir un sector), el reloj de esxDOS y el arranque de
   esxDOS sin tarjeta. Las pruebas de `divmmc/` son herramientas a mano con una imagen de
   tarjeta (ver sus comentarios).
+- `if1_snet_test.cpp`: cómo entran y salen la ROM del Interface 1 (0x0008, 0x1708, 0x0700;
+  reset, desconexión, +3, divMMC) y la Spectranet (arranque, 0x0008, 0x3FF8, 0x007C, la NMI
+  en 0x0066, RETN frente a RETI y la trampa programable).
 - `cpm_test.cpp`: el CP/M de LEC (`boot/cpm/cpm22_lec.tzx`) arranca en el 48K y en el 128K
   en modo 48K, y responde a DIR.

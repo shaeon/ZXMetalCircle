@@ -28,6 +28,7 @@
 #ifndef _zx_spectranet_h
 #define _zx_spectranet_h
 
+#include "zxmemory.h"
 #include <circle/types.h>
 
 #define SNET_FLASH_SIZE		0x20000
@@ -73,6 +74,29 @@ public:
 
 	void Reset (void);
 
+	// Conectada (spectranet=1). Al conectarla se reinicia.
+	void SetEnabled (boolean bOn)		{ m_bEnabled = bOn; if (bOn) Reset (); }
+	boolean IsEnabled (void) const		{ return m_bEnabled; }
+	// Reset del Spectrum: la NMI pendiente y el prefijo ED se olvidan, y la
+	// tarjeta (si está conectada) se reinicia
+	void MachineReset (void)
+	{
+		m_bNMIPending = FALSE;
+		m_bPrevED = FALSE;
+		if (m_bEnabled)
+		{
+			Reset ();
+		}
+	}
+	// La NMI del botón (o de la trampa) la atiende la tarjeta: se pagina al
+	// leer la instrucción de 0x0066
+	void TakeNMI (void)			{ m_bNMIPending = TRUE; }
+
+	// Lectura de una instrucción (ciclo M1), con la tarjeta conectada: la
+	// paginación, la trampa programable (*pbNMI: hay que lanzar una NMI) y
+	// RETN
+	u8 Fetch (u16 nAddress, const CMemory &rMem, boolean *pbNMI);
+
 	// Sin trampas ni paginación al arrancar (para grabar el firmware en una
 	// flash vacía con el instalador, como la opción "Spectranet disable" de Fuse)
 	void SetTrapsDisabled (boolean bOn)	{ m_bTrapsDisabled = bOn; }
@@ -101,6 +125,10 @@ public:
 	boolean IsActive (void)	{ boolean b = m_bActivity; m_bActivity = FALSE; return b; }
 
 private:
+	boolean m_bEnabled;
+	boolean m_bNMIPending;		// paginar al aceptarse la NMI
+	boolean m_bPrevED;		// el último código leído en un M1 fue el prefijo ED
+
 	void MapPage (unsigned nSlot, u8 nPage)	{ m_Page[nSlot] = nPage; }
 	u8 ReadPage (u8 nPage, u16 nOffset);
 	void WritePage (unsigned nSlot, u8 nPage, u16 nOffset, u8 nValue);

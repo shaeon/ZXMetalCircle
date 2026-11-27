@@ -81,6 +81,8 @@ jobs:
           ./cpm_test
           g++ $FLAGS -o divmmc_test divmmc_test.cpp $CORE roms_host.S
           ./divmmc_test
+          g++ $FLAGS -o if1_snet_test if1_snet_test.cpp $CORE roms_host.S
+          ./if1_snet_test
           g++ $FLAGS -o snapshot_snet_test snapshot_snet_test.cpp $S/snapshot.cpp $CORE roms_host.S
           ./snapshot_snet_test
           # Pruebas de referencia: la emulación de todos los modelos, igual que
