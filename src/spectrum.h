@@ -18,6 +18,7 @@
 #include "ula.h"
 #include "zxmemory.h"
 #include "pagers.h"
+#include "divmmc.h"
 #include "palette.h"
 #include "ay8912.h"
 #include "audiomixer.h"
@@ -121,23 +122,17 @@ public:
 	CPlus3Disk *GetDisk (void)		{ return m_pDisk; }
 	boolean HasDiskDrive (void) const	{ return ModelHas (m_Model, MODEL_DISK); }
 
-	// divMMC con esxDOS: puertos 0xE3 (control), 0xE7 (selección de tarjeta) y
-	// 0xEB (datos SPI), 8 KB de ROM (esxmmc.bin) y 128 KB de RAM que aparecen en
-	// 0x0000-0x3FFF al ejecutar los puntos de entrada (0x0000, 0x0008, 0x0038,
-	// 0x0066, 0x04C6, 0x0562; 0x3D00-0x3DFF al instante) y se retiran al
-	// ejecutar 0x1FF8-0x1FFF. La tarjeta es la misma que la de la ZXMMC.
-	// En el +3e solo se ponen los puertos (sin ROM ni paginación), como en el
-	// ZX-Uno, para los programas que hablan directamente con la tarjeta.
-	void SetDivMMCROM (const u8 *pROM);		// 8 KB (0 = sin divMMC completa)
-	void SetDivMMCEnabled (boolean bOn);		// divmmc=esxdos
-	boolean IsDivMMCActive (void) const	{ return m_bDivMMC && m_bDivROM && !HasZXMMC (); }
-	boolean IsDivMMCEnabled (void) const	{ return m_bDivMMC; }	// (en el +3e no se usa)
+	// divMMC con esxDOS (ver divmmc.h). La tarjeta es la misma que la de la
+	// ZXMMC. En el +3e solo se ponen los puertos (sin ROM ni paginación), como
+	// en el ZX-Uno, para los programas que hablan directamente con la tarjeta.
+	void SetDivMMCROM (const u8 *pROM)	{ m_Div.SetROM (pROM); UpdateDivActive (); }
+	void SetDivMMCEnabled (boolean bOn)	{ m_Div.SetEnabled (bOn); UpdateDivActive (); }
+	boolean IsDivMMCActive (void) const	{ return m_Div.IsEnabled () && m_Div.HasROM () && !HasZXMMC (); }
+	boolean IsDivMMCEnabled (void) const	{ return m_Div.IsEnabled (); }	// (en el +3e no se usa)
 	boolean HasDivMMCPorts (void) const	{ return IsDivMMCActive () || HasZXMMC (); }
 
-	// Reloj para esxDOS (RTC.SYS de ZXMetalCircle): fecha y hora en formato
-	// MS-DOS (0 = sin hora). Puerto 0x7C3B: un OUT la fija y cuatro IN la
-	// leen (fecha byte bajo, alto, hora byte bajo, alto). Solo con la divMMC.
-	void SetRTC (u16 nDate, u16 nTime)	{ m_nRTCDate = nDate; m_nRTCTime = nTime; }
+	// Reloj para esxDOS (RTC.SYS de ZXMetalCircle): ver divmmc.h
+	void SetRTC (u16 nDate, u16 nTime)	{ m_Div.SetRTC (nDate, nTime); }
 
 	// Spectranet (tarjeta de red): ver spectranet.h
 	CSpectranet *GetSpectranet (void)	{ return &m_Snet; }
@@ -301,40 +296,21 @@ private:
 	// Disquetera del +3
 	CPlus3Disk *m_pDisk;
 
-	// divMMC
-	boolean DivPaged (void) const
-		{ return m_bDivActive && (m_bDivAutomap || (m_nDivControl & 0x80)); }
-	u8 DivRead (u16 nAddress) const;
-	void DivWrite (u16 nAddress, u8 nValue);
-	u8 DivFetch (u16 nAddress);
 	u8 SnetFetch (u16 nAddress);
-	void UpdateDivActive (void)	{ m_bDivActive = IsDivMMCActive (); }
+	void UpdateDivActive (void)	{ m_Div.SetActive (IsDivMMCActive ()); }
 
 	boolean m_bNMIPending;
-
-	// Reloj para esxDOS
-	u16 m_nRTCDate, m_nRTCTime;
-	u8 m_RTCLatch[4];
-	unsigned m_nRTCIndex;
 
 	// Spectranet
 	CSpectranet m_Snet;
 	boolean m_bSnet;
 	boolean m_bPrevED;		// el último código leído en un M1 fue el prefijo ED
 	boolean m_bSnetNMIPending;	// paginar la Spectranet al aceptarse la NMI
-	boolean m_bDivMMC;		// divmmc=esxdos
-	boolean m_bDivROM;
-	boolean m_bDivActive;		// caché de IsDivMMCActive () (se mira en cada acceso)
-	boolean m_bDivAutomapLoad;		// la paginación automática ha sido en 0x0562
-	boolean m_bDivAutomap;		// paginada por un punto de entrada
-	u8 m_nDivControl;		// puerto 0xE3: CONMEM, MAPRAM, banco
-	u8 m_DivROM[0x2000];
-	u8 *m_pDivRAM;			// 128 KB: 16 bancos de 8 KB
 
-	// ZXMMC
+	// tarjeta SD, con sus dos interfaces
 	CSDCard m_SDCard;
-	u8 m_nMMCData;			// ZXMMC: byte recibido en la transferencia anterior
-	u8 m_nDivData;			// divMMC: ídem (cada interfaz tiene su registro)
+	CDivMMC m_Div;
+	CZXMMC m_ZXMMC;
 
 	const u8 *m_pModelROM[ModelCount];
 	TModel m_FallbackFrom;		// modelo pedido sin ROM (ModelCount = ninguno)

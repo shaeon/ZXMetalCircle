@@ -41,6 +41,8 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_bBusValid (FALSE),
 	m_nBusTstates (0),
 	m_nBusValue (0xFF),
+	m_Div (&m_SDCard),
+	m_ZXMMC (&m_SDCard),
 	m_TapeMode (TapeModeFast),
 	m_nFEReads (0),
 	m_nIdleFrames (0),
@@ -77,22 +79,7 @@ CSpectrum::CSpectrum (CZXKeyboard *pKeyboard, CTape *pTape)
 	m_bNMIPending = FALSE;
 	m_bSnet = FALSE;
 	m_bSnetNMIPending = FALSE;
-	m_nRTCDate = 0;
-	m_nRTCTime = 0;
-	m_nRTCIndex = 4;
-	memset (m_RTCLatch, 0, sizeof m_RTCLatch);
 	m_bPrevED = FALSE;
-	m_nMMCData = 0x00;		// registros SPI a 0 al encender (como en zxp3 y el ZX-Uno);
-	m_nDivData = 0x00;		// el cargador de CP/M de Otivax detecta la interfaz por esto
-	m_bDivMMC = FALSE;
-	m_bDivROM = FALSE;
-	m_bDivActive = FALSE;
-	m_bDivAutomap = FALSE;
-	m_bDivAutomapLoad = FALSE;
-	m_nDivControl = 0;
-	m_pDivRAM = new u8[128 * 1024];
-	memset (m_pDivRAM, 0, 128 * 1024);
-	// (m_nMMCData y m_nDivData se ponen a 0 más arriba)
 	m_bIF1ROM = FALSE;
 	m_FallbackFrom = ModelCount;
 	for (unsigned i = 0; i < ModelCount; i++)
@@ -115,7 +102,6 @@ CSpectrum::~CSpectrum (void)
 {
 	FreeRecording ();
 	delete m_pDisk;
-	delete [] m_pDivRAM;
 	m_pKeyboard = 0;
 	m_pTape = 0;
 }
@@ -196,9 +182,7 @@ void CSpectrum::Reset (void)
 	m_LEC.Reset ();
 	m_pDisk->Reset ();
 	m_SDCard.Select (FALSE);
-	m_bDivAutomap = FALSE;
-	m_bDivAutomapLoad = FALSE;
-	m_nDivControl = 0;		// CONMEM y MAPRAM se borran con el reset
+	m_Div.Reset ();			// CONMEM y MAPRAM se borran con el reset
 	m_bPrevED = FALSE;
 	m_bSnetNMIPending = FALSE;
 	if (m_bSnet)
@@ -257,7 +241,7 @@ void CSpectrum::UpdatePaging (void)
 boolean CSpectrum::IsMultifaceAvailable (void) const
 {
 	// con la divMMC, la NMI es suya (el navegador de esxDOS)
-	return m_MF.IsReady () && !m_bDivActive && !m_bSnet;
+	return m_MF.IsReady () && !m_Div.IsActive () && !m_bSnet;
 }
 
 boolean CSpectrum::InsertCartridge (const u8 *pROM, unsigned nSize)
@@ -296,7 +280,7 @@ boolean CSpectrum::SetLECConnected (boolean bConnected)
 
 void CSpectrum::SetIF1Connected (boolean bConnected)
 {
-	if (!m_bIF1ROM || m_bDivActive || m_bSnet)
+	if (!m_bIF1ROM || m_Div.IsActive () || m_bSnet)
 	{
 		bConnected = FALSE;		// sin roms/if1.rom, o con la divMMC (puertos 0xE7/0xEB), no hay IF1
 	}
@@ -345,9 +329,9 @@ inline void CSpectrum::WriteByte (uint16_t nAddress, uint8_t nValue)
 	{
 		NoteBus (nValue);
 	}
-	if (nAddress < 0x4000 && DivPaged ())
+	if (nAddress < 0x4000 && m_Div.IsPaged ())
 	{
-		DivWrite (nAddress, nValue);
+		m_Div.Write (nAddress, nValue);
 		return;
 	}
 
@@ -389,9 +373,9 @@ uint8_t CSpectrum::fetchOpcode (uint16_t address)
 			Snow (m_Mem.Bank ((m_Mem.GetPort7FFD () & 0x04) | ((m_Mem.GetPort7FFD () & 0x08) ? 2 : 0) | 1));
 		}
 	}
-	if (m_bDivActive)
+	if (m_Div.IsActive ())
 	{
-		return DivFetch (address);
+		return m_Div.Fetch (address, m_Mem);
 	}
 	if (m_bSnet)
 	{
@@ -447,98 +431,15 @@ uint8_t CSpectrum::peek8 (uint16_t address)
 	{
 		NoteBus (m_Mem.ReadPage (1)[address & 0x3FFF]);
 	}
-	if (address < 0x4000 && DivPaged ())
+	if (address < 0x4000 && m_Div.IsPaged ())
 	{
-		return DivRead (address);
+		return m_Div.Read (address);
 	}
 	if (address < 0x4000 && m_bSnet && m_Snet.IsPaged ())
 	{
 		return m_Snet.Read (address);
 	}
 	return m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
-}
-
-// divMMC: memoria en 0x0000-0x3FFF cuando está paginada
-//   CONMEM:            0x0000 ROM (esxDOS)       0x2000 banco elegido
-//   MAPRAM (sin CONMEM): 0x0000 banco 3 (lectura) 0x2000 banco elegido
-//   normal:            0x0000 ROM                0x2000 banco elegido
-u8 CSpectrum::DivRead (u16 nAddress) const
-{
-	if (nAddress < 0x2000)
-	{
-		if (!(m_nDivControl & 0x80) && (m_nDivControl & 0x40))
-		{
-			return m_pDivRAM[3 * 0x2000 + nAddress];
-		}
-		return m_DivROM[nAddress];
-	}
-	return m_pDivRAM[(m_nDivControl & 0x0F) * 0x2000 + (nAddress - 0x2000)];
-}
-
-void CSpectrum::DivWrite (u16 nAddress, u8 nValue)
-{
-	if (nAddress < 0x2000)
-	{
-		return;			// ROM protegida (el puente de escritura de la EEPROM, cerrado)
-	}
-
-	unsigned nBank = m_nDivControl & 0x0F;
-	if (!(m_nDivControl & 0x80) && (m_nDivControl & 0x40) && nBank == 3)
-	{
-		return;			// con MAPRAM, el banco 3 es de solo lectura
-	}
-	m_pDivRAM[nBank * 0x2000 + (nAddress - 0x2000)] = nValue;
-}
-
-// Lectura de una instrucción (ciclo M1) con la paginación automática
-u8 CSpectrum::DivFetch (u16 nAddress)
-{
-	// 0x3D00-0x3DFF: se pagina antes de leer (la instrucción ya es de la divMMC)
-	if (!m_bDivAutomap && (nAddress & 0xFF00) == 0x3D00)
-	{
-		m_bDivAutomap = TRUE;
-	}
-
-	u8 nOpcode = (nAddress < 0x4000 && DivPaged ()) ? DivRead (nAddress)
-							: m_Mem.ReadPage (nAddress >> 14)[nAddress & 0x3FFF];
-
-	// los demás puntos de entrada paginan después de leer la instrucción, y
-	// 0x1FF8-0x1FFF despagina también después
-	if (!m_bDivAutomap)
-	{
-		if (   nAddress == 0x0000 || nAddress == 0x0008 || nAddress == 0x0038
-		    || nAddress == 0x0066 || nAddress == 0x04C6 || nAddress == 0x0562)
-		{
-			m_bDivAutomap = TRUE;
-			m_bDivAutomapLoad = nAddress == 0x0562;	// ver la carga instantánea
-		}
-	}
-	else if (nAddress >= 0x1FF8 && nAddress <= 0x1FFF)
-	{
-		m_bDivAutomap = FALSE;
-		m_bDivAutomapLoad = FALSE;
-	}
-
-	return nOpcode;
-}
-
-void CSpectrum::SetDivMMCROM (const u8 *pROM)
-{
-	m_bDivROM = pROM != 0;
-	if (pROM != 0)
-	{
-		memcpy (m_DivROM, pROM, sizeof m_DivROM);
-	}
-	UpdateDivActive ();
-}
-
-void CSpectrum::SetDivMMCEnabled (boolean bOn)
-{
-	m_bDivMMC = bOn;
-	m_bDivAutomap = FALSE;
-	m_bDivAutomapLoad = FALSE;
-	m_nDivControl = 0;
-	UpdateDivActive ();
 }
 
 void CSpectrum::poke8 (uint16_t address, uint8_t value)
@@ -550,13 +451,13 @@ void CSpectrum::poke8 (uint16_t address, uint8_t value)
 uint16_t CSpectrum::peek16 (uint16_t address)
 {
 	Contend (address, 3);
-	uint8_t nLSB = (address < 0x4000 && DivPaged ()) ? DivRead (address)
+	uint8_t nLSB = (address < 0x4000 && m_Div.IsPaged ()) ? m_Div.Read (address)
 		     : (address < 0x4000 && m_bSnet && m_Snet.IsPaged ()) ? m_Snet.Read (address)
 							: m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
 
 	address++;
 	Contend (address, 3);
-	uint8_t nMSB = (address < 0x4000 && DivPaged ()) ? DivRead (address)
+	uint8_t nMSB = (address < 0x4000 && m_Div.IsPaged ()) ? m_Div.Read (address)
 		     : (address < 0x4000 && m_bSnet && m_Snet.IsPaged ()) ? m_Snet.Read (address)
 							: m_Mem.ReadPage (address >> 14)[address & 0x3FFF];
 
@@ -772,9 +673,9 @@ uint8_t CSpectrum::inPort (uint16_t port)
 	}
 
 	// Reloj de esxDOS (RTC.SYS de ZXMetalCircle)
-	if (port == 0x7C3B && m_bDivActive)
+	if (port == 0x7C3B && m_Div.IsActive ())
 	{
-		return m_nRTCIndex < 4 ? m_RTCLatch[m_nRTCIndex++] : 0xFF;
+		return m_Div.ReadRTC ();
 	}
 
 	// Spectranet: 0x003B, 0x013B, 0x023B y 0x033B (dirección completa)
@@ -787,18 +688,14 @@ uint8_t CSpectrum::inPort (uint16_t port)
 	// divMMC: 0xEB igual que el 0x3F de la ZXMMC
 	if (HasDivMMCPorts () && (port & 0xFF) == 0xEB)
 	{
-		u8 nValue = m_nDivData;
-		m_nDivData = m_SDCard.Exchange (0xFF);
-		return nValue;
+		return m_Div.ReadData ();
 	}
 
 	// ZXMMC: la lectura de 0x3F devuelve lo recibido en la transferencia
 	// anterior y lanza otra con 0xFF (como el spi.v de zxp3)
 	if (HasZXMMC () && (port & 0xFF) == 0x3F)
 	{
-		u8 nValue = m_nMMCData;
-		m_nMMCData = m_SDCard.Exchange (0xFF);
-		return nValue;
+		return m_ZXMMC.ReadData ();
 	}
 
 	// Disquetera del +3: 0x2FFD estado, 0x3FFD datos
@@ -1005,49 +902,21 @@ void CSpectrum::outPort (uint16_t port, uint8_t value)
 		m_Snet.WritePort (port, value);
 	}
 
-	if (port == 0x7C3B && m_bDivActive)		// reloj de esxDOS: se fija la hora
+	if (port == 0x7C3B && m_Div.IsActive ())		// reloj de esxDOS: se fija la hora
 	{
-		m_RTCLatch[0] = m_nRTCDate & 0xFF;
-		m_RTCLatch[1] = m_nRTCDate >> 8;
-		m_RTCLatch[2] = m_nRTCTime & 0xFF;
-		m_RTCLatch[3] = m_nRTCTime >> 8;
-		m_nRTCIndex = 0;
+		m_Div.LatchRTC ();
 	}
 
-	// divMMC: 0xE3 control (MAPRAM no se puede borrar salvo con reset),
-	// 0xE7 bit 0 = CS de la tarjeta 0 (activa en bajo), 0xEB datos SPI
+	// divMMC: 0xE3 control, 0xE7 selección de la tarjeta, 0xEB datos SPI
 	if (HasDivMMCPorts ())
 	{
-		switch (port & 0xFF)
-		{
-		case 0xE3:
-			if (m_bDivActive)
-			{
-				m_nDivControl = value | (m_nDivControl & 0x40);
-			}
-			break;
-
-		case 0xE7:
-			m_SDCard.Select ((value & 0x01) == 0);
-			break;
-
-		case 0xEB:
-			m_nDivData = m_SDCard.Exchange (value);
-			break;
-		}
+		m_Div.WritePort (port & 0xFF, value);
 	}
 
-	// ZXMMC: 0x1F bit 0 = CS de la tarjeta (activa en bajo), 0x3F = datos SPI
+	// ZXMMC: 0x1F selección de la tarjeta, 0x3F datos SPI
 	if (HasZXMMC ())
 	{
-		if ((port & 0xFF) == 0x1F)
-		{
-			m_SDCard.Select ((value & 0x01) == 0);
-		}
-		else if ((port & 0xFF) == 0x3F)
-		{
-			m_nMMCData = m_SDCard.Exchange (value);
-		}
+		m_ZXMMC.WritePort (port & 0xFF, value);
 	}
 
 	if (IF1Active ())
@@ -1386,14 +1255,10 @@ uint8_t CSpectrum::breakpoint (uint16_t address, uint8_t opcode)
 		// lo usa para sus cintas). Como la rutina de la ROM ya no se ejecuta,
 		// se anula: si no, la vuelta por SA/LD-RET ejecutaba código de esxDOS
 		// en lugar de la ROM y el programa se perdía tras el primer bloque.
-		if (m_bDivAutomapLoad)
-		{
-			m_bDivAutomap = FALSE;
-			m_bDivAutomapLoad = FALSE;
-		}
+		m_Div.CancelLoadAutomap ();
 		return 0xC9;	// RET (ver FlashLoad)
 	}
-	m_bDivAutomapLoad = FALSE;
+	m_Div.ClearLoadAutomap ();
 
 	// LD-BYTES de la ROM de BASIC
 	if (   address == 0x0556
@@ -1803,9 +1668,9 @@ static const TAccelPattern IncreasingPatterns[] =
 // Lectura de memoria sin contención ni efectos (para reconocer el código)
 u8 CSpectrum::PeekLoader (u16 nAddress) const
 {
-	if (nAddress < 0x4000 && DivPaged ())
+	if (nAddress < 0x4000 && m_Div.IsPaged ())
 	{
-		return DivRead (nAddress);
+		return m_Div.Read (nAddress);
 	}
 	return m_Mem.ReadPage (nAddress >> 14)[nAddress & 0x3FFF];
 }

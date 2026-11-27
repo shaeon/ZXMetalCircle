@@ -6,7 +6,7 @@ en `circle/`, y vuelca la pantalla a ficheros PPM (384x304, borde enorme).
 ```
 sed 's#"roms/#"../../roms/#' ../../src/roms.S > roms_host.S
 g++ -O2 -std=c++14 -DWITH_BREAKPOINT_SUPPORT -I. -I../../src -I../../third_party/z80cpp \
-    -o harness harness.cpp ../../src/spectrum.cpp ../../src/ula.cpp ../../src/zxmemory.cpp ../../src/pagers.cpp ../../src/ay8912.cpp ../../src/audiomixer.cpp \
+    -o harness harness.cpp ../../src/spectrum.cpp ../../src/ula.cpp ../../src/zxmemory.cpp ../../src/pagers.cpp ../../src/divmmc.cpp ../../src/ay8912.cpp ../../src/audiomixer.cpp \
     ../../src/tape.cpp ../../src/zxkeyboard.cpp ../../third_party/z80cpp/z80.cpp roms_host.S
 ./harness <modelo 0-2> <modo cinta 0-2> fichero.tap|tzx <cuadros>   # genera boot.ppm y end.ppm
 ```
@@ -36,5 +36,10 @@ teclado y su cinta, teclas, ROMs de `roms/` y lo que hay en la pantalla) y se ej
 - `lec_test.cpp`: las páginas de la LEC, la 15 (la RAM alta), el reset y la desconexión.
 - `cartridge_test.cpp`: cartuchos del Interface 2 (`test_if2.rom`, y sus 8 KB) en el 48K, el
   128K y el +2; el +2A los rechaza.
+- `divmmc_test.cpp`: la divMMC con `roms/esxmmc.bin` (CONMEM, bancos, MAPRAM, paginación
+  automática, reset), la tarjeta por SPI con la divMMC y con la ZXMMC del +3e (una imagen en
+  memoria: CMD0, ACMD41, leer y escribir un sector), el reloj de esxDOS y el arranque de
+  esxDOS sin tarjeta. Las pruebas de `divmmc/` son herramientas a mano con una imagen de
+  tarjeta (ver sus comentarios).
 - `cpm_test.cpp`: el CP/M de LEC (`boot/cpm/cpm22_lec.tzx`) arranca en el 48K y en el 128K
   en modo 48K, y responde a DIR.
