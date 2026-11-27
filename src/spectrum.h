@@ -23,6 +23,7 @@
 #include "ay8912.h"
 #include "audiomixer.h"
 #include "tape.h"
+#include "tapedeck.h"
 #include "interface1.h"
 #include "plus3disk.h"
 #include "sdcard.h"
@@ -32,24 +33,6 @@
 #include "z80.h"
 #include "z80operations.h"
 #include <circle/types.h>
-
-enum TTapeMode
-{
-	TapeModeFlash,		// trap de la ROM: carga instantánea de bloques estándar
-	TapeModeFast,		// carga por pulsos a máxima velocidad (se ve la carga)
-	TapeModeNormal,		// carga por pulsos a velocidad real
-	TapeModeCount
-};
-
-// Recibe los bloques que la ROM graba con SAVE (trap de SA-BYTES)
-class CTapeSaveHandler
-{
-public:
-	virtual ~CTapeSaveHandler (void) {}
-
-	// pBlock = flag + datos + paridad. Devuelve FALSE si no se pudo grabar.
-	virtual boolean SaveTapeBlock (const u8 *pBlock, unsigned nLength) = 0;
-};
 
 class CSnapshot;
 
@@ -82,16 +65,17 @@ public:
 	CAudioMixer *GetAudio (void) override	{ return &m_Audio; }
 	CAY8912 *GetAY (void)			{ return &m_AY; }
 
-	void SetTapeMode (TTapeMode Mode)	{ m_TapeMode = Mode; }
-	TTapeMode GetTapeMode (void) const	{ return m_TapeMode; }
-	void TapePlay (void);
-	void TapeStop (void);
-	void TapeInserted (void);	// tras insertar o rebobinar: arma el autoarranque
+	// Casete (tapedeck.h)
+	void SetTapeMode (TTapeMode Mode)	{ m_Deck.SetMode (Mode); }
+	TTapeMode GetTapeMode (void) const	{ return m_Deck.GetMode (); }
+	void TapePlay (void)			{ m_Deck.Play (GetAbsoluteTstates ()); }
+	void TapeStop (void)			{ m_Deck.Stop (); }
+	void TapeInserted (void)		{ m_Deck.Inserted (); }	// tras insertar o rebobinar: arma el autoarranque
 	// TRUE si se está cargando una cinta en modo acelerado (no sincronizar)
-	boolean IsTapeAccelerating (void) const;
+	boolean IsTapeAccelerating (void) const	{ return m_Deck.IsAccelerating (); }
 	// Aceleración de cargadores como en Fuse (solo en carga rápida e instantánea)
-	void SetLoaderAcceleration (boolean bOn)	{ m_bLoaderAccel = bOn; m_AccelMode = AccelNone; }
-	boolean GetLoaderAcceleration (void) const	{ return m_bLoaderAccel; }
+	void SetLoaderAcceleration (boolean bOn)	{ m_Deck.SetLoaderAcceleration (bOn); }
+	boolean GetLoaderAcceleration (void) const	{ return m_Deck.GetLoaderAcceleration (); }
 	// diskaccel=1: emulación acelerada mientras se usa la disquetera
 	void SetDiskAcceleration (boolean bOn)	{ m_bDiskAccel = bOn; }
 	boolean GetDiskAcceleration (void) const	{ return m_bDiskAccel; }
@@ -203,19 +187,22 @@ public:
 	// incluidas las turbo). Durante la grabación no se usa el trap de SAVE.
 	// Formato de los datos: RLE de CSW, 1 muestra = 16 t-states.
 	// Entrada EAR externa (casete real por GPIO o tarjeta de sonido USB)
-	void SetEarInput (CEarInput *pEarInput)	{ m_pEarInput = pEarInput; m_Audio.SetEarInput (pEarInput); }
-	boolean IsEarInputActive (void) const;
+	void SetEarInput (CEarInput *pEarInput)	{ m_Deck.SetEarInput (pEarInput); m_Audio.SetEarInput (pEarInput); }
+	boolean IsEarInputActive (void) const	{ return m_Deck.IsEarInputActive (); }
 
 	// bEarInput: graba la entrada EAR externa en lugar de la salida MIC
-	boolean StartRecording (boolean bEarInput = FALSE);
-	boolean IsRecordingEarInput (void) const	{ return m_bRecording && m_bRecordEar; }
-	void StopRecording (void);
-	boolean IsRecording (void) const	{ return m_bRecording; }
-	const u8 *GetRecording (unsigned *pLength, unsigned *pPulses, unsigned *pSampleRate) const;
-	void FreeRecording (void);
+	boolean StartRecording (boolean bEarInput = FALSE)
+		{ return m_Deck.StartRecording (bEarInput, GetAbsoluteTstates ()); }
+	boolean IsRecordingEarInput (void) const	{ return m_Deck.IsRecordingEarInput (); }
+	void StopRecording (void)		{ m_Deck.StopRecording (GetAbsoluteTstates ()); }
+	boolean IsRecording (void) const	{ return m_Deck.IsRecording (); }
+	// muestras de 16 t-states del reloj del modelo (tiempo real, como una cinta)
+	const u8 *GetRecording (unsigned *pLength, unsigned *pPulses, unsigned *pSampleRate) const
+		{ return m_Deck.GetRecording (pLength, pPulses, pSampleRate, m_pTiming->nClockFreq); }
+	void FreeRecording (void)		{ m_Deck.FreeRecording (); }
 
 	// Grabación con SAVE (0 = desactivada: la ROM graba "al aire")
-	void SetSaveHandler (CTapeSaveHandler *pHandler)	{ m_pSaveHandler = pHandler; }
+	void SetSaveHandler (CTapeSaveHandler *pHandler)	{ m_Deck.SetSaveHandler (pHandler); }
 
 	// Juego de caracteres de la ROM del 48K (96 caracteres x 8 bytes)
 	const u8 *GetROMFont (void) const;
@@ -256,10 +243,8 @@ private:
 
 	void PageMultiface (void);
 	void UnpageMultiface (void);
-	boolean FlashLoad (void);		// carga instantánea en 0x0562 (como Fuse)
-	boolean FlashSave (void);
 	u64 GetAbsoluteTstates (void) const	{ return m_nFrameStart + (u64) m_nTstates; }
-	void TapeFrameHousekeeping (void);
+	static void TapeWriteByte (void *pParam, u16 nAddress, u8 nValue);
 
 private:
 	CZXKeyboard *m_pKeyboard;
@@ -308,6 +293,9 @@ private:
 	CDivMMC m_Div;
 	CZXMMC m_ZXMMC;
 
+	// casete (después de m_CPU, m_Mem y m_Div)
+	CTapeDeck m_Deck;
+
 	const u8 *m_pModelROM[ModelCount];
 	TModel m_FallbackFrom;		// modelo pedido sin ROM (ModelCount = ninguno)
 
@@ -317,52 +305,11 @@ private:
 	CInterface1 m_IF1;		// microdrives, red y RS232
 	CInterface1ROM m_IF1ROM;	// su ROM y cuándo se ve (pagers.h)
 
-	// grabación por pulsos
-	void RecordEdge (u64 nTime);
-	boolean m_bRecording;
-	boolean m_bRecordEar;
-	CEarInput *m_pEarInput;
-	u8 *m_pRecBuffer;
-	unsigned m_nRecLength, m_nRecCapacity, m_nRecPulses;
-	u64 m_nRecLastEdge;
-	unsigned m_nRecRemainder;
-
-	// cinta
-	CTapeSaveHandler *m_pSaveHandler;
-	TTapeMode m_TapeMode;
-	unsigned m_nFEReads;
-	unsigned m_nIdleFrames;
-	unsigned m_nLoadingFrames;
-	boolean m_bAutoStopped;
-
-	// aceleración de cargadores (ver CheckLoaderAcceleration)
-	enum TAccelMode { AccelNone, AccelIncreasing, AccelDecreasing };
-	boolean m_bLoaderAccel;
+	// disco acelerado y TK
 	boolean m_bDiskAccel;
 	boolean m_bTKDiode;
 	TTKULA m_nTKULA;
 	boolean m_bTKMicro;		// TK con ULA de Microdigital (tiempos propios)
-	TAccelMode m_AccelMode;
-	u16 m_nAccelPC;
-	unsigned m_nAccelEdges;		// flancos acelerados en este cuadro
-	// parada automática: ¿el programa sigue los flancos de la cinta?
-	u32 m_nSeenEdge;			// último flanco que ha visto una lectura de 0xFE
-	u32 m_nFrameEdges;			// flancos al empezar el cuadro
-	unsigned m_nObservedEdges;		// lecturas de este cuadro que han visto un flanco nuevo
-	// ¿lee como un cargador? (ver CountLoaderRead)
-	unsigned m_nLoaderReads;		// lecturas de 0xFE de este cuadro con pinta de cargador
-	u16 m_nLastFEPC;
-	u16 m_nLastFEPort;
-	u8 m_LastFERegs[6];			// B, C, D, E, H, L en la lectura anterior
-	void CountLoaderRead (u16 nPort);
-	u8 PeekLoader (u16 nAddress) const;
-	boolean LoaderPatternMatches (u16 nAddress, const struct TLoaderPatternByte *pPattern,
-				      unsigned nLength) const;
-	boolean LoaderWordMatches (u16 nAddress, u16 nValue) const;
-	TAccelMode DetectLoader (u16 nPC) const;
-	TAccelMode DetectLoaderAtIn (u16 nPC) const;
-	boolean ModifiedROMLoader (u16 nPC) const;
-	void CheckLoaderAcceleration (void);
 };
 
 #endif

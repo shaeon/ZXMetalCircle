@@ -44,5 +44,8 @@ teclado y su cinta, teclas, ROMs de `roms/` y lo que hay en la pantalla) y se ej
 - `if1_snet_test.cpp`: cómo entran y salen la ROM del Interface 1 (0x0008, 0x1708, 0x0700;
   reset, desconexión, +3, divMMC) y la Spectranet (arranque, 0x0008, 0x3FF8, 0x007C, la NMI
   en 0x0066, RETN frente a RETI y la trampa programable).
+- `tapedeck_test.cpp`: el casete con una cinta .TAP hecha en la prueba: carga instantánea,
+  rápida (con y sin aceleración de cargadores) y normal, arranque y parada automáticos,
+  parada manual, SAVE instantáneo y grabación por pulsos de la salida MIC.
 - `cpm_test.cpp`: el CP/M de LEC (`boot/cpm/cpm22_lec.tzx`) arranca en el 48K y en el 128K
   en modo 48K, y responde a DIR.
