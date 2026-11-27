@@ -66,6 +66,7 @@ static const TOptionDef Options[] =
 	{"gw",		0},
 	{"dns",		0},
 	{"tlsverify",	"0|1"},
+	{"wifilog",	"0|1|2"},
 	{"hdd",		0},
 	{"p3elang",	"es|en"},
 	{"tkula",	"50|60|ferranti"},

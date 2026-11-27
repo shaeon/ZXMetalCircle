@@ -318,6 +318,13 @@ defecto.
                     1  si (por defecto)
                     0  no (solo si falla por un certificado y te fias de la red)
 
+ wifilog=0        Registro de la WiFi en SD:/wifi-diag.txt, para ver donde se
+                  queda si no conecta (se añade a lo que haya; no pasa de 4 MB):
+                    0  no (por defecto)
+                    1  intentos, cortes y su motivo, y el estado de la conexion
+                    2  ademas, los detalles de wpa_supplicant (mucho mas largo)
+                  Tambien en la configuracion: pagina 7, "Registro WiFi".
+
  web=1            Pagina web del emulador:
                     1   completa (por defecto)
                     ro  solo lectura: ver, bajar y cargar; sin subir, borrar,

@@ -17,6 +17,8 @@ Con una red guardada, ENTER da **Conectar** (pasa a ser la primera y pregunta si
 
 Al arrancar, la conexión se hace en segundo plano y la ayuda (F1, línea "Red:") dice en qué paso está: **buscando** la red, **conectando** a ella, **conectada, esperando IP** o que la red **rechaza la contraseña** (esto, además, sale abajo en cuanto pasa). Cuando está lista, aparece un mensaje con la dirección, por ejemplo `WiFi http://192.168.1.50`. Si a los dos minutos no ha conectado, sale una vez el aviso «WiFi sin conectar: mira F1 o reinicia».
 
+**Si no conecta**: pon **«Registro WiFi»** (página 7) en «sí», o `wifilog=1` en `cmdline.txt`, y reinicia. Desde ese arranque se va apuntando en `SD:/wifi-diag.txt` (se añade a lo que haya) cada intento de conexión, los cortes con su motivo, si la red rechaza la contraseña, lo que dice el chip WiFi (por qué falla un intento y los avisos de su firmware) y el estado que se ve en F1, cada línea con los segundos desde el arranque. Con «detallado» (`wifilog=2`) se apunta también todo lo que hace wpa_supplicant por dentro. El fichero no pasa de 4 MB; cuando acabes, vuelve a ponerlo en «no».
+
 **Operaciones largas**: la red y la emulación comparten el núcleo 0, así que mientras se lee o se escribe un fichero grande (desde 32 KB) por la web, o se busca o descarga de ZXDB (HTTPS), la emulación se para un momento. Durante ese rato se ve un aviso abajo, por ejemplo "Red: enviando juego.tap (512 KB)" o "Red: descargando de ZXDB...".
 
 **Servidor web**: abre esa dirección en el navegador del PC o del móvil. Desde ahí puedes:

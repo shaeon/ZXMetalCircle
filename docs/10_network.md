@@ -17,6 +17,8 @@ On a saved network, ENTER gives **Connect** (it becomes the first one and asks w
 
 At boot, the connection is made in the background and the help (F1, "Network:" line) says which step it is at: **looking for** the network, **connecting** to it, **connected, waiting for IP** or the network **rejects the password** (this is also shown at the bottom as soon as it happens). When it is ready, a message with the address appears, for example `WiFi http://192.168.1.50`. If it has not connected after two minutes, the notice "WiFi not connected: see F1 or restart" is shown once.
 
+**If it does not connect**: set **"WiFi log"** (page 7) to "yes", or `wifilog=1` in `cmdline.txt`, and restart. From that boot on, `SD:/wifi-diag.txt` records (appended to whatever is there) every connection attempt, the disconnections and their reason, whether the network rejects the password, what the WiFi chip reports (why an attempt fails and its firmware events) and the state shown in F1, each line with the seconds since boot. With "detailed" (`wifilog=2`) everything wpa_supplicant does inside is recorded too. The file never goes over 4 MB; when you are done, set it back to "no".
+
 **Long operations**: the network and the emulation share core 0, so while a large file (from 32 KB) is read or written through the web page, or ZXDB is searched or downloaded from (HTTPS), the emulation stops for a moment. Meanwhile a notice is shown at the bottom, for example "Network: sending game.tap (512 KB)" or "Network: downloading from ZXDB...".
 
 **Web server**: open that address in the PC's or phone's browser. From there you can:

@@ -21,6 +21,7 @@
 #include <circle/string.h>
 #include <circle/types.h>
 #include "wificonfig.h"
+#include <fatfs/ff.h>
 
 class CBcm4343Device;
 
@@ -126,6 +127,10 @@ public:
 		{ if (m_pBusyHandler != 0) m_pBusyHandler (pText, m_pBusyParam); }
 
 	void SetTLSVerify (boolean bVerify)	{ m_bTLSVerify = bVerify; }
+	// Registro de la WiFi en SD:/wifi-diag.txt (wifilog=): 0 = no, 1 = lo que
+	// cuenta wpa_supplicant (intentos, cortes y su motivo) y el estado que ve
+	// el emulador, 2 = también los detalles de wpa_supplicant. Antes de Start.
+	void SetWiFiLog (unsigned nLevel)	{ m_nWiFiLog = nLevel; }
 	void SetTimeZone (int nMinutes, TSummerTime SummerTime);	// tz= y dst=, en marcha
 	// Servidor web: 0 = apagado, 1 = completo, 2 = solo lectura; contraseña ("" = sin)
 	void SetWebOptions (unsigned nMode, const char *pPassword);
@@ -138,6 +143,9 @@ public:
 private:
 	void UpdateSummerTime (void);
 	void CheckWiFiProgress (void);
+	void WiFiLog (const char *pFormat, ...);	// una línea, con la hora (wifilog=)
+	void FlushWiFiLog (void);			// lo de wpa_supplicant y el estado, al fichero
+	void WriteWiFiLogBuffer (FIL *pFile);	// lo de wpa_supplicant y el chip, al fichero
 	const char *GetWiFiStepText (void) const;
 
 private:
@@ -173,6 +181,11 @@ private:
 	unsigned m_nConnectStart;		// cuándo empezó a conectar (s)
 	boolean m_bSlowWarned;
 	int m_nPSKWarned;			// contraseñas rechazadas ya avisadas
+	unsigned m_nWiFiLog;			// wifilog=
+	unsigned m_nWiFiLogBytes;		// escritos (hasta WIFI_LOG_MAX)
+	unsigned m_nWiFiLogNext;		// próxima vez que se pasa al fichero (s)
+	CString m_WiFiLogState;			// el último estado apuntado
+	boolean m_bWiFiLogTime;			// la hora (NTP) ya apuntada
 	CString m_Warning;
 	boolean m_bWarningPending;
 

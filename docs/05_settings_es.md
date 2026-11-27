@@ -94,7 +94,7 @@ Desde la ayuda (F1), la tecla **C** abre la configuración: diez páginas con la
 | 4 Teclado | F5 / Alt+F5, Recreated ZX, teclado por GPIO*, teclado del ZX81, sensibilidad del ratón (en gris si no hay ratón o el Kempston es del joystick) |
 | 5 Joysticks y mandos | joystick de los jugadores 1 y 2, mando de cada jugador, mandos de más, cursores del PC, disparo con el teclado, botones del mando (ver [04_usb_gamepads_es.md](04_usb_gamepads_es.md)) |
 | 6 Periféricos | Spectranet, divMMC con esxDOS, memoria LEC, Interface 1, Multiface, RS232*, ZX Net*, casete real*, invertir casete*, GPIO del casete* |
-| 7 Red y hora | red*, red WiFi y país WiFi (se guardan en `wpa_supplicant.conf` y se usan al reiniciar, ver [10_network_es.md](10_network_es.md)), zona horaria*, horario de verano*, IP fija*, máscara*, puerta de enlace*, DNS*, comprobar HTTPS* |
+| 7 Red y hora | red*, red WiFi y país WiFi (se guardan en `wpa_supplicant.conf` y se usan al reiniciar, ver [10_network_es.md](10_network_es.md)), zona horaria*, horario de verano*, IP fija*, máscara*, puerta de enlace*, DNS*, comprobar HTTPS*, registro WiFi* |
 | 8 ROMs y carpetas | ROM de cada máquina*, del Interface 1*, de esxDOS* y flash de la Spectranet* (las de la carpeta `roms` con el tamaño correcto), carpeta de esxDOS* |
 | 9 Servidor web | página web* (sí, solo lectura o no) y su contraseña* |
 | 10 Actualización | buscar e instalar, paquete guardado, buscar al arrancar, paquetes guardados, configuración al actualizar |

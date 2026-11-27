@@ -20,6 +20,8 @@
 #include <circle/logger.h>
 #include <circle/util.h>
 #include <fatfs/ff.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 #define FIRMWARE_PATH		"SD:/firmware/"
 #define WPA_CONFIG_FILE		"SD:/wpa_supplicant.conf"
@@ -27,6 +29,8 @@
 
 
 #define WIFI_SLOW_SECONDS	120		// sin conectar en este tiempo: se avisa
+#define WIFI_LOG_FILE		"SD:/wifi-diag.txt"
+#define WIFI_LOG_MAX		(4 * 1024 * 1024)	// el fichero no pasa de aquí
 
 static const char FromNet[] = "net";
 
@@ -38,6 +42,11 @@ int zxmc_wpa_scanning (void);
 int zxmc_wpa_get_bss (int nIndex, char *pSSID, int nSize, int *pLevel, int *pFreq, int *pOpen);
 extern "C" int zxmc_wpa_psk_mismatches;
 extern "C" char zxmc_wpa_psk_ssid[33];
+// Y el registro (tools/circle/wpa_zxmc_debug.c): los mensajes de wpa_supplicant
+// también a un búfer; wpa_debug_level es de wpa_supplicant (2 = MSG_DEBUG)
+extern "C" int zxmc_wpa_log_on;
+extern "C" int wpa_debug_level;
+extern "C" unsigned zxmc_wpa_log_take (char *pBuffer, unsigned nSize, unsigned *pLost);
 
 CNetworkManager *CNetworkManager::s_pThis = 0;
 
@@ -65,6 +74,10 @@ CNetworkManager::CNetworkManager (void)
 	m_nConnectStart (0),
 	m_bSlowWarned (FALSE),
 	m_nPSKWarned (0),
+	m_nWiFiLog (0),
+	m_nWiFiLogBytes (0),
+	m_nWiFiLogNext (0),
+	m_bWiFiLogTime (FALSE),
 	m_bWarningPending (FALSE)
 {
 	m_WiFiFirst[0] = '\0';
@@ -200,6 +213,23 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 		return;
 	}
 
+	if (m_nWiFiLog > 0)
+	{
+		zxmc_wpa_log_on = 1;
+		if (m_nWiFiLog >= 2)
+		{
+			wpa_debug_level = 2;		// MSG_DEBUG: los detalles, solo al fichero
+		}
+		WiFiLog ("=== ZXMetalCircle %s, %s, %u bits, wifilog=%u, red=%s ===", ZXCIRCLE_VERSION,
+			 CMachineInfo::Get ()->GetMachineName (),
+#if AARCH == 64
+			 64,
+#else
+			 32,
+#endif
+			 m_nWiFiLog, Mode == NetModeAuto ? "auto" : (Mode == NetModeWiFi ? "wifi" : "eth"));
+	}
+
 #ifdef ZX_TEST_NET_ERROR
 	// solo para pruebas en QEMU: la red falla antes de crear CNetSubSystem
 	m_pErrorReason = "prueba";
@@ -231,6 +261,10 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 	{
 		Mode = (ModelHasWiFi () && bConfig) ? NetModeWiFi : NetModeEthernet;
 	}
+	WiFiLog ("emulador: %s; redes guardadas: %u%s%s%s; WiFi en esta Pi: %s",
+		 Mode == NetModeWiFi ? "por WiFi" : "por cable", m_nWiFiNetworks,
+		 m_nWiFiNetworks > 0 ? " (la primera: " : "", m_WiFiFirst, m_nWiFiNetworks > 0 ? ")" : "",
+		 ModelHasWiFi () ? "si" : "no");
 
 	if (Mode == NetModeWiFi)
 	{
@@ -241,6 +275,7 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 		}
 		if (!bConfig || !FileExists (FIRMWARE_PATH "brcmfmac43430-sdio.bin"))
 		{
+			WiFiLog ("emulador: no arranca: %s", bConfig ? "falta el firmware" : "no hay redes guardadas");
 			m_bWiFi = TRUE;
 			m_bNoFirmware = bConfig;
 			m_State = NetStateNoConfig;
@@ -253,6 +288,7 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 		{
 			CLogger::Get ()->Write (FromNet, LogError, "No se pudo iniciar el chip WiFi (firmware en %s)",
 						FIRMWARE_PATH);
+			WiFiLog ("emulador: no arranca el chip WiFi");
 			m_pErrorReason = N_("no arranca el chip WiFi");
 			m_State = NetStateError;
 			return;
@@ -280,6 +316,7 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 		{
 			CLogger::Get ()->Write (FromNet, LogError, "No se pudo iniciar WPA: revisa %s",
 						WPA_CONFIG_FILE);
+			WiFiLog ("emulador: no arranca wpa_supplicant (revisa %s)", WPA_CONFIG_FILE);
 			m_pErrorReason = N_("revisa wpa_supplicant.conf");
 			m_State = NetStateError;
 			return;
@@ -288,10 +325,16 @@ void CNetworkManager::Start (TNetMode Mode, const char *pHostname, int nTimeZone
 
 	m_State = NetStateConnecting;
 	m_nConnectStart = CTimer::Get ()->GetUptime ();
+	WiFiLog ("emulador: chip y wpa_supplicant en marcha, conectando");
 }
 
 boolean CNetworkManager::Process (void)
 {
+	if (m_nWiFiLog > 0 && m_bWiFi)
+	{
+		FlushWiFiLog ();
+	}
+
 	if (m_State == NetStateRunning)
 	{
 		UpdateSummerTime ();
@@ -444,6 +487,121 @@ void CNetworkManager::CheckWiFiProgress (void)
 		m_bWarningPending = TRUE;
 		CLogger::Get ()->Write (FromNet, LogWarning, "Sin conexion WiFi tras %u s: %s",
 					WIFI_SLOW_SECONDS, GetStateText ());
+	}
+}
+
+// Registro de la WiFi (wifilog=): una línea con el tiempo desde el arranque,
+// en el mismo formato que las de wpa_supplicant
+void CNetworkManager::WiFiLog (const char *pFormat, ...)
+{
+	if (m_nWiFiLog == 0 || m_nWiFiLogBytes >= WIFI_LOG_MAX)
+	{
+		return;
+	}
+
+	char Line[300];
+	unsigned nSec, nUsec;
+	CTimer::Get ()->GetUptime (&nSec, &nUsec);
+	int n = snprintf (Line, sizeof Line, "%6u.%02u zx:  ", nSec, nUsec / 10000);
+	va_list Args;
+	va_start (Args, pFormat);
+	int m = vsnprintf (Line + n, sizeof Line - n - 2, pFormat, Args);
+	va_end (Args);
+	n += m > 0 ? m : 0;
+	if (n > (int) sizeof Line - 2)
+	{
+		n = sizeof Line - 2;
+	}
+	Line[n++] = '\r';
+	Line[n++] = '\n';
+
+	FIL File;
+	if (f_open (&File, WIFI_LOG_FILE, FA_WRITE | FA_OPEN_APPEND) != FR_OK)
+	{
+		return;
+	}
+	WriteWiFiLogBuffer (&File);		// antes, lo de wpa_supplicant y el chip (en orden)
+	UINT nWritten = 0;
+	f_write (&File, Line, n, &nWritten);
+	f_close (&File);
+	m_nWiFiLogBytes += nWritten;
+}
+
+// Lo que han apuntado wpa_supplicant y el chip, al fichero abierto
+void CNetworkManager::WriteWiFiLogBuffer (FIL *pFile)
+{
+	static char Buffer[4096];
+	unsigned nLost;
+	unsigned n;
+	while (   m_nWiFiLogBytes < WIFI_LOG_MAX
+	       && ((n = zxmc_wpa_log_take (Buffer, sizeof Buffer, &nLost)) > 0 || nLost > 0))
+	{
+		if (nLost > 0)
+		{
+			char Line[80];
+			int m = snprintf (Line, sizeof Line, "(se perdieron %u líneas: no cabían)\r\n", nLost);
+			UINT nWritten = 0;
+			f_write (pFile, Line, m, &nWritten);
+			m_nWiFiLogBytes += nWritten;
+		}
+		UINT nWritten = 0;
+		f_write (pFile, Buffer, n, &nWritten);
+		m_nWiFiLogBytes += nWritten;
+	}
+}
+
+// Una vez por segundo: el estado que ve el emulador (si ha cambiado), la
+// hora cuando llega por NTP y lo que ha contado wpa_supplicant
+void CNetworkManager::FlushWiFiLog (void)
+{
+	unsigned nNow = CTimer::Get ()->GetUptime ();
+	if (nNow < m_nWiFiLogNext)
+	{
+		return;
+	}
+	m_nWiFiLogNext = nNow + 1;
+
+	if (m_nWiFiLogBytes >= WIFI_LOG_MAX)
+	{
+		zxmc_wpa_log_on = 0;
+		return;
+	}
+
+	const char *pState = GetStateText ();
+	if (m_WiFiLogState.Compare (pState) != 0)
+	{
+		m_WiFiLogState = pState;
+		WiFiLog ("estado: %s%s", pState,
+			 m_State == NetStateRunning ? "" : (m_bSlowWarned ? " (ya avisado: sin conectar)" : ""));
+	}
+	if (!m_bWiFiLogTime && HasTime ())
+	{
+		m_bWiFiLogTime = TRUE;
+		CString *pTime = CTimer::Get ()->GetTimeString ();
+		if (pTime != 0)
+		{
+			WiFiLog ("hora (NTP): %s", (const char *) *pTime);
+			delete pTime;
+		}
+	}
+
+	FIL File;
+	if (f_open (&File, WIFI_LOG_FILE, FA_WRITE | FA_OPEN_APPEND) == FR_OK)
+	{
+		WriteWiFiLogBuffer (&File);
+		f_close (&File);
+	}
+
+	if (m_nWiFiLogBytes >= WIFI_LOG_MAX)
+	{
+		static const char Full[] = "(wifi-diag.txt lleno: no se apunta más)\r\n";
+		if (f_open (&File, WIFI_LOG_FILE, FA_WRITE | FA_OPEN_APPEND) == FR_OK)
+		{
+			UINT nWritten;
+			f_write (&File, Full, sizeof Full - 1, &nWritten);
+			f_close (&File);
+		}
+		zxmc_wpa_log_on = 0;
 	}
 }
 

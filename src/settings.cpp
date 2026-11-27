@@ -103,6 +103,8 @@ static TSettingDef Settings[] =
 	// la red WiFi y el país, en SD:/wpa_supplicant.conf (lo hace kernelwifi.cpp)
 	{"_wifinet",	N_("Red WiFi"),		6, "*accion", N_("ENTER: elegir"),		"",	TRUE},
 	{"_wificountry", N_("País WiFi"),	6, "*accion", "",				"",	TRUE},
+	// registro de la WiFi en SD:/wifi-diag.txt (para ver dónde se queda)
+	{"wifilog",	N_("Registro WiFi"),	6, "0|1|2", N_("no|sí|detallado"),			"0",	FALSE},
 	{"tz",		N_("Zona horaria"),	6, "-480|-300|-240|-180|0|60|120|180|240|330|480|540|600",
 				   "UTC-8|UTC-5|UTC-4|UTC-3|UTC|UTC+1|UTC+2|UTC+3|UTC+4|UTC+5:30|UTC+8|UTC+9|UTC+10", "60", TRUE},
 	{"dst",		N_("Horario de verano"), 6, "1|on|0", N_("automático|sí|no"),		"1",	TRUE},

@@ -191,6 +191,42 @@ for T in $TARGETS; do
 			|| { echo "No se pudo añadir lo de la WiFi a events.c"; exit 1; }
 		make -C "$W" -f Makefile.circle -j"$JOBS" > /dev/null
 	fi
+	# Registro de la WiFi (wifilog=): los mensajes de wpa_supplicant, lo que
+	# escribe el controlador del chip y los eventos del firmware van también a
+	# un búfer que el emulador pasa a SD:/wifi-diag.txt (tools/circle/wpa_zxmc_debug.c,
+	# al final de wpa_debug_circle.c; y una llamada en p9util.cpp y otra en
+	# ether4330.c). Si wpa_debug_circle.c tiene el de una versión anterior (sin
+	# zxmc_wlan_event), se quita antes de poner el nuevo.
+	WDBG="$C/addon/wlan/hostap/src/utils/wpa_debug_circle.c"
+	if ! grep -q "zxmc_wlan_event" "$WDBG"; then
+		if grep -q "zxmc_wpa_vprintf (level, fmt, ap);" "$WDBG"; then
+			N=$(grep -n "ZXMetalCircle: lo añade build.sh" "$WDBG" | head -1 | cut -d: -f1)
+			head -n $((N - 3)) "$WDBG" > "$WDBG.tmp" && mv "$WDBG.tmp" "$WDBG"
+		else
+			sed -i 's/^#include "common.h"$/&\nvoid zxmc_wpa_vprintf (int level, const char *fmt, va_list ap);/' "$WDBG"
+			sed -i 's/^\t\tvprintf (fmt, ap);$/\t\tzxmc_wpa_vprintf (level, fmt, ap);/' "$WDBG"
+		fi
+		cat "$ROOT/tools/circle/wpa_zxmc_debug.c" >> "$WDBG"
+		[ "$(grep -c "zxmc_wpa_vprintf (level, fmt, ap);" "$WDBG")" = 2 ] \
+			|| { echo "No se pudo añadir el registro de la WiFi a wpa_debug_circle.c"; exit 1; }
+		make -C "$W" -f Makefile.circle -j"$JOBS" > /dev/null
+	fi
+	WP9="$C/addon/wlan/p9util.cpp"
+	WETH="$C/addon/wlan/ether4330.c"
+	if ! grep -q "zxmc_wlan_log" "$WP9" || ! grep -q "zxmc_wlan_event" "$WETH"; then
+		if ! grep -q "zxmc_wlan_log" "$WP9"; then
+			sed -i '1i extern "C" void zxmc_wlan_log (const char *pText);' "$WP9"
+			sed -i 's/^\t\tCLogger::Get ()->Write (From, LogDebug, "%s", pLine);$/&\n\t\tzxmc_wlan_log (pLine);/' "$WP9"
+		fi
+		if ! grep -q "zxmc_wlan_event" "$WETH"; then
+			sed -i '1i void zxmc_wlan_event (const char *name, long event, long status, int flags, long reason);' "$WETH"
+			sed -i 's/^\treason = nhgetl(p + 12);$/&\n\tzxmc_wlan_event(evstring(event), event, status, flags, reason);/' "$WETH"
+		fi
+		[ "$(grep -c "zxmc_wlan_log (pLine);" "$WP9")" = 2 ] \
+		&& [ "$(grep -c "zxmc_wlan_event(evstring(event)" "$WETH")" = 1 ] \
+			|| { echo "No se pudo añadir el registro de la WiFi al controlador del chip"; exit 1; }
+		make -C "$C/addon/wlan" -j"$JOBS" > /dev/null
+	fi
 
 	# Carpeta de trabajo de cada objetivo (la de QEMU, aparte: compila con otra
 	# definición). Se conserva entre compilaciones para que make solo recompile

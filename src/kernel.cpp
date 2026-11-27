@@ -2058,6 +2058,7 @@ void CKernel::StartNetwork (void)
 	}
 
 	m_Network.SetTLSVerify (m_Options.GetAppOptionDecimal ("tlsverify", 1) != 0);
+	m_Network.SetWiFiLog (m_Options.GetAppOptionDecimal ("wifilog", 0));
 	// web=1 (completa), ro (solo lectura) o 0 (apagada); webpass= contraseña
 	const char *pWeb = m_Options.GetAppOptionString ("web", "1");
 	WebSetInUseCheck (WebInUse, this);

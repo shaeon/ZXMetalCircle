@@ -321,6 +321,14 @@ If an option is misspelt, the emulator says so at boot for about 10 seconds
                     0  no (only if it fails because of a certificate and
                        you trust the network)
 
+ wifilog=0        WiFi log in SD:/wifi-diag.txt, to see where it gets stuck
+                  when it does not connect (appended; never over 4 MB):
+                    0  no (default)
+                    1  attempts, disconnections and their reason, and the
+                       connection state
+                    2  also wpa_supplicant's details (much longer)
+                  Also in the settings: page 7, "WiFi log".
+
  web=1            The emulator's web page:
                     1   full (default)
                     ro  read-only: browse, download and load; no uploads,
