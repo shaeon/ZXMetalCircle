@@ -571,6 +571,7 @@ boolean CKernel::Initialize (void)
 	if (bOK)
 	{
 		SetFileTypes (m_pMachine->GetFileTypes ());	// navegador, web y ZIP
+		m_Input.SetMachineInput (m_pMachine->GetInput ());
 	}
 
 	if (bOK)
@@ -976,7 +977,7 @@ void CKernel::KeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned cha
 	// Teclas para el Spectrum (letras, números, ENTER, espacio, símbolos y
 	// cursores; no las de función del emulador ni con un menú abierto): ver
 	// IsTyping
-	if (!s_pThis->m_Keyboard.IsCaptured ())
+	if (!s_pThis->m_Input.IsCaptured ())
 	{
 		for (unsigned i = 0; i < 6; i++)
 		{
@@ -992,7 +993,7 @@ void CKernel::KeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned cha
 	unsigned nIndex = (unsigned) (uintptr) pArg;
 	if (nIndex >= MAX_KEYBOARDS)
 	{
-		s_pThis->m_Keyboard.UpdateFromReport (ucModifiers, RawKeys);
+		s_pThis->m_Input.UpdateFromReport (ucModifiers, RawKeys);
 		return;
 	}
 
@@ -1002,7 +1003,7 @@ void CKernel::KeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned cha
 	s_pThis->m_Recreated[nIndex].ProcessReport (ucModifiers, RawKeys, CTimer::GetClockTicks (), &Out);
 	for (unsigned i = 0; i < Out.nCount; i++)
 	{
-		s_pThis->m_Keyboard.UpdateFromKeyboard (nIndex, Out.Modifiers[i], Out.Keys[i]);
+		s_pThis->m_Input.UpdateFromKeyboard (nIndex, Out.Modifiers[i], Out.Keys[i]);
 	}
 }
 
@@ -1020,7 +1021,7 @@ void CKernel::KeyboardRemovedHandler (CDevice *pDevice, void *pContext)
 		s_pThis->m_Recreated[nIndex].Reset (s_pThis->m_RecreatedMode);
 	}
 
-	s_pThis->m_Keyboard.ForgetKeyboard (nIndex);	// sus teclas se sueltan; las de los demás, no
+	s_pThis->m_Input.ForgetKeyboard (nIndex);	// sus teclas se sueltan; las de los demás, no
 }
 
 void CKernel::UpdateUSB (void)
@@ -1233,13 +1234,13 @@ void CKernel::GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *
 	u32 nL = bKnown ? GamePadButtonLB : BIT (4);
 	u32 nR = bKnown ? GamePadButtonRB : BIT (5);
 	u8 nNavJoy = nJoy;
-	if (pThis->m_Keyboard.IsCaptured ())
+	if (pThis->m_Input.IsCaptured ())
 	{
 		TPadOutput Nav;
 		pThis->m_PadProfile[nDeviceIndex].Evaluate (nButtons & ~(nL | nR), nOldButtons & ~(nL | nR), &Nav);
 		nNavJoy = nStick | Nav.nJoy;
-		if ((nButtons & nL) && !(nOldButtons & nL))	pThis->m_Keyboard.InjectKeyEvent (0x4B, 0);	// RePág
-		if ((nButtons & nR) && !(nOldButtons & nR))	pThis->m_Keyboard.InjectKeyEvent (0x4E, 0);	// AvPág
+		if ((nButtons & nL) && !(nOldButtons & nL))	pThis->m_Input.InjectKeyEvent (0x4B, 0);	// RePág
+		if ((nButtons & nR) && !(nOldButtons & nR))	pThis->m_Input.InjectKeyEvent (0x4E, 0);	// AvPág
 	}
 
 	pThis->m_Keyboard.SetGamePadState (nDeviceIndex, nJoy);
@@ -1247,45 +1248,45 @@ void CKernel::GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *
 
 	for (unsigned i = 0; i < Out.nPCKeys; i++)
 	{
-		pThis->m_Keyboard.InjectKeyEvent (Out.PCKey[i], Out.PCMods[i]);	// teclas del emulador
+		pThis->m_Input.InjectKeyEvent (Out.PCKey[i], Out.PCMods[i]);	// teclas del emulador
 	}
 
 	// Pulsaciones nuevas
 	u8 nOldJoy = pThis->m_PrevPadJoy[nDeviceIndex];
 	if (Out.bNextJoy)
 	{
-		pThis->m_Keyboard.InjectKeyEvent (pThis->m_Keyboard.GetPadPlayer (nDeviceIndex) == 1 ? KEY_PAD_SELECT2 : KEY_PAD_SELECT, 0);
+		pThis->m_Input.InjectKeyEvent (pThis->m_Keyboard.GetPadPlayer (nDeviceIndex) == 1 ? KEY_PAD_SELECT2 : KEY_PAD_SELECT, 0);
 	}
 
-	if (pThis->m_Keyboard.IsCaptured ())
+	if (pThis->m_Input.IsCaptured ())
 	{
 		// En los menús: cruceta = cursores, disparo = ENTER, disparo 2 = ESC
 		u8 nNew = nNavJoy & ~nOldJoy;
-		if (nNew & JOY_UP)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_UP, 0);
-		if (nNew & JOY_DOWN)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_DOWN, 0);
-		if (nNew & JOY_LEFT)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_LEFT, 0);
-		if (nNew & JOY_RIGHT)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_RIGHT, 0);
-		if (nNew & JOY_FIRE)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_ENTER, 0);
-		if (nNew & JOY_FIRE2)	pThis->m_Keyboard.InjectKeyEvent (HID_KEY_ESC, 0);
+		if (nNew & JOY_UP)	pThis->m_Input.InjectKeyEvent (HID_KEY_UP, 0);
+		if (nNew & JOY_DOWN)	pThis->m_Input.InjectKeyEvent (HID_KEY_DOWN, 0);
+		if (nNew & JOY_LEFT)	pThis->m_Input.InjectKeyEvent (HID_KEY_LEFT, 0);
+		if (nNew & JOY_RIGHT)	pThis->m_Input.InjectKeyEvent (HID_KEY_RIGHT, 0);
+		if (nNew & JOY_FIRE)	pThis->m_Input.InjectKeyEvent (HID_KEY_ENTER, 0);
+		if (nNew & JOY_FIRE2)	pThis->m_Input.InjectKeyEvent (HID_KEY_ESC, 0);
 	}
 	else
 	{
 		if (Out.bMenu)
 		{
-			pThis->m_Keyboard.InjectKeyEvent (HID_KEY_F1, 0);		// la ayuda
+			pThis->m_Input.InjectKeyEvent (HID_KEY_F1, 0);		// la ayuda
 		}
 		if (Out.bSettings)
 		{
-			pThis->m_Keyboard.InjectKeyEvent (KEY_PAD_SETTINGS, 0);	// la configuración (Start)
+			pThis->m_Input.InjectKeyEvent (KEY_PAD_SETTINGS, 0);	// la configuración (Start)
 		}
 		if (Out.bFiles)
 		{
-			pThis->m_Keyboard.InjectKeyEvent (KEY_PAD_FILES, 0);	// los ficheros (Select)
+			pThis->m_Input.InjectKeyEvent (KEY_PAD_FILES, 0);	// los ficheros (Select)
 		}
 	}
 
 	pThis->m_PrevPadButtons[nDeviceIndex] = nButtons;
-	pThis->m_PrevPadJoy[nDeviceIndex] = pThis->m_Keyboard.IsCaptured () ? nNavJoy : nJoy;
+	pThis->m_PrevPadJoy[nDeviceIndex] = pThis->m_Input.IsCaptured () ? nNavJoy : nJoy;
 }
 
 void CKernel::GamePadRemovedHandler (CDevice *pDevice, void *pContext)
@@ -2293,7 +2294,7 @@ void CKernel::OpenZip (const char *pPath, const char *pEntry)
 	{
 		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
-		m_Keyboard.SetCaptured (TRUE);
+		m_Input.SetCaptured (TRUE);
 	}
 	m_bZipChoice = TRUE;
 	m_Menu.OpenChoice (T ("Elige el fichero del ZIP"));
@@ -2416,7 +2417,7 @@ void CKernel::LoadZipEntry (unsigned nEntry)
 			{
 				memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 				OpenMenu ();
-				m_Keyboard.SetCaptured (TRUE);
+				m_Input.SetCaptured (TRUE);
 			}
 			m_nZipPending = nEntry;
 			m_bZipOverwriteChoice = TRUE;
@@ -3240,7 +3241,7 @@ void CKernel::OpenTapeSelect (void)
 		}
 		m_Menu.SetChoiceItem (i, Text);
 	}
-	m_Keyboard.SetCaptured (TRUE);
+	m_Input.SetCaptured (TRUE);
 }
 
 // Nombre de la ROM de una opción (rom...=): "default" (o nada) es la de siempre
@@ -3494,7 +3495,7 @@ void CKernel::OpenUnitsScreen (void)
 	{
 		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
-		m_Keyboard.SetCaptured (TRUE);
+		m_Input.SetCaptured (TRUE);
 	}
 	UpdateUnitLines ();
 	m_Menu.OpenUnits ();
@@ -5189,7 +5190,7 @@ void CKernel::CheckTapeModel (void)
 	{
 		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
-		m_Keyboard.SetCaptured (TRUE);
+		m_Input.SetCaptured (TRUE);
 	}
 	CString Title, Change, Keep;
 	Title.Format (T ("Esta cinta no va en el %s"), m_pMachine->GetName ());
@@ -5245,7 +5246,7 @@ void CKernel::UpdateKeyRepeat (void)
 		return;
 	}
 
-	u8 nHeld = m_Keyboard.GetHeldNavKey ();
+	u8 nHeld = m_Input.GetHeldNavKey ();
 
 	// teclado GPIO (en el menú las teclas van capturadas): CAPS SHIFT + 5..8
 	if (nHeld == 0 && m_bGPIOKeyboard && (m_PrevGPIOMatrix[0] & 0x01))
@@ -5549,7 +5550,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 			m_nTapeStage = 0;		// ni de F2 en la cinta
 			m_nSnapStage = 0;		// ni de F8
 			MenuClosed ();
-			m_Keyboard.SetCaptured (FALSE);
+			m_Input.SetCaptured (FALSE);
 			m_Keyboard.ReleaseAll ();
 			m_nNextFrameTime = 0;
 		}
@@ -5593,7 +5594,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		UpdateStatusLines ();
 		OpenMenu ();
 		m_Menu.OpenHelp ();
-		m_Keyboard.SetCaptured (TRUE);
+		m_Input.SetCaptured (TRUE);
 		break;
 
 	case ActionSettings:
@@ -5608,14 +5609,14 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		WiFiRows ();
 		m_Menu.OpenSettings ();
 		m_Menu.SetSettingsFromShortcut (TRUE);
-		m_Keyboard.SetCaptured (TRUE);
+		m_Input.SetCaptured (TRUE);
 		break;
 
 	case ActionKeyHelp:
 		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		OpenMenu ();
 		m_Menu.OpenKeyHelp (IsZX81Active ());
-		m_Keyboard.SetCaptured (TRUE);
+		m_Input.SetCaptured (TRUE);
 		break;
 
 	case ActionTapePlayStop:
@@ -5645,7 +5646,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			OpenMenu ();
-			m_Keyboard.SetCaptured (TRUE);
+			m_Input.SetCaptured (TRUE);
 		}
 		TapeUpdateClip ();		// lo marcado: de esta cinta o de otra
 		m_Menu.OpenTape (&m_Tape);
@@ -5665,7 +5666,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		UpdateStatusLines ();
 		OpenMenu ();
 		m_Menu.OpenBrowser ();
-		m_Keyboard.SetCaptured (TRUE);
+		m_Input.SetCaptured (TRUE);
 		break;
 
 	case ActionNMI:
@@ -5687,7 +5688,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			OpenMenu ();
-			m_Keyboard.SetCaptured (TRUE);
+			m_Input.SetCaptured (TRUE);
 		}
 		m_bModelList = TRUE;
 		m_Menu.OpenChoice (T ("Elige el modelo"));
@@ -5815,7 +5816,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			OpenMenu ();
-			m_Keyboard.SetCaptured (TRUE);
+			m_Input.SetCaptured (TRUE);
 		}
 		m_Menu.OpenInput (T ("Pulsar teclas simultáneas"),
 				  T ("Teclas que se pulsan a la vez (1,5 s):"),
@@ -5828,7 +5829,7 @@ void CKernel::HandleKeyEvent (const TKeyEvent &rEvent)
 		{
 			memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 			OpenMenu ();
-			m_Keyboard.SetCaptured (TRUE);
+			m_Input.SetCaptured (TRUE);
 		}
 		m_bDiskChoice = TRUE;
 		m_Menu.OpenChoice (T ("Disquete nuevo del +3"));
@@ -5974,7 +5975,7 @@ void CKernel::HandleGPIOKeyboard (void)
 		m_Recreated[k].CheckTimeout (CTimer::GetClockTicks (), &Out);
 		for (unsigned i = 0; i < Out.nCount; i++)
 		{
-			m_Keyboard.UpdateFromKeyboard (k, Out.Modifiers[i], Out.Keys[i]);
+			m_Input.UpdateFromKeyboard (k, Out.Modifiers[i], Out.Keys[i]);
 		}
 		LeaveCritical ();
 
@@ -6054,12 +6055,12 @@ void CKernel::HandleGPIOKeyboard (void)
 		return;
 	}
 
-	if (bAnyKey && !m_Keyboard.IsCaptured ())
+	if (bAnyKey && !m_Input.IsCaptured ())
 	{
 		m_nLastKeyTime = CTimer::GetClockTicks64 ();		// ver IsTyping
 	}
 
-	boolean bCaptured = m_Keyboard.IsCaptured ();
+	boolean bCaptured = m_Input.IsCaptured ();
 	if (!m_bExtendedMode && !bCaptured)
 	{
 		m_Keyboard.SetGPIOMatrix (pMatrix);
@@ -6094,7 +6095,7 @@ void CKernel::HandleGPIOKeyboard (void)
 			// SHIFT + M es el punto, como en el Spectrum (no Alt+M)
 			if (bSS && nHID == 0x10 && m_Menu.IsOpen () && m_Menu.IsEditing ())
 			{
-				m_Keyboard.InjectKeyEvent (0x37, 0);	// '.'
+				m_Input.InjectKeyEvent (0x37, 0);	// '.'
 				continue;
 			}
 
@@ -6106,12 +6107,12 @@ void CKernel::HandleGPIOKeyboard (void)
 			{
 				if (bCS && nHID >= 0x04 && nHID <= 0x1D)
 				{
-					m_Keyboard.InjectKeyEvent (nHID, HID_MOD_LSHIFT);
+					m_Input.InjectKeyEvent (nHID, HID_MOD_LSHIFT);
 					continue;
 				}
 				if (bSS)
 				{
-					m_Keyboard.InjectKeyEvent (nHID, HID_MOD_LCTRL);
+					m_Input.InjectKeyEvent (nHID, HID_MOD_LCTRL);
 					continue;
 				}
 			}
@@ -6123,7 +6124,7 @@ void CKernel::HandleGPIOKeyboard (void)
 				nModifiers = HID_MOD_LALT;		// SYMBOL SHIFT = Alt
 			}
 
-			m_Keyboard.InjectKeyEvent (nHID, nModifiers);
+			m_Input.InjectKeyEvent (nHID, nModifiers);
 		}
 	}
 
@@ -6520,7 +6521,7 @@ TShutdownMode CKernel::Run (void)
 		HandleGPIOKeyboard ();
 
 		TKeyEvent Event;
-		while (m_Keyboard.GetKeyEvent (&Event))
+		while (m_Input.GetKeyEvent (&Event))
 		{
 			HandleKeyEvent (Event);
 		}

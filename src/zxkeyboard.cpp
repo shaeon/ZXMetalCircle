@@ -84,14 +84,9 @@ CZXKeyboard::CZXKeyboard (void)
 	m_CursorMode (CursorBoth),
 	m_KbdFire (KbdFireWindows),
 	m_bBackspaceAsLeft (FALSE),
-	m_bCaptured (FALSE),
-	m_nEventIn (0),
-	m_nEventOut (0)
+	m_bCaptured (FALSE)
 {
 	ReleaseAll ();
-	memset (m_PrevKeys, 0, sizeof m_PrevKeys);
-	memset (m_KbdModifiers, 0, sizeof m_KbdModifiers);
-	memset (m_KbdKeys, 0, sizeof m_KbdKeys);
 	m_nHeldFrames = 0;
 	for (unsigned i = 0; i < 8; i++)
 	{
@@ -160,6 +155,16 @@ u8 CZXKeyboard::MatrixKeyToHID (unsigned nRow, unsigned nBit)
 	if (ch == ' ')			return HID_KEY_SPACE;
 
 	return 0;
+}
+
+// Con Alt pulsado las teclas son atajos del emulador: no llegan al Spectrum
+void CZXKeyboard::ReleasePCKeys (void)
+{
+	for (unsigned i = 0; i < 8; i++)
+	{
+		m_Matrix[i] = 0;
+	}
+	m_nKeyJoy = 0;
 }
 
 void CZXKeyboard::ReleaseAll (void)
@@ -232,175 +237,10 @@ static inline void Press (u8 Matrix[8], u8 nPos)
 	}
 }
 
-u8 CZXKeyboard::GetHeldNavKey (void) const
+// Las teclas del PC que van al Spectrum (CHostInput ya ha quitado las del
+// emulador y los informes de error): su matriz y el joystick de los cursores
+void CZXKeyboard::SetPCKeys (u8 nModifiers, const u8 RawKeys[6])
 {
-	for (unsigned i = 0; i < 6; i++)
-	{
-		u8 nKey = m_PrevKeys[i];
-		if (   nKey == HID_KEY_UP || nKey == HID_KEY_DOWN || nKey == HID_KEY_LEFT
-		    || nKey == HID_KEY_RIGHT || nKey == HID_KEY_PAGEUP || nKey == HID_KEY_PAGEDOWN)
-		{
-			return nKey;
-		}
-	}
-	return 0;
-}
-
-void CZXKeyboard::PushEvent (u8 nKey, u8 nModifiers)
-{
-	unsigned nNext = (m_nEventIn + 1) % (sizeof m_Events / sizeof m_Events[0]);
-	if (nNext == m_nEventOut)
-	{
-		return;		// cola llena
-	}
-
-	m_Events[m_nEventIn].nKey = nKey;
-	m_Events[m_nEventIn].nModifiers = nModifiers;
-	m_nEventIn = nNext;
-}
-
-boolean CZXKeyboard::GetKeyEvent (TKeyEvent *pEvent)
-{
-	if (m_nEventOut == m_nEventIn)
-	{
-		return FALSE;
-	}
-
-	*pEvent = m_Events[m_nEventOut];
-	m_nEventOut = (m_nEventOut + 1) % (sizeof m_Events / sizeof m_Events[0]);
-
-	return TRUE;
-}
-
-void CZXKeyboard::UpdateFromKeyboard (unsigned nKeyboard, u8 nModifiers, const u8 RawKeys[6])
-{
-	if (nKeyboard >= ZXKBD_KEYBOARDS)
-	{
-		UpdateFromReport (nModifiers, RawKeys);
-		return;
-	}
-
-	// informe de error (demasiadas teclas): se mantiene lo que tenía ese teclado
-	for (unsigned i = 0; i < 6; i++)
-	{
-		if (RawKeys[i] >= 0x01 && RawKeys[i] <= 0x03)
-		{
-			return;
-		}
-	}
-
-	m_KbdModifiers[nKeyboard] = nModifiers;
-	memcpy (m_KbdKeys[nKeyboard], RawKeys, 6);
-	UpdateMerged ();
-}
-
-void CZXKeyboard::ForgetKeyboard (unsigned nKeyboard)
-{
-	if (nKeyboard < ZXKBD_KEYBOARDS)
-	{
-		m_KbdModifiers[nKeyboard] = 0;
-		memset (m_KbdKeys[nKeyboard], 0, 6);
-	}
-	UpdateMerged ();
-}
-
-// Las teclas de todos los teclados juntas: los modificadores de cualquiera y
-// hasta 6 teclas (las primeras que haya, sin repetir)
-void CZXKeyboard::UpdateMerged (void)
-{
-	u8 nModifiers = 0;
-	u8 Keys[6] = {0, 0, 0, 0, 0, 0};
-	unsigned nKeys = 0;
-	for (unsigned k = 0; k < ZXKBD_KEYBOARDS; k++)
-	{
-		nModifiers |= m_KbdModifiers[k];
-		for (unsigned i = 0; i < 6 && nKeys < 6; i++)
-		{
-			u8 nKey = m_KbdKeys[k][i];
-			if (nKey < 4)
-			{
-				continue;
-			}
-			boolean bDup = FALSE;
-			for (unsigned j = 0; j < nKeys; j++)
-			{
-				if (Keys[j] == nKey)
-				{
-					bDup = TRUE;
-				}
-			}
-			if (!bDup)
-			{
-				Keys[nKeys++] = nKey;
-			}
-		}
-	}
-	UpdateFromReport (nModifiers, Keys);
-}
-
-void CZXKeyboard::UpdateFromReport (u8 nModifiers, const u8 RawKeys[6])
-{
-	// Con demasiadas teclas a la vez (o una combinación que su matriz no
-	// distingue), el teclado manda un informe de error: ErrorRollOver (0x01)
-	// en todas las posiciones. Según la norma HID se mantiene el estado
-	// anterior hasta el siguiente informe válido; antes se soltaba todo y el
-	// juego veía de golpe que no había ninguna tecla pulsada (p. ej. al
-	// teclear a la vez VICTOR en Profanation).
-	for (unsigned i = 0; i < 6; i++)
-	{
-		if (RawKeys[i] >= 0x01 && RawKeys[i] <= 0x03)
-		{
-			return;
-		}
-	}
-
-	// Eventos para el emulador: teclas recién pulsadas
-	for (unsigned i = 0; i < 6; i++)
-	{
-		u8 nKey = RawKeys[i];
-		if (nKey < 4)
-		{
-			continue;	// 0 = nada, 1-3 = errores
-		}
-
-		boolean bNew = TRUE;
-		for (unsigned j = 0; j < 6; j++)
-		{
-			if (m_PrevKeys[j] == nKey)
-			{
-				bNew = FALSE;
-				break;
-			}
-		}
-
-		if (   bNew
-		    && (   m_bCaptured
-			|| (nKey >= HID_KEY_F1 && nKey <= HID_KEY_F12)
-			|| nKey == HID_KEY_PAUSE
-			|| (nModifiers & (HID_MOD_LALT | HID_MOD_RALT))))
-		{
-			PushEvent (nKey, nModifiers);
-		}
-	}
-	memcpy (m_PrevKeys, RawKeys, 6);
-
-	if (m_bCaptured)
-	{
-		ReleaseAll ();
-		return;
-	}
-
-	// Con Alt pulsado las teclas son atajos del emulador: no llegan al Spectrum
-	if (nModifiers & (HID_MOD_LALT | HID_MOD_RALT))
-	{
-		for (unsigned i = 0; i < 8; i++)
-		{
-			m_Matrix[i] = 0;
-		}
-		m_nKeyJoy = 0;
-		return;
-	}
-
 	u8 Matrix[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 	boolean bShift = (nModifiers & (HID_MOD_LSHIFT | HID_MOD_RSHIFT)) != 0;
 	boolean bSuppressCS = FALSE;

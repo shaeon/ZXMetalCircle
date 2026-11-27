@@ -80,10 +80,12 @@ static inline void type (const char *p)
 // Una tecla del teclado USB (código HID)
 static inline void usb (u8 nKey)
 {
+	static CHostInput Input;		// los teclados USB llegan por aquí (hostinput.h)
+	Input.SetMachineInput (&kb);
 	u8 r[6] = {nKey, 0, 0, 0, 0, 0}, z[6] = {0};
-	kb.UpdateFromReport (0, r);
+	Input.UpdateFromReport (0, r);
 	run (6);
-	kb.UpdateFromReport (0, z);
+	Input.UpdateFromReport (0, z);
 	run (8);
 }
 

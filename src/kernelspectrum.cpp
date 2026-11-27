@@ -100,7 +100,7 @@ boolean CKernel::MachineAskStateFormat (unsigned nFormat)
 		memcpy (m_pFrozen, m_pMachine->GetScreenBuffer (), SCREEN_WIDTH * SCREEN_HEIGHT * sizeof (TPixel));
 		UpdateStatusLines ();
 		OpenMenu ();
-		m_Keyboard.SetCaptured (TRUE);
+		m_Input.SetCaptured (TRUE);
 	}
 	m_nSnapStage = 1;
 	m_Menu.OpenChoice (nFormat == 1 ? T ("SNA no guarda la paleta ULAplus")

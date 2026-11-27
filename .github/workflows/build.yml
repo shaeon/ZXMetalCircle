@@ -47,7 +47,7 @@ jobs:
           sed 's#"roms/#"../../roms/#' ../../src/roms.S > roms_host.S
           echo '.section .note.GNU-stack,"",@progbits' >> roms_host.S
           S=../../src; M=../../third_party/mame
-          CORE="$S/spectrum.cpp $S/ula.cpp $S/zxmemory.cpp $S/pagers.cpp $S/divmmc.cpp $S/tapedeck.cpp $S/snapshot.cpp $S/ay8912.cpp $S/audiomixer.cpp $S/tape.cpp $S/zxkeyboard.cpp \
+          CORE="$S/spectrum.cpp $S/ula.cpp $S/zxmemory.cpp $S/pagers.cpp $S/divmmc.cpp $S/tapedeck.cpp $S/snapshot.cpp $S/ay8912.cpp $S/audiomixer.cpp $S/tape.cpp $S/hostinput.cpp $S/zxkeyboard.cpp \
                 $S/interface1.cpp $S/plus3disk.cpp $S/sdcard.cpp $S/spectranet.cpp $S/earinput.cpp \
                 $S/zxnet.cpp $M/*.cpp $M/compat/*.cpp $S/inflate.cpp ../../third_party/z80cpp/z80.cpp"
           FLAGS="-O2 -std=c++17 -DWITH_BREAKPOINT_SUPPORT -I. -I$S -I../../third_party/z80cpp -I$M/compat -I$M"
@@ -105,7 +105,7 @@ jobs:
           ./mdr_format_test
           g++ -O2 -std=c++17 -I. -I$S -o joystick_test joystick_test.cpp $S/zxkeyboard.cpp
           ./joystick_test
-          g++ -O2 -std=c++17 -I. -I$S -o multikbd_test multikbd_test.cpp $S/zxkeyboard.cpp
+          g++ -O2 -std=c++17 -I. -I$S -o multikbd_test multikbd_test.cpp $S/hostinput.cpp $S/zxkeyboard.cpp
           ./multikbd_test
           g++ -O2 -std=c++17 -I. -I$S -o players_test players_test.cpp $S/zxkeyboard.cpp
           ./players_test
@@ -132,8 +132,10 @@ jobs:
           g++ -O2 -std=c++17 -I. -I$S -I$MB/include -I$MB -DMBEDTLS_CONFIG_FILE='"zxmc_config.h"' \
               -o retry_test download/retry_test.cpp $S/download/httpsclient.cpp t_stub.cpp mbedtls_host/*.o
           ./retry_test
-          g++ -O2 -std=c++17 -I. -I$S -o keyboard_hold_test keyboard_hold_test.cpp $S/zxkeyboard.cpp
+          g++ -O2 -std=c++17 -I. -I$S -o keyboard_hold_test keyboard_hold_test.cpp $S/hostinput.cpp $S/zxkeyboard.cpp
           ./keyboard_hold_test
+          g++ -O2 -std=c++17 -I. -I$S -o input_test input_test.cpp $S/hostinput.cpp $S/zxkeyboard.cpp
+          ./input_test
           g++ -O2 -std=c++17 -I. -I$S -o gpio_keys_test gpio_keys_test.cpp $S/zxkeyboard.cpp
           ./gpio_keys_test
           g++ -O2 -std=c++17 -I. -I$S -o zip_test zip_test.cpp $S/zipfile.cpp $S/inflate.cpp

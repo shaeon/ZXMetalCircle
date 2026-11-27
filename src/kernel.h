@@ -367,7 +367,8 @@ private:
 	boolean			m_bUSBRescan;		// mirar los aparatos USB aunque no haya cambios
 
 	CVideo			m_Video;
-	CZXKeyboard		m_Keyboard;
+	CHostInput		m_Input;		// teclados USB, cola de teclas y menús (hostinput.h)
+	CZXKeyboard		m_Keyboard;		// lo del Spectrum: matriz, joysticks, ratón
 	CTape			m_Tape;
 	CSpectrum		*m_pSpectrum;
 	CMachine		*m_pMachine;	// la misma máquina, por lo que vale para cualquiera

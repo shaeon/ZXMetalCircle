@@ -6,7 +6,8 @@
 #include <string.h>
 #include "spectrum.h"
 CZXKeyboard kb; CTape tape;
-static void key (u8 mods, std::initializer_list<u8> k) { u8 r[6] = {0}; int i = 0; for (u8 x : k) r[i++] = x; kb.UpdateFromReport (mods, r); }
+CHostInput in;		// teclados USB (hostinput.h)
+static void key (u8 mods, std::initializer_list<u8> k) { u8 r[6] = {0}; int i = 0; for (u8 x : k) r[i++] = x; in.UpdateFromReport (mods, r); }
 static void run (CSpectrum &s, int n) { for (int i = 0; i < n; i++) { s.RunFrame (); s.GetAudio ()->ClearBuffer (); } }
 static int compare (CSpectrum &s, const char *pFile, u16 nAddr)
 {
@@ -17,6 +18,7 @@ static int compare (CSpectrum &s, const char *pFile, u16 nAddr)
 }
 int main (int argc, char **argv)
 {
+	in.SetMachineInput (&kb);
 	int nMode = atoi (argv[1]);
 	CSpectrum *s = new CSpectrum (&kb, &tape);
 	s->SetModel (Model48K); s->SetTapeMode ((TTapeMode) nMode);

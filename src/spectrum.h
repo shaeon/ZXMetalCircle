@@ -58,6 +58,7 @@ public:
 	boolean IsAccelerating (void) const override
 		{ return IsTapeAccelerating () || IsDiskAccelerating (); }
 	const TFileType *GetFileTypes (void) const override;
+	CMachineInput *GetInput (void) override			{ return m_pKeyboard; }
 	// Estado: .Z80, .SNA y .SZX (y se cargan .SP); en snapshot.cpp
 	unsigned GetStateFormats (void) const override			{ return 3; }
 	const char *GetStateExt (unsigned nFormat) const override;

@@ -9,6 +9,7 @@
 #ifndef _zx_zxkeyboard_h
 #define _zx_zxkeyboard_h
 
+#include "hostinput.h"
 #include <circle/types.h>
 
 // Mismo orden que el ciclo del botón Select de ZXBaremulator
@@ -44,39 +45,6 @@ enum TCursorMode
 	CursorJoystickOnly	// solo joystick
 };
 
-// Teclas HID de interés
-#define HID_KEY_ESC		0x29
-#define HID_KEY_ENTER		0x28
-#define HID_KEY_BACKSPACE	0x2A
-#define HID_KEY_TAB		0x2B
-#define HID_KEY_SPACE		0x2C
-#define HID_KEY_F1		0x3A
-#define HID_KEY_F12		0x45
-#define HID_KEY_PAUSE		0x48
-#define HID_KEY_PAGEUP		0x4B
-#define HID_KEY_PAGEDOWN	0x4E
-#define HID_KEY_HOME		0x4A
-#define HID_KEY_END		0x4D
-#define HID_KEY_RIGHT		0x4F
-#define HID_KEY_LEFT		0x50
-#define HID_KEY_DOWN		0x51
-#define HID_KEY_UP		0x52
-
-#define HID_MOD_LCTRL		0x01
-#define HID_MOD_LSHIFT		0x02
-#define HID_MOD_LALT		0x04
-#define HID_MOD_RCTRL		0x10
-#define HID_MOD_RSHIFT		0x20
-#define HID_MOD_RALT		0x40
-#define HID_MOD_LGUI		0x08	// tecla Windows izquierda
-#define HID_MOD_RGUI		0x80	// tecla Windows derecha
-
-struct TKeyEvent
-{
-	u8 nKey;		// código HID
-	u8 nModifiers;
-};
-
 // Tecla del teclado que hace de disparo del joystick (kbdfire=)
 enum TKbdFire
 {
@@ -85,20 +53,19 @@ enum TKbdFire
 	KbdFireNone		// ninguna (sigue el 0 del teclado numérico)
 };
 
-class CZXKeyboard
+// El teclado y los joysticks del Spectrum: las teclas del PC (de CHostInput),
+// el teclado GPIO y los mandos, en su matriz de 8x5 y en los joysticks
+// Kempston, Sinclair, Cursor, Fuller y QAOP; y el ratón Kempston
+class CZXKeyboard : public CMachineInput
 {
 public:
 	CZXKeyboard (void);
 
-	// Llamado desde el manejador USB (contexto de interrupción)
-	void UpdateFromReport (u8 nModifiers, const u8 RawKeys[6]);
-
-	// Varios teclados USB a la vez (p. ej. el de la Pi 400 y otro): cada
-	// informe es el estado de SU teclado, y se juntan con los de los demás.
-	// Con UpdateFromReport, el informe de un teclado (aunque sea el que repite
-	// cada poco sin teclas) soltaba las que se tenían pulsadas en el otro.
-	void UpdateFromKeyboard (unsigned nKeyboard, u8 nModifiers, const u8 RawKeys[6]);
-	void ForgetKeyboard (unsigned nKeyboard);	// desenchufado: sus teclas se sueltan
+	// CMachineInput (desde CHostInput, en el contexto del manejador USB)
+	void SetPCKeys (u8 nModifiers, const u8 RawKeys[6]) override;
+	void ReleasePCKeys (void) override;
+	void SetCaptured (boolean bCaptured) override	{ m_bCaptured = bCaptured; }
+	void ReleaseAll (void) override;
 
 	// Lectura del puerto del teclado (byte alto de la dirección)
 	u8 ReadPort (u8 nHighByte) const;
@@ -144,17 +111,10 @@ public:
 	void SetPadPlayer (unsigned nIndex, u8 nPlayer);
 	u8 GetPadPlayer (unsigned nIndex) const	{ return nIndex < MAX_GAMEPADS ? m_PadPlayer[nIndex] : 0; }
 
-	// Si está activo, las teclas no llegan al Spectrum (menús del emulador)
-	void SetCaptured (boolean bCaptured)	{ m_bCaptured = bCaptured; }
-	boolean IsCaptured (void) const		{ return m_bCaptured; }
-
 	// Teclado real por GPIO: se combina con el USB en ReadPort()
 	void SetGPIOMatrix (const u8 Matrix[8]);
 	// Teclas que pulsa el propio emulador (la carga de un .P en el ZX81)
 	void SetScriptMatrix (const u8 Matrix[8]);
-
-	// Eventos generados por otros teclados (GPIO en modo extendido o en menús)
-	void InjectKeyEvent (u8 nKey, u8 nModifiers)	{ PushEvent (nKey, nModifiers); }
 
 	// Tecla HID equivalente a una tecla de la matriz (0 si no tiene: CS, SS)
 	// Teclado real (GPIO, Recreated ZX) en los menús o en modo extendido:
@@ -165,15 +125,6 @@ public:
 	static u8 TranslateGPIOKey (u8 nHID, boolean bCS, boolean bExtended);
 	static u8 MatrixKeyToHID (unsigned nRow, unsigned nBit);
 
-	// Cola de pulsaciones (flancos de bajada) para el emulador
-	boolean GetKeyEvent (TKeyEvent *pEvent);
-
-	// Tecla de navegación (cursores, RePág, AvPág) que sigue pulsada en el
-	// teclado USB, o 0 (para la repetición en los menús)
-	u8 GetHeldNavKey (void) const;
-
-	void ReleaseAll (void);
-
 	// Alt+V: pulsar varias teclas a la vez durante unos cuadros
 	unsigned HoldKeys (const char *pKeys, unsigned nFrames);
 	void TickHeld (void);			// una vez por cuadro emulado
@@ -182,7 +133,6 @@ public:
 private:
 	u8 GetJoystickState (unsigned nPlayer) const;	// 0 = jugador 1, 1 = jugador 2
 	unsigned PlayerWithMode (TJoystickMode Mode) const;	// el jugador con ese joystick, o 2
-	void PushEvent (u8 nKey, u8 nModifiers);
 
 private:
 	volatile u8 m_Matrix[8];
@@ -208,15 +158,6 @@ private:
 	volatile boolean m_bBackspaceAsLeft;
 	volatile boolean m_bCaptured;
 
-	u8 m_PrevKeys[6];
-
-	#define ZXKBD_KEYBOARDS	4
-	u8 m_KbdModifiers[ZXKBD_KEYBOARDS];
-	u8 m_KbdKeys[ZXKBD_KEYBOARDS][6];
-	void UpdateMerged (void);
-
-	TKeyEvent m_Events[32];
-	volatile unsigned m_nEventIn, m_nEventOut;
 };
 
 #endif

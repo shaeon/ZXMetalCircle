@@ -22,6 +22,7 @@
 
 #include "palette.h"
 #include "filetypes.h"
+#include "hostinput.h"
 #include <circle/types.h>
 
 class CAudioMixer;
@@ -51,6 +52,9 @@ public:
 	// Está cargando de cinta o de disco en un modo rápido: el kernel emula
 	// sin esperar al reloj (y sin sonido)
 	virtual boolean IsAccelerating (void) const = 0;
+
+	// Su parte de la entrada (hostinput.h): lo que hace con las teclas del PC
+	virtual CMachineInput *GetInput (void) = 0;
 
 	// Los ficheros que sabe cargar y qué es cada uno (filetypes.h)
 	virtual const TFileType *GetFileTypes (void) const = 0;

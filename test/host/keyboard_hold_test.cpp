@@ -1,7 +1,7 @@
 // Teclado: informe de error de rollover (se mantiene el estado anterior) y
 // Alt+V (mantener varias teclas pulsadas a la vez)
 //
-//   g++ -O2 -std=c++17 -I. -I../../src -o keyboard_hold_test keyboard_hold_test.cpp ../../src/zxkeyboard.cpp
+//   g++ -O2 -std=c++17 -I. -I../../src -o keyboard_hold_test keyboard_hold_test.cpp ../../src/hostinput.cpp ../../src/zxkeyboard.cpp
 #include "zxkeyboard.h"
 #include <stdio.h>
 
@@ -33,18 +33,20 @@ bool NoKey (CZXKeyboard &kb)
 int main ()
 {
 	CZXKeyboard kb;
+	CHostInput in;			// los teclados USB llegan por aquí (hostinput.h)
+	in.SetMachineInput (&kb);
 	kb.SetJoystickMode (JoystickNone);
 
 	const u8 Keys[6] = {0x19, 0x0C, 0x06, 0x17, 0x12, 0x15};	// V I C T O R
-	kb.UpdateFromReport (0, Keys);
+	in.UpdateFromReport (0, Keys);
 	chk ("VICTOR por USB: las seis pulsadas", Victor (kb));
 
 	const u8 Rollover[6] = {0x01, 0x01, 0x01, 0x01, 0x01, 0x01};
-	kb.UpdateFromReport (0, Rollover);
+	in.UpdateFromReport (0, Rollover);
 	chk ("informe de rollover: siguen las seis pulsadas", Victor (kb));
 
 	const u8 Empty[6] = {0, 0, 0, 0, 0, 0};
-	kb.UpdateFromReport (0, Empty);
+	in.UpdateFromReport (0, Empty);
 	chk ("informe vacío: se sueltan", NoKey (kb));
 
 	unsigned n = kb.HoldKeys ("victor", 3);
@@ -70,44 +72,44 @@ int main ()
 	kb.SetCursorMode (CursorBoth);
 
 	// por defecto: las teclas Windows; los dos Ctrl, SYMBOL SHIFT
-	kb.UpdateFromReport (LWIN, NoKeys);
+	in.UpdateFromReport (LWIN, NoKeys);
 	chk ("por defecto: Windows izquierda es el disparo", (kb.ReadKempston () & 0x10) && !Pressed (kb, 7, 1));
-	kb.UpdateFromReport (RWIN, NoKeys);
+	in.UpdateFromReport (RWIN, NoKeys);
 	chk ("por defecto: Windows derecha es el disparo", (kb.ReadKempston () & 0x10) != 0);
-	kb.UpdateFromReport (RCTRL, NoKeys);
+	in.UpdateFromReport (RCTRL, NoKeys);
 	chk ("por defecto: Ctrl derecho es SYMBOL SHIFT y no dispara", Pressed (kb, 7, 1) && !(kb.ReadKempston () & 0x10));
-	kb.UpdateFromReport (LCTRL, NoKeys);
+	in.UpdateFromReport (LCTRL, NoKeys);
 	chk ("por defecto: Ctrl izquierdo es SYMBOL SHIFT", Pressed (kb, 7, 1));
-	kb.UpdateFromReport (0, NoKeys);
+	in.UpdateFromReport (0, NoKeys);
 
 	// kbdfire=rctrl: como antes
 	kb.SetKbdFire (KbdFireRightCtrl);
-	kb.UpdateFromReport (RCTRL, NoKeys);
+	in.UpdateFromReport (RCTRL, NoKeys);
 	chk ("rctrl: Ctrl derecho es el disparo y no SYMBOL SHIFT", (kb.ReadKempston () & 0x10) && !Pressed (kb, 7, 1));
-	kb.UpdateFromReport (LWIN, NoKeys);
+	in.UpdateFromReport (LWIN, NoKeys);
 	chk ("rctrl: Windows no dispara", !(kb.ReadKempston () & 0x10));
-	kb.UpdateFromReport (0, NoKeys);
+	in.UpdateFromReport (0, NoKeys);
 	kb.SetCursorMode (CursorKeysOnly);
-	kb.UpdateFromReport (RCTRL, NoKeys);
+	in.UpdateFromReport (RCTRL, NoKeys);
 	chk ("rctrl y cursors=keys: Ctrl derecho es SYMBOL SHIFT", Pressed (kb, 7, 1) && !(kb.ReadKempston () & 0x10));
-	kb.UpdateFromReport (0, NoKeys);
+	in.UpdateFromReport (0, NoKeys);
 	kb.SetCursorMode (CursorBoth);
 
 	// kbdfire=none: ninguna tecla dispara
 	kb.SetKbdFire (KbdFireNone);
-	kb.UpdateFromReport (LWIN | RCTRL, NoKeys);
+	in.UpdateFromReport (LWIN | RCTRL, NoKeys);
 	chk ("none: ni Windows ni Ctrl derecho disparan; Ctrl es SYMBOL SHIFT",
 	     !(kb.ReadKempston () & 0x10) && Pressed (kb, 7, 1));
-	kb.UpdateFromReport (0, NoKeys);
+	in.UpdateFromReport (0, NoKeys);
 
 	// sin joystick: nada dispara y los Ctrl son SYMBOL SHIFT
 	kb.SetKbdFire (KbdFireWindows);
 	kb.SetJoystickMode (JoystickNone);
-	kb.UpdateFromReport (LWIN, NoKeys);
+	in.UpdateFromReport (LWIN, NoKeys);
 	chk ("sin joystick: Windows no dispara", !(kb.ReadKempston () & 0x10));
-	kb.UpdateFromReport (RCTRL, NoKeys);
+	in.UpdateFromReport (RCTRL, NoKeys);
 	chk ("sin joystick: Ctrl derecho es SYMBOL SHIFT", Pressed (kb, 7, 1));
-	kb.UpdateFromReport (0, NoKeys);
+	in.UpdateFromReport (0, NoKeys);
 
 	printf (fails ? "%d fallos\n" : "todo OK\n", fails);
 	return fails;
